@@ -618,3 +618,43 @@ body::after {
   .thrift-row { grid-template-columns: 1fr; gap: 0.25rem; }
   .thrift-row span:last-child { text-align: left; }
 }
+
+/* --- Password gate --- */
+body.locked { overflow: hidden; }
+#city-lock {
+  position: fixed; inset: 0; z-index: 9999;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(107,15,22,0.85), transparent 55%),
+    #0a0304;
+  padding: 1.5rem;
+}
+.lock-card {
+  width: min(380px, 100%);
+  padding: 1.75rem 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(212,160,23,0.45);
+  background: rgba(20,4,6,0.92);
+  box-shadow: 0 0 40px rgba(196,30,42,0.35), 0 0 24px rgba(212,160,23,0.15);
+}
+.lock-brand {
+  font-weight: 900; letter-spacing: 0.12em; text-align: center;
+  background: linear-gradient(90deg, #c41e2a, #f0d78c, #c41e2a);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  font-size: 1.35rem;
+}
+.lock-sub { text-align: center; color: #a8989a; font-size: 0.85rem; margin: 0.4rem 0 1.25rem; }
+#city-lock-form label { display: block; font-size: 0.75rem; color: #f0d78c; margin-bottom: 0.35rem; letter-spacing: 0.06em; text-transform: uppercase; }
+#city-lock-form input {
+  width: 100%; padding: 0.7rem 0.85rem; border-radius: 10px;
+  border: 1px solid #4a2024; background: #1a0a0c; color: #f2e8e6;
+  font-size: 1rem; margin-bottom: 0.75rem;
+}
+#city-lock-form button {
+  width: 100%; padding: 0.75rem; border-radius: 10px; border: none;
+  background: linear-gradient(90deg, #8b151c, #d4a017); color: #0a0304;
+  font-weight: 800; letter-spacing: 0.04em; cursor: pointer;
+}
+#city-lock-form button:hover { filter: brightness(1.08); }
+.lock-err { color: #ff8a90; font-size: 0.85rem; margin: 0.6rem 0 0; text-align: center; }
+.lock-hint { color: #6a5a5c; font-size: 0.72rem; margin: 0.85rem 0 0; text-align: center; }
