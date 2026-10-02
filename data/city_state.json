@@ -1,5 +1,5 @@
 {
-  "updated_pt": "2026-10-02T12:54:00-07:00",
+  "updated_pt": "2026-10-02T13:17:35-07:00",
   "city": "MONEY CITY",
   "year": 0,
   "creator": "Keysean Caris",
@@ -75,7 +75,7 @@
       "district": "Alpha",
       "rank": "Alpha \u00b7 landscape / plant",
       "status": "held",
-      "notes": "Nursery offline packs PASS. Live DualCortex HELD."
+      "notes": "Nursery packs HELD. Box DualCortex via city_brains (1.5b)."
     },
     {
       "name": "MONEY TRAIL",
@@ -163,10 +163,19 @@
       "note": "menu 4 offline demo"
     },
     {
-      "name": "SEED DualCortex packs",
-      "status": "HELD",
-      "note": "until new Gate E + Creator"
+      "name": "DualCortex brains",
+      "status": "LIVE",
+      "note": "Ollama 1.5b L/R + bridge :8787 (hello-only sandbox)"
     }
   ],
-  "mmm_drills": "01\u201319 shipped (advisory)"
+  "mmm_drills": "01\u201319 shipped (advisory)",
+  "brains": {
+    "left": "deepseek-r1:1.5b",
+    "right": "qwen2.5:1.5b",
+    "merge": "qwen2.5:1.5b",
+    "bridge": "127.0.0.1:8787",
+    "windows_full": "deepseek-r1:latest + qwen2.5:latest via windows_starter",
+    "creative_mode": true,
+    "rule": "JOB_HALT ON \u00b7 Gate E hello only \u00b7 hard stops stay"
+  }
 }

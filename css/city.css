@@ -658,3 +658,59 @@ body.locked { overflow: hidden; }
 #city-lock-form button:hover { filter: brightness(1.08); }
 .lock-err { color: #ff8a90; font-size: 0.85rem; margin: 0.6rem 0 0; text-align: center; }
 .lock-hint { color: #6a5a5c; font-size: 0.72rem; margin: 0.85rem 0 0; text-align: center; }
+
+/* —— Brains tab —— */
+.brains-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.65rem; }
+#brains-prompt {
+  width: 100%;
+  resize: vertical;
+  min-height: 4.5rem;
+  background: rgba(8, 2, 3, 0.85);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  color: var(--cream);
+  padding: 0.7rem 0.85rem;
+  font: inherit;
+  line-height: 1.45;
+}
+#brains-prompt:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: var(--glow-gold);
+}
+.brains-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.65rem; }
+.brains-btn {
+  appearance: none;
+  border: 1px solid var(--gold-dim);
+  background: linear-gradient(180deg, #3a1a08, #1a0804);
+  color: var(--gold-bright);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: var(--glow-ember);
+}
+.brains-btn:hover { border-color: var(--gold); box-shadow: var(--glow-gold); }
+.brains-btn:disabled { opacity: 0.55; cursor: wait; }
+.brains-btn.secondary {
+  background: rgba(20, 6, 8, 0.9);
+  color: var(--smoke);
+  box-shadow: none;
+}
+.brains-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--cream);
+  margin: 0.35rem 0 0;
+  max-height: 280px;
+  overflow: auto;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+.brains-merge {
+  border-color: rgba(212, 160, 23, 0.55);
+  box-shadow: var(--glow-gold);
+}
+.brains-out { align-items: stretch; }
