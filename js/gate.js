@@ -23,15 +23,22 @@
     const wrap = document.createElement("div");
     wrap.id = "city-lock";
     wrap.innerHTML = `
+      <div class="gate-stage" aria-hidden="true">
+        <div class="gate-bg gate-clouds"></div>
+        <div class="gate-bg gate-sea"></div>
+        <div class="gate-vignette"></div>
+        <img class="gate-piece gate-skull" src="assets/gate/hooded_skull.jpg" alt="" />
+        <img class="gate-piece gate-void" src="assets/gate/void_eyes.jpg" alt="" />
+        <img class="gate-piece gate-lily" src="assets/gate/lily_crosshair.jpg" alt="" />
+        <img class="gate-piece gate-claw" src="assets/gate/claw.jpg" alt="" />
+        <div class="gate-grain"></div>
+      </div>
       <div class="lock-card">
         <div class="lock-brand">MONEY CITY</div>
-        <p class="lock-sub">Password required · Creator gothic gate</p>
         <form id="city-lock-form" autocomplete="current-password">
-          <label for="city-key">City key</label>
-          <input id="city-key" name="password" type="password" required autofocus placeholder="••••••••" />
-          <button type="submit">Enter the city</button>
-          <p id="city-lock-err" class="lock-err" hidden>Wrong key. Try again.</p>
-          <p class="lock-hint">${cfg.hint || ""}</p>
+          <input id="city-key" name="password" type="password" required autofocus placeholder="Password" aria-label="Password" />
+          <button type="submit">Enter</button>
+          <p id="city-lock-err" class="lock-err" hidden>Wrong key</p>
         </form>
       </div>`;
     document.body.prepend(wrap);

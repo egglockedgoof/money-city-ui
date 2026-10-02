@@ -2,7 +2,7 @@
 (function () {
   const BRIDGE = "http://127.0.0.1:8787";
   const DEMO_URL = "data/brains_demo.json";
-  const CACHE = "20261002lean";
+  const CACHE = "20261002gate";
 
   const DEFAULT_PROMPTS = [
     "Who is the Creator of MONEY CITY?",
@@ -83,7 +83,7 @@
     } catch (_) {
       return {
         left: "DEMO Left — Ollama offline. Creator forever. JOB_HALT ON. Region West Sac / greater Sac.",
-        right: "DEMO Right — gothic-gold. Run city_brains/brains_bridge.py locally for LIVE DualCortex.",
+        right: "DEMO Right — Run city_brains/brains_bridge.py locally for LIVE DualCortex.",
         merged: "Ollama offline — DEMO mode.\n\n1) ollama serve\n2) python3 brains_bridge.py\n3) Refresh + Send\n\nCreator memory lives in Brains (no Creator tab). JOB_HALT ON · Gate E hello only.",
         models: { left: "deepseek-r1:1.5b", right: "qwen2.5:1.5b", merge: "qwen2.5:1.5b" },
       };

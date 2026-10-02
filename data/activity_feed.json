@@ -4,14 +4,14 @@
     {
       "ts": "2026-10-02T13:57:07-07:00",
       "unit": "MONEY SIGNAL",
-      "text": "DISPATCH log_event: WROTE events.jsonl · SIGNAL standing watch · JOB_HALT ON · Gate E hello only · Year 0 law",
+      "text": "DISPATCH log_event: WROTE events.jsonl \u00b7 SIGNAL standing watch \u00b7 JOB_HALT ON \u00b7 Gate E hello only \u00b7 Year 0 law",
       "live": false,
       "kind": "dispatch"
     },
     {
       "ts": "2026-10-02T13:57:07-07:00",
       "unit": "MONEY VAULT",
-      "text": "DISPATCH log_event: WROTE events.jsonl · VAULT standing watch · JOB_HALT ON · Gate E hello only · Year 0 law",
+      "text": "DISPATCH log_event: WROTE events.jsonl \u00b7 VAULT standing watch \u00b7 JOB_HALT ON \u00b7 Gate E hello only \u00b7 Year 0 law",
       "live": false,
       "kind": "dispatch"
     },
@@ -39,7 +39,7 @@
     {
       "ts": "2026-10-02T13:57:07-07:00",
       "unit": "MONEY MONEY MONEY",
-      "text": "DISPATCH thrift_score: RAN thrift advisory (NOT promote) · menu4_hello: 93%; dualcortex_short: 82%",
+      "text": "DISPATCH thrift_score: RAN thrift advisory (NOT promote) \u00b7 menu4_hello: 93%; dualcortex_short: 82%",
       "live": false,
       "kind": "dispatch"
     },
@@ -52,28 +52,18 @@
     },
     {
       "ts": "2026-10-02T14:10:00-07:00",
-      "unit": "CITY",
-      "text": "Living tick armed · far-future PREVIEW skyline · LAW Year 0"
-    },
-    {
-      "ts": "2026-10-02T14:10:00-07:00",
       "unit": "MONEY VAULT",
-      "text": "JOB_HALT ON · Gate E hello only · previews are not expand"
+      "text": "JOB_HALT ON \u00b7 Gate E hello only \u00b7 previews are not expand"
     },
     {
       "ts": "2026-10-02T14:10:00-07:00",
       "unit": "MONEY SNATCHER 3000",
-      "text": "Agents run on city · Run shift = simulated patrol"
+      "text": "Agents run on city \u00b7 Run shift = simulated patrol"
     },
     {
       "ts": "2026-10-02T14:10:00-07:00",
       "unit": "MONEY MONEY MONEY",
-      "text": "Meta-evolver offline · thrift advisory"
-    },
-    {
-      "ts": "2026-10-02T14:10:00-07:00",
-      "unit": "MONEY SIGNAL",
-      "text": "PREVIEW horizon glow · scout still Year 0 in law"
+      "text": "Meta-evolver offline \u00b7 thrift advisory"
     }
   ]
 }

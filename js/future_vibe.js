@@ -1,6 +1,6 @@
 /* MONEY CITY — quiet future accent. LAW stays Year 0. No PREVIEW spam. */
 (function () {
-  const CACHE = "20261002lean";
+  const CACHE = "20261002gate";
   let PREVIEW = null;
 
   async function load() {

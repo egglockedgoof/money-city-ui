@@ -1,6 +1,6 @@
 /* MONEY CITY — living tick (no Ollama). Year 0 DEMO life on Pages. */
 (function () {
-  const CACHE = "20261002lean";
+  const CACHE = "20261002gate";
   const SHORT_TO_UNIT = {
     SNATCHER: "MONEY SNATCHER 3000",
     MMM: "MONEY MONEY MONEY",

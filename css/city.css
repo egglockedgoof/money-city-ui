@@ -1,4 +1,4 @@
-/* MONEY CITY — lean command deck. Blood-red + gold, clean HUD. 2026-10-02 lean */
+/* MONEY CITY — blood-red + gold lean HUD */
 :root {
   --bg: #070203;
   --bg2: #100406;
@@ -31,37 +31,125 @@ body {
 
 #app { max-width: 1080px; margin: 0 auto; padding: 0.85rem 1rem 2rem; }
 
-/* Lock gate */
+/* Gate — Keysean art collage */
 body.locked { overflow: hidden; }
 #city-lock {
   position: fixed; inset: 0; z-index: 100;
   display: grid; place-items: center;
-  background: radial-gradient(ellipse at 50% 30%, #2a080c, #050101 70%);
+  background: #050101;
+}
+.gate-stage {
+  position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+}
+.gate-bg {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+}
+.gate-clouds {
+  background-image: url("../assets/gate/red_clouds.jpg");
+  filter: saturate(1.15) contrast(1.05);
+  opacity: 0.95;
+}
+.gate-sea {
+  background-image: url("../assets/gate/red_sea.jpg");
+  background-position: center bottom;
+  background-size: cover;
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+  mask-image: linear-gradient(180deg, transparent 20%, #000 55%, #000 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 20%, #000 55%, #000 100%);
+}
+.gate-vignette {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 42%, transparent 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.88) 100%),
+    linear-gradient(180deg, rgba(5,1,1,0.35) 0%, transparent 30%, rgba(5,1,1,0.75) 100%);
+}
+.gate-piece {
+  position: absolute;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+.gate-skull {
+  width: min(42vw, 340px); height: auto; aspect-ratio: 1;
+  left: 50%; top: 38%; transform: translate(-50%, -58%);
+  border-radius: 50%;
+  opacity: 0.88;
+  mix-blend-mode: screen;
+  filter: contrast(1.1) saturate(1.05);
+  mask-image: radial-gradient(circle, #000 55%, transparent 78%);
+  -webkit-mask-image: radial-gradient(circle, #000 55%, transparent 78%);
+}
+.gate-void {
+  width: min(28vw, 200px); height: auto; aspect-ratio: 1;
+  right: 6%; top: 12%;
+  opacity: 0.42;
+  mix-blend-mode: lighten;
+  filter: contrast(1.15);
+  mask-image: radial-gradient(circle, #000 40%, transparent 72%);
+  -webkit-mask-image: radial-gradient(circle, #000 40%, transparent 72%);
+}
+.gate-lily {
+  width: min(22vw, 160px); height: auto; aspect-ratio: 1;
+  left: 5%; bottom: 14%;
+  opacity: 0.55;
+  mix-blend-mode: screen;
+  filter: contrast(1.1);
+  mask-image: radial-gradient(circle, #000 45%, transparent 75%);
+  -webkit-mask-image: radial-gradient(circle, #000 45%, transparent 75%);
+}
+.gate-claw {
+  width: min(26vw, 190px); height: auto; aspect-ratio: 1;
+  right: 4%; bottom: 8%;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  filter: contrast(1.2);
+  mask-image: radial-gradient(circle, #000 40%, transparent 70%);
+  -webkit-mask-image: radial-gradient(circle, #000 40%, transparent 70%);
+}
+.gate-grain {
+  position: absolute; inset: 0;
+  opacity: 0.12;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  pointer-events: none;
 }
 .lock-card {
-  width: min(360px, 92vw);
-  padding: 1.6rem 1.4rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  position: relative; z-index: 2;
+  width: min(320px, 88vw);
+  padding: 1.5rem 1.35rem 1.35rem;
+  background: rgba(6, 2, 3, 0.72);
+  border: 1px solid rgba(212, 160, 23, 0.35);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 20px 60px rgba(0,0,0,0.55);
 }
 .lock-brand {
-  font-weight: 800; letter-spacing: 0.14em; font-size: 1.15rem;
-  color: var(--gold-b); margin-bottom: 0.35rem;
+  font-weight: 800; letter-spacing: 0.22em; font-size: 1.05rem;
+  color: var(--gold-b); margin: 0 0 1.1rem; text-align: center;
 }
-.lock-sub, .lock-hint { color: var(--muted); font-size: 0.8rem; margin: 0 0 0.9rem; }
-#city-lock label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.08em; }
 #city-key {
-  width: 100%; padding: 0.65rem 0.75rem; margin-bottom: 0.75rem;
-  background: #0a0304; border: 1px solid var(--line); border-radius: 8px;
-  color: var(--cream); font: inherit;
+  width: 100%; padding: 0.7rem 0.8rem; margin-bottom: 0.65rem;
+  background: rgba(0,0,0,0.55); border: 1px solid rgba(212,160,23,0.28);
+  border-radius: 8px; color: var(--cream); font: inherit; text-align: center;
+  letter-spacing: 0.08em;
 }
+#city-key::placeholder { color: #6a584e; letter-spacing: 0.12em; }
+#city-key:focus { outline: none; border-color: var(--gold); }
 #city-lock button {
-  width: 100%; padding: 0.7rem; border: none; border-radius: 8px; cursor: pointer;
-  font: inherit; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  width: 100%; padding: 0.72rem; border: none; border-radius: 8px; cursor: pointer;
+  font: inherit; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
   background: linear-gradient(135deg, var(--gold-b), var(--gold)); color: #1a0808;
 }
-.lock-err { color: var(--halt); font-size: 0.8rem; margin: 0.5rem 0 0; }
+#city-lock button:hover { filter: brightness(1.06); }
+.lock-err { color: var(--halt); font-size: 0.78rem; margin: 0.55rem 0 0; text-align: center; }
+@media (max-width: 600px) {
+  .gate-skull { width: min(55vw, 260px); top: 34%; }
+  .gate-void { width: 28vw; opacity: 0.32; }
+  .gate-lily, .gate-claw { opacity: 0.38; width: 26vw; }
+}
 
 /* Topbar */
 .topbar {

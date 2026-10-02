@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MONEY CITY</title>
-  <meta name="description" content="MONEY CITY Year 0 command deck" />
-  <link rel="stylesheet" href="css/city.css?v=20261002lean" />
+  <meta name="description" content="MONEY CITY" />
+  <link rel="stylesheet" href="css/city.css?v=20261002gate" />
 </head>
 <body>
   <div id="app" hidden>
     <header class="topbar">
-      <div class="brand">MONEY CITY<span>Year 0 · Command Deck</span></div>
+      <div class="brand">MONEY CITY<span>Year 0</span></div>
       <div class="badges">
         <span class="badge badge-halt">HALT</span>
         <span class="badge badge-gate">Gate E</span>
@@ -22,7 +22,7 @@
 
     <div class="ticker" id="activity-ticker" aria-live="polite">
       <span class="ticker-label">FEED</span>
-      <div class="ticker-track"><div class="ticker-inner" id="ticker-inner">Standing by…</div></div>
+      <div class="ticker-track"><div class="ticker-inner" id="ticker-inner">—</div></div>
     </div>
 
     <nav class="nav">
@@ -122,7 +122,7 @@
         <div class="agent-side">
           <div id="agent-sheet" class="card agent-sheet">
             <h4>Select an agent</h4>
-            <p class="meta">Open a sheet for pulse, brief, or war link.</p>
+            <p class="meta">Pulse · brief · war.</p>
           </div>
           <div class="card feed-card">
             <div class="feed-head">
@@ -142,7 +142,7 @@
           <h4>War Room</h4>
           <span class="meta" id="war-updated"></span>
         </div>
-        <p class="meta">Last local dispatch. Run on PC: <code>python city_runtime/dispatch_agent.py --agent ALL --job shift</code></p>
+        <p class="meta">Last dispatch · <code>dispatch_agent.py --agent ALL --job shift</code></p>
         <div class="row-actions">
           <button type="button" id="war-reload" class="btn">Reload</button>
           <button type="button" id="war-how" class="btn ghost">How</button>
@@ -169,13 +169,13 @@
       </div>
     </section>
 
-    <!-- OPS = systems + actions + thrift (lean stack) -->
+    <!-- OPS -->
     <section id="panel-ops" class="panel">
       <div id="panel-systems" class="ops-block">
         <div class="card">
           <h4>Systems</h4>
           <div id="systems" class="systems-list"></div>
-          <p class="meta" style="margin-top:0.6rem">Gate: <span id="gate-scope"></span></p>
+          <p class="meta" style="margin-top:0.6rem">Gate E · <span id="gate-scope"></span></p>
           <div id="sandbox-flags" class="meta"></div>
           <pre id="systems-output" class="out" hidden style="margin-top:0.65rem"></pre>
         </div>
@@ -198,7 +198,7 @@
       <div id="panel-thrift" class="ops-block" style="margin-top:0.85rem">
         <div class="card" id="thrift">
           <h4>Thrift</h4>
-          <p class="meta">Advisory only — promote gate before live use.</p>
+          <p class="meta">Advisory.</p>
         </div>
         <div class="card" style="margin-top:0.65rem" id="thrift-score-card" hidden>
           <h4>Score</h4>
@@ -225,7 +225,7 @@
         <div class="quick-prompts" id="quick-prompts"></div>
       </div>
       <div class="card" style="margin-top:0.85rem">
-        <textarea id="brains-prompt" rows="3" placeholder="Ask the city — Creator, crew, law, DualCortex…"></textarea>
+        <textarea id="brains-prompt" rows="3" placeholder="Ask DualCortex…"></textarea>
         <div class="row-actions">
           <button type="button" id="brains-send" class="btn">Send</button>
           <button type="button" id="brains-refresh" class="btn ghost">Status</button>
@@ -235,15 +235,15 @@
       <div class="brains-out">
         <div class="card"><h4>Left</h4><pre id="brains-left" class="brains-pre">—</pre></div>
         <div class="card"><h4>Right</h4><pre id="brains-right" class="brains-pre">—</pre></div>
-        <div class="card brains-merge"><h4>Merge</h4><pre id="brains-merged" class="brains-pre">DEMO works on Pages. LIVE needs Ollama + bridge :8787. Creator brief lives here.</pre></div>
+        <div class="card brains-merge"><h4>Merge</h4><pre id="brains-merged" class="brains-pre">DEMO on Pages · LIVE on :8787</pre></div>
       </div>
     </section>
 
     <!-- LAW -->
     <section id="panel-law" class="panel">
       <div class="card">
-        <h4>Law · Year 0</h4>
-        <p class="meta">Constitution v1.2 · Security v1.1 · Army Spec v1.0.1</p>
+        <h4>Law</h4>
+        <p class="meta">Year 0 · Constitution · Security · Army Spec</p>
         <div id="law-articles" class="law-articles"></div>
       </div>
     </section>
@@ -253,11 +253,11 @@
       <a href="https://github.com/egglockedgoof/money-city-ui" target="_blank" rel="noopener">UI repo</a>
     </footer>
   </div>
-  <script src="js/gate_config.js?v=1"></script>
-  <script src="js/gate.js?v=1"></script>
-  <script src="js/live_loop.js?v=20261002lean"></script>
-  <script src="js/future_vibe.js?v=20261002lean"></script>
-  <script src="js/city.js?v=20261002lean"></script>
-  <script src="js/brains.js?v=20261002lean"></script>
+  <script src="js/gate_config.js?v=20261002gate"></script>
+  <script src="js/gate.js?v=20261002gate"></script>
+  <script src="js/live_loop.js?v=20261002gate"></script>
+  <script src="js/future_vibe.js?v=20261002gate"></script>
+  <script src="js/city.js?v=20261002gate"></script>
+  <script src="js/brains.js?v=20261002gate"></script>
 </body>
 </html>

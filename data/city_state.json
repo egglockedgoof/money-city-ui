@@ -13,7 +13,7 @@
   "constitution": "v1.2",
   "security_pack": "v1.1 ENDORSED",
   "army_spec": "v1.0.1",
-  "theme": "lean gothic HUD \u00b7 blood-red + gold",
+  "theme": "blood-red + gold",
   "districts": [
     {
       "id": "supreme",
@@ -80,8 +80,8 @@
       "rank": "Alpha lead + Gamma coordinator",
       "status": "active",
       "role": "Alpha / city-build lead \u00b7 plant+grounds+apply when unhalted",
-      "notes": "Gold command deck. Tears down the old grind. Coordinates the living city. Gate E smoke + UI twist.",
-      "flavor": "Gold command deck. Tears down the old grind. Coordinates the living city. Gate E smoke + UI twist.",
+      "notes": "City-build lead \u00b7 Gate E \u00b7 UI.",
+      "flavor": "City-build lead \u00b7 Gate E \u00b7 UI.",
       "pin": {
         "x": 18,
         "y": 62
@@ -334,7 +334,7 @@
         ],
         "rank": "Alpha lead + Gamma coordinator",
         "status": "active",
-        "flavor": "Gold command deck. Tears down the old grind. Coordinates the living city. Gate E smoke + UI twist.",
+        "flavor": "City-build lead \u00b7 Gate E \u00b7 UI.",
         "pin": {
           "x": 18,
           "y": 62
