@@ -38,6 +38,7 @@
     <nav class="nav">
       <button class="active" data-panel="panel-map">City Map</button>
       <button data-panel="panel-agents">Agents</button>
+      <button data-panel="panel-war">War Room</button>
       <button data-panel="panel-systems">Systems</button>
       <button data-panel="panel-actions">Actions</button>
       <button data-panel="panel-thrift">Thrift</button>
@@ -146,6 +147,48 @@
         <div id="room-agents" class="room-agents"></div>
         <div id="room-actions" class="room-actions"></div>
         <pre id="room-output" class="room-output" hidden></pre>
+      </div>
+    </section>
+
+    
+    <section id="panel-war" class="panel">
+      <div class="card war-hero">
+        <h4>District War Room · local army dispatch</h4>
+        <p class="meta">This is where agents do <strong>real offline work</strong> on box/PC. Pages shows the last run. Peer Grok bots (MMM etc.) are separate — city dispatches <em>local workers</em> now.</p>
+        <div class="honesty-grid" id="honesty-grid">
+          <div class="honesty-chip local">Runs on Pages view: last results + DEMO brains + living tick</div>
+          <div class="honesty-chip pc">Needs PC/box script: sandbox hello · inventory · thrift · events</div>
+          <div class="honesty-chip bridge">Needs Ollama + bridge: DualCortex LIVE</div>
+          <div class="honesty-chip halt">Needs Creator unhalt: job applies (JOB_HALT ON)</div>
+        </div>
+        <p class="meta" style="margin-top:0.65rem">On PC/box: <code>python3 city_runtime/dispatch_agent.py --agent ALL --job shift</code></p>
+        <div class="brains-actions" style="margin-top:0.75rem">
+          <button type="button" id="war-reload" class="brains-btn">Reload last dispatch</button>
+          <button type="button" id="war-how" class="brains-btn secondary">How real work runs</button>
+        </div>
+        <pre id="war-how-box" class="room-output" hidden></pre>
+      </div>
+      <div class="card" style="margin-top:1rem">
+        <h4>Last real dispatch <span class="meta" id="war-updated"></span></h4>
+        <div id="war-results" class="war-results"></div>
+      </div>
+      <div class="card" style="margin-top:1rem">
+        <h4>Queue a local job (intent on Pages · execute on PC)</h4>
+        <p class="meta">Pick agent + job. On Pages this logs intent into the feed and shows last matching result. On PC the same choices run for real via <code>dispatch_agent.py</code>.</p>
+        <div class="war-queue">
+          <select id="war-agent"></select>
+          <select id="war-job">
+            <option value="shift">shift (agent default)</option>
+            <option value="sandbox_hello">sandbox_hello (Gate E)</option>
+            <option value="thrift_score">thrift_score (advisory)</option>
+            <option value="inventory">inventory (money_city fs)</option>
+            <option value="log_event">log_event (events.jsonl)</option>
+            <option value="brains_demo">brains_demo (no Ollama)</option>
+            <option value="dualcortex">dualcortex (needs Ollama)</option>
+          </select>
+          <button type="button" id="war-dispatch" class="brains-btn">Dispatch</button>
+        </div>
+        <pre id="war-out" class="room-output" style="margin-top:0.75rem" hidden></pre>
       </div>
     </section>
 

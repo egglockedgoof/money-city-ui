@@ -1285,3 +1285,50 @@ body.vibe-future .city-lights-overlay {
 }
 .shift-hint { margin-top: 0.55rem; }
 .run-shift-btn { border-color: rgba(62,207,142,0.55) !important; }
+
+/* —— War Room —— */
+.war-hero { border-color: rgba(212,160,23,0.5); box-shadow: var(--glow-gold); }
+.honesty-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+.honesty-chip {
+  font-size: 0.72rem;
+  font-weight: 650;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid;
+  line-height: 1.35;
+}
+.honesty-chip.local { border-color: var(--good); color: #9af0c8; background: rgba(62,207,142,0.1); }
+.honesty-chip.pc { border-color: var(--gold); color: var(--gold-bright); background: rgba(212,160,23,0.1); }
+.honesty-chip.bridge { border-color: var(--held); color: #e0d0ff; background: rgba(155,107,255,0.12); }
+.honesty-chip.halt { border-color: var(--halt); color: #ffb3b3; background: rgba(255,77,77,0.1); }
+.war-results { display: flex; flex-direction: column; gap: 0.65rem; margin-top: 0.5rem; }
+.war-result {
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(62,207,142,0.35);
+  background: rgba(8,20,14,0.45);
+}
+.war-result.fail {
+  border-color: rgba(255,77,77,0.4);
+  background: rgba(40,8,10,0.5);
+}
+.war-queue {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.65rem;
+}
+.war-queue select {
+  background: #1a080a;
+  color: var(--cream);
+  border: 1px solid rgba(212,160,23,0.35);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+}

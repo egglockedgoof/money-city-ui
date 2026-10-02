@@ -1,5 +1,5 @@
 {
-  "updated_pt": "2026-10-02T13:38:00-07:00",
+  "updated_pt": "2026-10-02T13:57:00-07:00",
   "city": "MONEY CITY",
   "year": 0,
   "creator": "Creator (identity private \u2014 see briefing_room)",
@@ -256,6 +256,12 @@
     ]
   },
   "systems": [
+    {
+      "name": "City Runtime",
+      "status": "LIVE",
+      "note": "dispatch_agent.py local workers \u00b7 JOB_HALT",
+      "key": "runtime"
+    },
     {
       "name": "Sandbox",
       "status": "PASS",

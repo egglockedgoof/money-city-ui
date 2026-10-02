@@ -208,6 +208,15 @@ function roomActionsFor(id) {
           showPanel("panel-agents");
           return "Switched to Agents tab — pick a hustler for detail sheet.";
         }
+      },
+      {
+        label: "Open War Room",
+        secondary: true,
+        run: () => {
+          showPanel("panel-war");
+          renderWarRoom();
+          return "War Room — last REAL local dispatch results. Execute on PC: dispatch_agent.py";
+        }
       }
     ];
   }
@@ -388,29 +397,35 @@ function openAgentSheet(u) {
   const liveLine = (typeof window.__cityGetLiveStatus === "function" && short)
     ? window.__cityGetLiveStatus(short)
     : "standing by…";
-  const previewBanner = (window.__cityEraId && window.__cityEraId !== "y0")
-    ? '<div class="preview-banner">PREVIEW / NOT LIVE LAW · era ' + esc(window.__cityEraId) + '</div>'
-    : "";
+  const previewBanner = '<div class="preview-banner">LAW Year 0 · UI future PREVIEW / NOT LIVE LAW</div>';
+  // Last real dispatch for this agent
+  const latest = (CITY.dispatch && CITY.dispatch.latest && CITY.dispatch.latest.results) || [];
+  const lastJob = latest.find((r) => r.agent === short);
+  const lastJobLine = lastJob
+    ? (lastJob.ok ? "✓ " : "✗ ") + (lastJob.job || "?") + " — " + (lastJob.label || "")
+    : "No local dispatch on file yet";
   sheet.innerHTML =
     previewBanner +
-    '<h4><span class="status-dot status-' + esc(u.status || "active") + '"></span> ' + esc(u.name) + "</h4>" +
-    '<span id="sheet-short" hidden>' + esc(short) + "</span>" +
-    '<div class="meta"><strong>Role:</strong> ' + esc(u.role || u.rank || "") + "</div>" +
-    '<div class="meta"><strong>District:</strong> ' + esc((u.districts || [u.district || "—"]).join(" · ")) + "</div>" +
-    '<div class="meta"><strong>Rank:</strong> ' + esc(eraRank) + "</div>" +
-    '<div class="meta flavor-line">' + esc(eraFlavor) + "</div>" +
-    '<div class="meta live-status-row"><strong>Live:</strong> <span id="sheet-live-line" class="agent-live-status" data-short="' + esc(short) + '">' + esc(liveLine) + "</span></div>" +
-    '<div class="meta"><strong>Last activity:</strong> ' + esc(lastActivityFor(u)) + "</div>" +
-    '<div class="agent-sheet-actions">' +
-    '<button type="button" class="brains-btn" id="sheet-pulse">Pulse / refresh</button>' +
-    '<button type="button" class="brains-btn" id="sheet-brief">Brief me</button>' +
+    "<h4><span class=\"status-dot status-" + esc(u.status || "active") + "\"></span> " + esc(u.name) + "</h4>" +
+    "<span id=\"sheet-short\" hidden>" + esc(short) + "</span>" +
+    "<div class=\"meta\"><strong>Role:</strong> " + esc(u.role || u.rank || "") + "</div>" +
+    "<div class=\"meta\"><strong>District:</strong> " + esc((u.districts || [u.district || "—"]).join(" · ")) + "</div>" +
+    "<div class=\"meta\"><strong>Rank:</strong> " + esc(eraRank) + "</div>" +
+    "<div class=\"meta flavor-line\">" + esc(eraFlavor) + "</div>" +
+    "<div class=\"meta live-status-row\"><strong>Live:</strong> <span id=\"sheet-live-line\" class=\"agent-live-status\" data-short=\"" + esc(short) + "\">" + esc(liveLine) + "</span></div>" +
+    "<div class=\"meta\"><strong>Last real dispatch:</strong> " + esc(lastJobLine) + "</div>" +
+    "<div class=\"meta\"><strong>Last activity:</strong> " + esc(lastActivityFor(u)) + "</div>" +
+    "<div class=\"agent-sheet-actions\">" +
+    "<button type=\"button\" class=\"brains-btn\" id=\"sheet-pulse\">Pulse / refresh</button>" +
+    "<button type=\"button\" class=\"brains-btn\" id=\"sheet-brief\">Brief me</button>" +
     (short && short !== "JUNIOR"
-      ? '<button type="button" class="brains-btn run-shift-btn" id="sheet-shift" data-short="' + esc(short) + '">Run shift</button>'
+      ? "<button type=\"button\" class=\"brains-btn run-shift-btn\" id=\"sheet-shift\" data-short=\"" + esc(short) + "\">Run shift</button>"
       : "") +
-    '<span class="sys-chip ' + statusClass + '" id="sheet-status" title="Display only — no applies">Status: ' + esc(statusLabel) + (u.status === "held" ? " (SEED held)" : "") + "</span>" +
+    "<button type=\"button\" class=\"brains-btn secondary\" id=\"sheet-war\">War Room</button>" +
+    "<span class=\"sys-chip " + statusClass + "\" id=\"sheet-status\" title=\"Display only — no applies\">Status: " + esc(statusLabel) + (u.status === "held" ? " (SEED held)" : "") + "</span>" +
     "</div>" +
-    '<p class="meta shift-hint">Run shift = simulated offline patrol (3–5 feed lines). No applies. JOB_HALT ON.</p>' +
-    '<pre class="room-output" id="sheet-out" hidden></pre>';
+    "<p class=\"meta shift-hint\">Run shift = simulated feed on Pages. Real work = War Room / <code>dispatch_agent.py</code> on PC (Gate E hello, thrift, inventory, events). JOB_HALT ON · no applies.</p>" +
+    "<pre class=\"room-output\" id=\"sheet-out\" hidden></pre>";
 
   const pulseBtn = document.getElementById("sheet-pulse");
   const briefBtn = document.getElementById("sheet-brief");
@@ -418,9 +433,10 @@ function openAgentSheet(u) {
   if (pulseBtn) {
     pulseBtn.addEventListener("click", async () => {
       await refreshFeed();
+      CITY.dispatch = await loadJSON("data/dispatch_results.json?v=" + CACHE, CITY.dispatch);
       if (out) {
         out.hidden = false;
-        out.textContent = "Feed refreshed.\n" + lastActivityFor(u);
+        out.textContent = "Feed refreshed.\n" + lastActivityFor(u) + (lastJob ? "\n\nLast dispatch:\n" + JSON.stringify(lastJob, null, 2).slice(0, 1200) : "");
       }
       openAgentSheet(u);
     });
@@ -434,6 +450,8 @@ function openAgentSheet(u) {
       }
     });
   }
+  const warBtn = document.getElementById("sheet-war");
+  if (warBtn) warBtn.addEventListener("click", () => { showPanel("panel-war"); renderWarRoom(); });
   const shiftBtn = document.getElementById("sheet-shift");
   if (shiftBtn) {
     shiftBtn.addEventListener("click", () => {
@@ -442,7 +460,7 @@ function openAgentSheet(u) {
         window.__cityRunShift(s);
         if (out) {
           out.hidden = false;
-          out.textContent = "Simulated shift for " + s + " — watch the activity feed. No applies.";
+          out.textContent = "Simulated shift for " + s + " — watch activity feed.\nFor REAL work open War Room or run dispatch_agent.py on PC.";
         }
       }
     });
@@ -779,6 +797,127 @@ function wireTabs() {
   });
   const pulseFeed = document.getElementById("pulse-feed-btn");
   if (pulseFeed) pulseFeed.addEventListener("click", () => refreshFeed());
+}
+
+
+/* —— WAR ROOM / DISPATCH —— */
+const WAR_AGENTS = ["SNATCHER","MMM","MAGNET","SEED","TRAIL","VAULT","SIGNAL"];
+const JOB_HONESTY = {
+  sandbox_hello: "PC/box · Gate E hello via sandbox run.sh",
+  thrift_score: "PC/box · advisory thrift JSON (NOT promote)",
+  inventory: "PC/box · filesystem inventory under money_city",
+  log_event: "PC/box · append city_actions/events.jsonl",
+  brains_demo: "Pages OK · DualCortex DEMO lore (no Ollama)",
+  dualcortex: "PC/box · needs Ollama (+ bridge for LIVE chat)",
+  shift: "PC/box · agent default real job",
+  apply: "BLOCKED · JOB_HALT · Creator unhalt only"
+};
+
+function renderWarRoom() {
+  const sel = document.getElementById("war-agent");
+  if (sel && !sel.options.length) {
+    WAR_AGENTS.forEach((a) => {
+      const o = document.createElement("option");
+      o.value = a; o.textContent = a;
+      sel.appendChild(o);
+    });
+  }
+  const latest = (CITY.dispatch && CITY.dispatch.latest) || null;
+  const upd = document.getElementById("war-updated");
+  if (upd) upd.textContent = latest && latest.ts ? "· " + latest.ts : "· none yet — run dispatch_agent.py on PC/box";
+  const box = document.getElementById("war-results");
+  if (!box) return;
+  box.innerHTML = "";
+  const results = (latest && latest.results) || [];
+  if (!results.length) {
+    box.innerHTML = '<p class="meta">No dispatch on file. On box/PC: <code>python3 city_runtime/dispatch_agent.py --agent ALL --job shift</code></p>';
+    return;
+  }
+  results.forEach((r) => {
+    const div = document.createElement("div");
+    div.className = "war-result " + (r.ok ? "ok" : "fail");
+    const title = document.createElement("div");
+    title.className = "action-title";
+    title.textContent = (r.ok ? "✓ " : "✗ ") + (r.agent || "?") + " · " + (r.job || "?") + " — " + (r.label || "");
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = "Where: " + (r.where || "?") + " · " + (JOB_HONESTY[r.job] || "");
+    const pre = document.createElement("pre");
+    pre.className = "action-pre";
+    const show = { ...r };
+    if (show.stdout_tail) show.stdout_tail = String(show.stdout_tail).slice(-500);
+    if (show.stderr_tail) show.stderr_tail = String(show.stderr_tail).slice(-300);
+    pre.textContent = JSON.stringify(show, null, 2);
+    div.appendChild(title);
+    div.appendChild(meta);
+    div.appendChild(pre);
+    box.appendChild(div);
+  });
+}
+
+function wireWarRoom() {
+  const reload = document.getElementById("war-reload");
+  const how = document.getElementById("war-how");
+  const howBox = document.getElementById("war-how-box");
+  const go = document.getElementById("war-dispatch");
+  if (reload) {
+    reload.addEventListener("click", async () => {
+      CITY.dispatch = await loadJSON("data/dispatch_results.json?v=" + CACHE, CITY.dispatch);
+      renderWarRoom();
+    });
+  }
+  if (how && howBox) {
+    how.addEventListener("click", () => {
+      howBox.hidden = !howBox.hidden;
+      howBox.textContent =
+        "REAL WORK PATH (Year 0 law)\\n" +
+        "1) On box/PC unpack MONEY_CITY_PC_PACK\\n" +
+        "2) python3 city_runtime/dispatch_agent.py --agent ALL --job shift\\n" +
+        "3) That runs Gate E hello, thrift advisory, inventory, DEMO brains, events\\n" +
+        "4) Results → city_ui/data/dispatch_results.json + activity_feed\\n" +
+        "5) Push/sync UI or hard-refresh Pages after publish\\n\\n" +
+        "Pages Dispatch button = show last result + feed intent (static host cannot shell).\\n" +
+        "DualCortex LIVE = Ollama + city_brains/brains_bridge.py\\n" +
+        "Job applies = BLOCKED until Creator clears JOB_HALT\\n" +
+        "Peer Grok bots are NOT auto-woken — crew group when Creator says.";
+    });
+  }
+  if (go) {
+    go.addEventListener("click", () => {
+      const agent = (document.getElementById("war-agent") || {}).value || "SNATCHER";
+      const job = (document.getElementById("war-job") || {}).value || "shift";
+      const out = document.getElementById("war-out");
+      const latest = (CITY.dispatch && CITY.dispatch.latest && CITY.dispatch.latest.results) || [];
+      const hit = latest.find((r) => r.agent === agent && (job === "shift" || r.job === job))
+        || latest.find((r) => r.agent === agent);
+      const honesty = JOB_HONESTY[job] || "";
+      let text = "DISPATCH INTENT\\nAgent: " + agent + "\\nJob: " + job + "\\nHonesty: " + honesty + "\\n\\n";
+      if (job === "apply") {
+        text += "BLOCKED — JOB_HALT ON. Creator must unhalt before any applies.\\n";
+      } else if (hit) {
+        text += "LAST REAL RESULT ON FILE:\\n" + JSON.stringify(hit, null, 2).slice(0, 2500);
+      } else {
+        text += "No matching result yet. Run on PC/box:\\npython3 city_runtime/dispatch_agent.py --agent " + agent + " --job " + job + "\\n";
+      }
+      if (out) { out.hidden = false; out.textContent = text; }
+      // Feed ping via live loop if present
+      if (typeof window.__cityRunShift === "function" && job === "shift") {
+        window.__cityRunShift(agent);
+      } else if (window.CITY && CITY.feed) {
+        const items = CITY.feed.items || [];
+        items.unshift({
+          ts: new Date().toLocaleTimeString("en-US", { timeZone: "America/Los_Angeles" }) + " PT",
+          unit: agent,
+          short: agent,
+          text: "War Room intent · " + job + " · " + honesty,
+          kind: "dispatch",
+          live: true
+        });
+        CITY.feed.items = items.slice(0, 28);
+        if (typeof renderActivity === "function") renderActivity(CITY.feed.items);
+      }
+    });
+  }
 }
 
 async function boot() {
