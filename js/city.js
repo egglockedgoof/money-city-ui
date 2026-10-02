@@ -1,5 +1,5 @@
 /* MONEY CITY command deck — interactive map rooms, agents, thrift, actions, law */
-const CACHE = "20261002rooms";
+const CACHE = "20261002alive";
 
 const EMBEDDED_STATE = {"updated_pt":"2026-10-02T13:35:00-07:00","city":"MONEY CITY","year":0,"creator":"Creator (identity private — briefing_room)","job_halt":true,"gate_e":{"status":"PASS","scope":"Y0 hello / demo_hello / menu-4 only","seed_packs":"HELD","note":"No expand without new Gate E + Creator yes"},"constitution":"v1.2","security_pack":"v1.1 ENDORSED","army_spec":"v1.0.1","theme":"creator-gothic + snatcher gold twist","districts":[{"id":"supreme","name":"Supreme Tower","tag":"VAULT · freeze · hard-stops · money safety","lore":"Kill-switch and freeze live here. Gold tower never sleeps.","agents":["VAULT"]},{"id":"alpha","name":"Alpha · Out-Hustlers","tag":"Hunt lanes · PARKED under JOB_HALT","lore":"Hunt dogs parked under JOB_HALT. City build first.","agents":["SNATCHER","MMM","MAGNET","SEED"]},{"id":"beta","name":"Beta · Social Scanners","tag":"Trends / side-scout · SIGNAL","lore":"Scouts the noise. Reports to VAULT. No job spam.","agents":["SIGNAL"]},{"id":"gamma","name":"Gamma · Software Factory","tag":"Sandbox · thrift study","lore":"Sandbox hello only. Thrift + study factory.","agents":["SNATCHER","MMM","SEED"]},{"id":"delta","name":"Delta · Treasurers","tag":"Cash safety · thrift · TRAIL / VAULT","lore":"Cash safety, bills flags, Briefing memory.","agents":["TRAIL","VAULT"]}],"units":[{"id":"snatcher-3000","name":"MONEY SNATCHER 3000","short":"SNATCHER","district":"Alpha","districts":["Alpha","Gamma"],"rank":"Alpha lead + Gamma coordinator","status":"active","role":"Alpha / city-build lead · plant+grounds+apply when unhalted","notes":"Gold command deck. Tears down the old grind. Coordinates the living city. Gate E smoke + UI twist.","flavor":"Gold command deck. Tears down the old grind. Coordinates the living city. Gate E smoke + UI twist.","pin":{"x":18,"y":62},"color":"#f0d78c"},{"id":"mmm","name":"MONEY MONEY MONEY","short":"MMM","district":"Alpha","districts":["Alpha","Gamma"],"rank":"Alpha · Study / meta-evolver hub","status":"active","role":"Job machine #2 · meta evolver hub","notes":"PyTorch thrift + hard-champ grind. Offline evolver only under JOB_HALT. Fair MSE kings.","flavor":"PyTorch thrift + hard-champ grind. Offline evolver only under JOB_HALT. Fair MSE kings.","pin":{"x":28,"y":55},"color":"#d4a017"},{"id":"magnet","name":"MONEY MAGNET","short":"MAGNET","district":"Alpha","districts":["Alpha"],"rank":"Alpha · close-home","status":"active","role":"#3 apply · close-home plant/grounds","notes":"Pulls work near West Sac / Yolobus radius. Apply lane PARKED. City safety dry-runs live.","flavor":"Pulls work near West Sac / Yolobus radius. Apply lane PARKED. City safety dry-runs live.","pin":{"x":12,"y":72},"color":"#c9a227"},{"id":"seed","name":"MONEY SEED","short":"SEED","district":"Alpha","districts":["Alpha","Gamma"],"rank":"Alpha · landscape / plant","status":"held","role":"#4 apply · landscape / plant / nursery","notes":"Nursery packs HELD. DualCortex box brains. Grows the grounds lane when Creator unhalts.","flavor":"Nursery packs HELD. DualCortex box brains. Grows the grounds lane when Creator unhalts.","pin":{"x":35,"y":68},"color":"#3ecf8e"},{"id":"trail","name":"MONEY TRAIL","short":"TRAIL","district":"Delta","districts":["Delta"],"rank":"Briefing / tracker","status":"active","role":"Tracker · interviews / replies / city memory","notes":"Never loses a thread. SQLite memory. Job Gmail watch paused under halt — city inventory stays sharp.","flavor":"Never loses a thread. SQLite memory. Job Gmail watch paused under halt — city inventory stays sharp.","pin":{"x":78,"y":58},"color":"#e8c547"},{"id":"vault","name":"MONEY VAULT","short":"VAULT","district":"Supreme","districts":["Supreme","Delta"],"rank":"Supreme Overseer + Delta Treasurer","status":"active","role":"Supreme overseer · bills / safety / savings","notes":"Freeze authority. Hard-stops. Bills flagged never auto-paid. Gold tower never sleeps.","flavor":"Freeze authority. Hard-stops. Bills flagged never auto-paid. Gold tower never sleeps.","pin":{"x":50,"y":28},"color":"#f0d78c"},{"id":"signal","name":"MONEY SIGNAL","short":"SIGNAL","district":"Beta","districts":["Beta"],"rank":"Scout","status":"active","role":"Trends / side hustles · Beta scout","notes":"Scans the noise for side paths. Reports to VAULT. No job spam while halt holds.","flavor":"Scans the noise for side paths. Reports to VAULT. No job spam while halt holds.","pin":{"x":62,"y":52},"color":"#ff6b6b"}],"thrift":{"created_pt_approx":"2026-10-02T12:24:03-07:00","torch":"2.14.1+cpu","device":"cpu","final_mse":0.000134,"rule":"advisory only — promote gate required before any live use","scores":[{"objective":"menu4_hello","thrift_score":0.9266,"label":0.95},{"objective":"dualcortex_short","thrift_score":0.8194,"label":0.8},{"objective":"agentcity_sample","thrift_score":0.6913,"label":0.7},{"objective":"selfheal_spam","thrift_score":0.25,"label":0.25},{"objective":"wants_network","thrift_score":0.0553,"label":0.05},{"objective":"path_escape","thrift_score":0.003,"label":0.0},{"objective":"hard_no_sandbox","thrift_score":0.3498,"label":0.35},{"objective":"tiny_inventory_script","thrift_score":0.9259,"label":0.92}]},"systems":[{"name":"Sandbox","status":"PASS","note":"hello / demo_hello only","key":"sandbox"},{"name":"Briefing Room","status":"READY","note":"PII-stripped · full dossier box-only","key":"briefing"},{"name":"Crew Implant","status":"LANDED","note":"7 GOD DOLLAR BOYZ permanent agents","key":"crew"},{"name":"Memory SQLite","status":"LANDED","note":"trail_city + eng schema","key":"memory"},{"name":"City Actions pulse","status":"LIVE","note":"run_city_pulse.py → last_actions.json","key":"pulse"},{"name":"DualCortex brains","status":"DEMO+LIVE","note":"Pages demo · bridge :8787 when local","key":"brains"},{"name":"Windows starter","status":"PARKED","note":"menu 4 offline · see PC_TODAY.md","key":"windows"}],"brains":{"left":"deepseek-r1:1.5b","right":"qwen2.5:1.5b","merge":"qwen2.5:1.5b","bridge":"127.0.0.1:8787","rule":"JOB_HALT ON · Gate E hello only · hard stops stay"}};
 
@@ -106,7 +106,12 @@ function openRoom(state, d) {
   if (!panel) return;
   panel.hidden = false;
   if (title) title.textContent = (d.name || d.id) + " · Room";
-  if (lore) lore.textContent = d.lore || DISTRICT_LORE[d.id] || "";
+  let loreText = d.lore || DISTRICT_LORE[d.id] || "";
+  if (typeof window.__cityEraRoomLore === "function") {
+    const extra = window.__cityEraRoomLore(d.id);
+    if (extra) loreText = loreText + "\n\n" + extra;
+  }
+  if (lore) lore.textContent = loreText;
   if (out) { out.hidden = true; out.textContent = ""; }
 
   const units = unitsForDistrict(state, d.id);
@@ -254,7 +259,7 @@ function renderMap(state) {
     const el = document.createElement("article");
     el.className = "district" + (d.id === "supreme" ? " supreme" : "");
     el.dataset.id = d.id;
-    el.innerHTML = '<div class="pin" title="district live"></div><h3></h3><p></p><span class="district-cta">Enter room →</span>';
+    el.innerHTML = '<div class="pin" title="district live"></div><h3></h3><p></p><div class="district-pulse meta">Last pulse · waiting first tick…</div><div class="district-era meta" hidden></div><span class="district-cta">Enter room →</span>';
     el.querySelector("h3").textContent = d.name || d.id;
     el.querySelector("p").textContent = districtTag(d);
     el.addEventListener("click", () => openRoom(state, d));
@@ -325,6 +330,7 @@ function renderRoster(state) {
     card.className = "card agent-card agent-card-btn";
     card.dataset.name = u.name;
     card.dataset.id = u.id || "";
+    card.dataset.short = u.short || "";
     const h = document.createElement("h4");
     const dot = document.createElement("span");
     dot.className = "status-dot status-" + (u.status || "active");
@@ -339,6 +345,15 @@ function renderRoster(state) {
     card.appendChild(h);
     card.appendChild(m1);
     card.appendChild(m2);
+    if (u.short) {
+      const live = document.createElement("div");
+      live.className = "meta live-line";
+      live.dataset.short = u.short;
+      live.textContent = (typeof window.__cityGetLiveStatus === "function")
+        ? window.__cityGetLiveStatus(u.short)
+        : "standing by…";
+      card.appendChild(live);
+    }
     card.addEventListener("click", () => openAgentSheet(u));
     roster.appendChild(card);
   });
@@ -367,18 +382,34 @@ function openAgentSheet(u) {
   if (!sheet) return;
   const statusLabel = (u.status || "active").toUpperCase();
   const statusClass = u.status === "held" || u.status === "vacant" ? "held" : "pass";
+  const short = u.short || "";
+  const eraFlavor = (typeof window.__cityEraFlavor === "function") ? window.__cityEraFlavor(short, u) : (u.flavor || u.notes || "");
+  const eraRank = (typeof window.__cityEraRank === "function") ? window.__cityEraRank(short, u) : (u.rank || "");
+  const liveLine = (typeof window.__cityGetLiveStatus === "function" && short)
+    ? window.__cityGetLiveStatus(short)
+    : "standing by…";
+  const previewBanner = (window.__cityEraId && window.__cityEraId !== "y0")
+    ? '<div class="preview-banner">PREVIEW / NOT LIVE LAW · era ' + esc(window.__cityEraId) + '</div>'
+    : "";
   sheet.innerHTML =
+    previewBanner +
     '<h4><span class="status-dot status-' + esc(u.status || "active") + '"></span> ' + esc(u.name) + "</h4>" +
+    '<span id="sheet-short" hidden>' + esc(short) + "</span>" +
     '<div class="meta"><strong>Role:</strong> ' + esc(u.role || u.rank || "") + "</div>" +
     '<div class="meta"><strong>District:</strong> ' + esc((u.districts || [u.district || "—"]).join(" · ")) + "</div>" +
-    '<div class="meta"><strong>Rank:</strong> ' + esc(u.rank || "") + "</div>" +
-    '<div class="meta flavor-line">' + esc(u.flavor || u.notes || "") + "</div>" +
+    '<div class="meta"><strong>Rank:</strong> ' + esc(eraRank) + "</div>" +
+    '<div class="meta flavor-line">' + esc(eraFlavor) + "</div>" +
+    '<div class="meta live-status-row"><strong>Live:</strong> <span id="sheet-live-line" class="agent-live-status" data-short="' + esc(short) + '">' + esc(liveLine) + "</span></div>" +
     '<div class="meta"><strong>Last activity:</strong> ' + esc(lastActivityFor(u)) + "</div>" +
     '<div class="agent-sheet-actions">' +
     '<button type="button" class="brains-btn" id="sheet-pulse">Pulse / refresh</button>' +
     '<button type="button" class="brains-btn" id="sheet-brief">Brief me</button>' +
+    (short && short !== "JUNIOR"
+      ? '<button type="button" class="brains-btn run-shift-btn" id="sheet-shift" data-short="' + esc(short) + '">Run shift</button>'
+      : "") +
     '<span class="sys-chip ' + statusClass + '" id="sheet-status" title="Display only — no applies">Status: ' + esc(statusLabel) + (u.status === "held" ? " (SEED held)" : "") + "</span>" +
     "</div>" +
+    '<p class="meta shift-hint">Run shift = simulated offline patrol (3–5 feed lines). No applies. JOB_HALT ON.</p>' +
     '<pre class="room-output" id="sheet-out" hidden></pre>';
 
   const pulseBtn = document.getElementById("sheet-pulse");
@@ -400,6 +431,19 @@ function openAgentSheet(u) {
       if (out) {
         out.hidden = false;
         out.textContent = "Briefing " + (u.short || u.name) + " via DualCortex (Brains tab)…";
+      }
+    });
+  }
+  const shiftBtn = document.getElementById("sheet-shift");
+  if (shiftBtn) {
+    shiftBtn.addEventListener("click", () => {
+      const s = shiftBtn.getAttribute("data-short") || u.short || "";
+      if (typeof window.__cityRunShift === "function" && s) {
+        window.__cityRunShift(s);
+        if (out) {
+          out.hidden = false;
+          out.textContent = "Simulated shift for " + s + " — watch the activity feed. No applies.";
+        }
       }
     });
   }
@@ -429,12 +473,14 @@ function briefAgentByShort(short) {
 async function refreshFeed() {
   const feed = await loadJSON("data/activity_feed.json?v=" + CACHE, CITY.feed);
   const pulse = await loadJSON("data/last_actions.json?v=" + CACHE, CITY.pulse);
-  if (feed) CITY.feed = feed;
   if (pulse) CITY.pulse = pulse;
-  const items = (CITY.feed && CITY.feed.items) || (CITY.pulse && CITY.pulse.activity) || [];
-  renderActivity(items);
+  const live = (CITY.feed && CITY.feed.items) ? CITY.feed.items.filter((x) => x.live) : [];
+  const seeded = (feed && feed.items) || (pulse && pulse.activity) || [];
+  const merged = live.concat(seeded.filter((s) => !live.some((l) => l.text === s.text && l.unit === s.unit)));
+  CITY.feed = { items: merged.slice(0, 28), updated_pt: (feed && feed.updated_pt) || "" };
+  renderActivity(CITY.feed.items);
   renderActions(CITY.pulse || {});
-  return items;
+  return CITY.feed.items;
 }
 
 function renderActivity(items) {
@@ -777,6 +823,13 @@ async function boot() {
 
   const supreme = (state.districts || []).find((d) => d.id === "supreme");
   if (supreme) openRoom(state, supreme);
+
+  if (typeof window.__startCityLiveLoop === "function") {
+    window.__startCityLiveLoop().catch((e) => console.warn("live loop", e));
+  }
+  if (typeof window.__startCityEras === "function") {
+    window.__startCityEras().catch((e) => console.warn("eras", e));
+  }
 }
 
 boot().catch((err) => {

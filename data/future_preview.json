@@ -1,0 +1,60 @@
+{
+  "updated_pt": "2026-10-02T14:10:00-07:00",
+  "law_year": 0,
+  "ui_vibe": "far-future gothic megacity (PREVIEW fantasy)",
+  "law_banner": "LAW = Year 0 · JOB_HALT ON · Gate E hello only · everything glowing ahead is PREVIEW / NOT LIVE LAW",
+  "disclaimer": "Visual + flavor PREVIEW only. Constitution, Gate E, and JOB_HALT stay Year 0. No Gate E expand. No years claimed passed.",
+  "agent_preview": {
+    "SNATCHER": {
+      "title": "Supreme Field Marshal (PREVIEW)",
+      "flavor": "PREVIEW: Commands the full Alpha fleet across sandboxed boxes. Still Year 0 city-build lead in law."
+    },
+    "MMM": {
+      "title": "Meta-Evolver Archon (PREVIEW)",
+      "flavor": "PREVIEW: Self-evolution loops under freeze→sandbox→promote. Law today: offline advisory hub only."
+    },
+    "MAGNET": {
+      "title": "Close-Orbit Warden (PREVIEW)",
+      "flavor": "PREVIEW: Dozens of near-home hunters on HITL send. Law today: apply lane PARKED."
+    },
+    "SEED": {
+      "title": "Grounds Dominion (PREVIEW)",
+      "flavor": "PREVIEW: Nursery + landscape army at scale. Law today: packs HELD."
+    },
+    "TRAIL": {
+      "title": "Memory Chronist (PREVIEW)",
+      "flavor": "PREVIEW: City-wide SQLite + vector memory that survives platforms. Law today: inventory sharp, job watch paused."
+    },
+    "VAULT": {
+      "title": "Eternal Freeze Sovereign (PREVIEW)",
+      "flavor": "PREVIEW: Continuity state + Legacy Mode drills. Law today: Supreme freeze, hard-stops, never auto-pay."
+    },
+    "SIGNAL": {
+      "title": "Horizon Scout Prime (PREVIEW)",
+      "flavor": "PREVIEW: District-scale Beta trend mesh. Law today: scout online, no job spam."
+    }
+  },
+  "district_preview": {
+    "supreme": "PREVIEW build-out: always-on gold tower + Legacy Mode vaults. LAW Y0: freeze + hard-stops only.",
+    "alpha": "PREVIEW: 20–50 Out-Hustlers sandboxed. LAW Y0: hunt lanes PARKED under JOB_HALT.",
+    "beta": "PREVIEW: social-scan mesh feeding draft packs. LAW Y0: SIGNAL scout only.",
+    "gamma": "PREVIEW: Docker/CI software factory. LAW Y0: sandbox hello + thrift study.",
+    "delta": "PREVIEW: thrift scoring + bill watch at scale. LAW Y0: TRAIL/VAULT cash safety, no auto-pay."
+  },
+  "future_ticker": [
+    "PREVIEW · decades ahead fantasy — law still Year 0",
+    "PREVIEW · denser skyline · districts lit · NOT LIVE LAW",
+    "PREVIEW · DualCortex army on owned silicon · Gate E still hello only",
+    "PREVIEW · freeze→sandbox→promote loops mature · JOB_HALT holds today",
+    "PREVIEW · city outlives any single app · Creator forever",
+    "PREVIEW · 20–50 agents without melting the host · aspire only",
+    "PREVIEW · Legacy Mode drills · continuity state · Year 0 seed is real",
+    "LAW · JOB_HALT ON · Gate E hello only · hard-stops armed",
+    "LAW · no Gate E expand · no applies · no PII on Pages",
+    "PREVIEW · Destruction is a form of CREATION — gothic megacity dream"
+  ],
+  "extra_skyline_districts": [
+    {"id": "epsilon", "name": "Epsilon · Continuity Docks", "tag": "PREVIEW · exportable city image", "lore": "PREVIEW only — not chartered in Year 0 law."},
+    {"id": "zeta", "name": "Zeta · Reflection Spire", "tag": "PREVIEW · Sunday 3AM PT proposals", "lore": "PREVIEW only — Architect/Critic loops not live law."}
+  ]
+}

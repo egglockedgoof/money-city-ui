@@ -5,16 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MONEY CITY — Command Deck</title>
   <meta name="description" content="MONEY CITY Year 0 command deck — Creator gothic + gold twist" />
-  <link rel="stylesheet" href="css/city.css?v=20261002rooms" />
+  <link rel="stylesheet" href="css/city.css?v=20261002alive" />
 </head>
 <body>
   <div id="app" hidden>
     <header class="topbar">
-      <div class="brand">MONEY CITY<small>Year 0 · Creator forever · Living deck</small></div>
+      <div class="brand">MONEY CITY<small>Year 0 law · future PREVIEW skyline · Living deck</small></div>
       <div class="badges">
         <span class="badge badge-creator">Creator forever</span>
         <span class="badge badge-halt">JOB_HALT ON</span>
         <span class="badge badge-gate">Gate E PASS · hello only</span>
+        <span class="badge badge-year">LAW Year 0</span>
+        <span class="badge badge-preview" id="era-feel-badge">UI: future PREVIEW</span>
+        <span class="badge badge-live" id="live-tick-badge">Living tick …</span>
         <span class="badge badge-mode" id="brains-mode-badge">Brains: …</span>
       </div>
     </header>
@@ -29,6 +32,8 @@
       <span class="ticker-label">LIVE</span>
       <div class="ticker-track"><div class="ticker-inner" id="ticker-inner">Loading city pulse…</div></div>
     </div>
+    <div class="law-year-banner" id="law-year-banner">LAW = Year 0 · JOB_HALT ON · Gate E hello only · glowing ahead = PREVIEW / NOT LIVE LAW</div>
+    <p class="preview-disclaimer meta" id="preview-disclaimer">Far-future gothic megacity vibe is UI fantasy. No years claimed passed. No Gate E expand.</p>
 
     <nav class="nav">
       <button class="active" data-panel="panel-map">City Map</button>
@@ -147,7 +152,7 @@
     <section id="panel-agents" class="panel">
       <div class="card" style="margin-bottom:1rem">
         <h4>GOD DOLLAR BOYZ — implanted</h4>
-        <p class="meta">Click an agent for a detail sheet. Pulse refreshes the feed. Brief Me talks through DualCortex (DEMO on Pages / LIVE on bridge). Status is display-only — no job applies while JOB_HALT is ON.</p>
+        <p class="meta">Agents RUN on the living tick (no Ollama). Live status lines update. <strong>Run shift</strong> simulates a short offline patrol. Titles may show PREVIEW fantasy ranks — law still Year 0. Pulse / Brief Me still work. No applies.</p>
       </div>
       <div class="split agents-layout">
         <div>
@@ -250,7 +255,9 @@
   </div>
   <script src="js/gate_config.js?v=1"></script>
   <script src="js/gate.js?v=1"></script>
-  <script src="js/city.js?v=20261002rooms"></script>
-  <script src="js/brains.js?v=20261002rooms"></script>
+  <script src="js/live_loop.js?v=20261002alive"></script>
+  <script src="js/future_vibe.js?v=20261002alive"></script>
+  <script src="js/city.js?v=20261002alive"></script>
+  <script src="js/brains.js?v=20261002alive"></script>
 </body>
 </html>

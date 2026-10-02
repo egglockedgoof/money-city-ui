@@ -7,8 +7,7 @@
     "role": "MONEY CITY forever Creator",
     "region": "West Sacramento / greater Sacramento CA",
     "github_public_ui": "egglockedgoof/money-city-ui",
-    "pages_ui": "https://egglockedgoof.github.io/money-city-ui/",
-    "contact": "private \u2014 see briefing_room CREATOR_DOSSIER (not on Pages)"
+    "pages_ui": "https://egglockedgoof.github.io/money-city-ui/"
   },
   "work_auth": {
     "us_authorized": true,
@@ -72,31 +71,24 @@
   },
   "crew": [
     {
-      "name": "MONEY SNATCHER 3000",
       "role": "Alpha / city-build lead \u00b7 plant+grounds+apply"
     },
     {
-      "name": "MONEY MONEY MONEY",
       "role": "Job machine #2 \u00b7 meta evolver hub"
     },
     {
-      "name": "MONEY MAGNET",
       "role": "#3 apply \u00b7 close-home"
     },
     {
-      "name": "MONEY SEED",
       "role": "#4 apply \u00b7 landscape/plant"
     },
     {
-      "name": "MONEY TRAIL",
       "role": "Tracker \u00b7 interviews/replies"
     },
     {
-      "name": "MONEY VAULT",
       "role": "Supreme overseer \u00b7 bills/safety/savings"
     },
     {
-      "name": "MONEY SIGNAL",
       "role": "Trends / side hustles"
     }
   ],
