@@ -1,5 +1,5 @@
 {
-  "updated_pt": "2026-10-02T14:25:19-07:00",
+  "updated_pt": "2026-10-02T14:35:54-07:00",
   "law": "Y0 · JOB_HALT · credits = compute throttle only · NOT money",
   "default": 100.0,
   "balances": {
@@ -75,5 +75,13 @@
       "cost": 0,
       "balance_after": 100.0
     }
-  ]
+  ],
+  "agents": {
+    "FORGE": {
+      "balance": 100,
+      "spent": 0,
+      "spawned": true,
+      "updated_pt": "2026-10-02T14:35:54-07:00"
+    }
+  }
 }

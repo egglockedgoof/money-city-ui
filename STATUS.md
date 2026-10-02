@@ -1,1 +1,1 @@
-Gate art collage live · lean deck · no PII · JOB_HALT ON · Gate E hello only
+Desks+VMs+spawn+self-evolve live · DualCortex=speech · workers=WORK · JOB_HALT · Gate E hello only · no PII

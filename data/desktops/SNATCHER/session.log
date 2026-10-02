@@ -1,0 +1,7 @@
+[2026-10-02T14:35:54-07:00] agent=SNATCHER job=vm_hello status=worked
+LAW: JOB_HALT ON · Gate E hello only · no PII
+KIND: stub desktop frame (Immediate Stack) — real OS desktops need VMs on Creator PC
+MONEY CITY · SNATCHER host-fallback hello — Gate E · JOB_HALT ON
+Install Docker Desktop / WSL2 for real VM
+--- result ---
+{"ok": true, "job": "vm_hello", "agent": "SNATCHER", "label": "RAN host fallback hello", "where": "host-fallback"}

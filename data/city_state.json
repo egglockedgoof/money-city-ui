@@ -1,5 +1,5 @@
 {
-  "updated_pt": "2026-10-02T14:45:00-07:00",
+  "updated_pt": "2026-10-02T14:36:03-07:00",
   "city": "MONEY CITY",
   "year": 0,
   "creator": "Creator (identity private \u2014 see briefing_room)",
@@ -204,6 +204,27 @@
         "y": 52
       },
       "color": "#ff6b6b"
+    },
+    {
+      "id": "forge",
+      "name": "MONEY FORGE",
+      "short": "FORGE",
+      "district": "Gamma",
+      "districts": [
+        "Gamma"
+      ],
+      "rank": "Gamma \u00b7 spawned worker",
+      "status": "active",
+      "role": "factory worker \u00b7 Gate E",
+      "notes": "Spawned worker \u00b7 factory worker \u00b7 Gate E \u00b7 DualCortex=speech \u00b7 desktop=WORK \u00b7 JOB_HALT ON",
+      "flavor": "Spawned worker \u00b7 factory worker \u00b7 Gate E \u00b7 DualCortex=speech \u00b7 desktop=WORK \u00b7 JOB_HALT ON",
+      "pin": {
+        "x": 44,
+        "y": 70
+      },
+      "color": "#9b6bff",
+      "spawned": true,
+      "worker": true
     }
   ],
   "thrift": {
@@ -303,6 +324,30 @@
       "status": "PARKED",
       "note": "menu 4 offline \u00b7 see PC_TODAY.md",
       "key": "windows"
+    },
+    {
+      "name": "Agent Desktops",
+      "status": "LIVE",
+      "note": "Watchable frames \u00b7 Gate E hello \u00b7 DualCortex=speech",
+      "key": "desktops"
+    },
+    {
+      "name": "Agent VMs",
+      "status": "SCAFFOLD",
+      "note": "Docker/WSL per agent \u00b7 host fallback without Docker",
+      "key": "agent_vm"
+    },
+    {
+      "name": "Self-evolve",
+      "status": "LIVE",
+      "note": "mutate top \u00b7 apoptosis bottom \u00b7 MMM champ advisory only",
+      "key": "self_evolve"
+    },
+    {
+      "name": "Spawn workers",
+      "status": "LIVE",
+      "note": "spawn_agent.py + UI Add Agent \u00b7 SNATCHER-min workers",
+      "key": "spawn"
     }
   ],
   "mmm_drills": "01\u201319 shipped (advisory)",
@@ -466,5 +511,10 @@
     "agents": 7,
     "briefing": "Creator tab hidden; memory in Brains; PII-stripped slate only",
     "at_pt": "2026-10-02T13:38:00-07:00"
+  },
+  "honesty": {
+    "dualcortex": "speech only",
+    "workers": "dispatch + desktop + VM sandbox (SNATCHER-min)",
+    "grok_class": "needs cloud agent runtime OR heavy QEMU/RDP on Creator PC"
   }
 }

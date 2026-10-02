@@ -445,3 +445,30 @@ body.vibe-future { /* intentional: same palette, no extra effects */ }
 .preview-banner { display: none !important; }
 .shift-hint { margin-top: 0.55rem; }
 .flavor-line { margin: 0.35rem 0; color: var(--cream); opacity: 0.85; }
+
+/* Desks + spawn + moving pins (2026-10-02) */
+.spawn-card { margin-bottom: 0.85rem; }
+.spawn-form { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; }
+.spawn-form input, .spawn-form select {
+  background: #120406; color: var(--cream); border: 1px solid var(--line);
+  border-radius: 8px; padding: 0.45rem 0.55rem; font: inherit; min-width: 140px;
+}
+.desks-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem; margin-top: 0.75rem;
+}
+.desk-card .desk-frame {
+  aspect-ratio: 16/9; background: #0a0304; border: 1px solid var(--line-soft);
+  border-radius: 8px; overflow: hidden; margin: 0.45rem 0;
+}
+.desk-card .desk-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.desk-head { display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline; }
+.desk-log {
+  max-height: 7rem; overflow: auto; white-space: pre-wrap; font-family: var(--mono);
+  font-size: 0.72rem; background: rgba(0,0,0,0.35); padding: 0.4rem; border-radius: 6px;
+}
+.agent-pin.moving {
+  box-shadow: 0 0 18px rgba(232, 201, 106, 0.95);
+  z-index: 5;
+}
+.btn.sm { padding: 0.3rem 0.55rem; font-size: 0.8rem; }

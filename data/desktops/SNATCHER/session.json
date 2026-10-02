@@ -1,0 +1,22 @@
+{
+  "agent": "SNATCHER",
+  "updated_pt": "2026-10-02T14:35:54-07:00",
+  "status": "worked",
+  "job": "vm_hello",
+  "kind": "stub_desktop",
+  "watchable": true,
+  "real_os_desktop": false,
+  "screenshot": "data/desktops/SNATCHER/latest.png",
+  "log": "data/desktops/SNATCHER/session.log",
+  "workspace": "city_runtime/agent_desktop/workspaces/SNATCHER",
+  "law": "Year 0 · JOB_HALT ON · Gate E hello only",
+  "note": "DualCortex cannot drive Cursor. True multi-desktop = VMs/sandboxes on Creator PC.",
+  "log_tail": [
+    "MONEY CITY · SNATCHER host-fallback hello — Gate E · JOB_HALT ON",
+    "Install Docker Desktop / WSL2 for real VM",
+    "--- result ---",
+    "{\"ok\": true, \"job\": \"vm_hello\", \"agent\": \"SNATCHER\", \"label\": \"RAN host fallback hello\", \"where\": \"host-fallback\"}"
+  ],
+  "result_ok": true,
+  "result_label": "RAN host fallback hello"
+}

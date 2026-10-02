@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MONEY CITY</title>
   <meta name="description" content="MONEY CITY" />
-  <link rel="stylesheet" href="css/city.css?v=20261002immune" />
+  <link rel="stylesheet" href="css/city.css?v=20261002desks" />
 </head>
 <body>
   <div id="app" hidden>
@@ -28,6 +28,7 @@
     <nav class="nav">
       <button class="active" data-panel="panel-map">Map</button>
       <button data-panel="panel-agents">Agents</button>
+      <button data-panel="panel-desktops">Desks</button>
       <button data-panel="panel-war">War</button>
       <button data-panel="panel-brains">Brains</button>
       <button data-panel="panel-law">Law</button>
@@ -116,12 +117,32 @@
 
     <!-- AGENTS -->
     <section id="panel-agents" class="panel">
+      <div class="card spawn-card" id="spawn-card">
+        <div class="card-head">
+          <h4>Add Agent</h4>
+          <span class="meta">Worker that MOVES + WORKS · DualCortex = speech only</span>
+        </div>
+        <form id="spawn-form" class="spawn-form" autocomplete="off">
+          <input type="text" id="spawn-name" placeholder="Name (e.g. MONEY FORGE)" required maxlength="40" />
+          <select id="spawn-district" required>
+            <option value="alpha">Alpha</option>
+            <option value="gamma">Gamma</option>
+            <option value="beta">Beta</option>
+            <option value="delta">Delta</option>
+            <option value="supreme">Supreme</option>
+          </select>
+          <input type="text" id="spawn-role" placeholder="Role (optional)" maxlength="80" />
+          <button type="submit" class="btn">Spawn worker</button>
+        </form>
+        <pre id="spawn-out" class="out" hidden></pre>
+        <p class="meta">Pages records the spawn locally until you run <code>spawn_agent.py</code> on PC (or SNATCHER box). Workers ≠ brains.</p>
+      </div>
       <div class="split agents-layout">
         <div id="roster" class="cards"></div>
         <div class="agent-side">
           <div id="agent-sheet" class="card agent-sheet">
             <h4>Select an agent</h4>
-            <p class="meta">Pulse · brief · war.</p>
+            <p class="meta">Work · pulse · brief · desk.</p>
           </div>
           <div class="card feed-card">
             <div class="feed-head">
@@ -131,6 +152,24 @@
             <ul id="activity-list" class="activity-list"></ul>
           </div>
         </div>
+      </div>
+    </section>
+
+
+    <!-- DESKS -->
+    <section id="panel-desktops" class="panel">
+      <div class="card">
+        <div class="card-head">
+          <h4>Agent Desktops</h4>
+          <span class="meta" id="desks-updated"></span>
+        </div>
+        <p class="meta">Watchable worker frames · Gate E hello · DualCortex talks, desks WORK. True Cursor multi-PC needs VMs on your machine.</p>
+        <div class="row-actions">
+          <button type="button" id="desks-reload" class="btn">Reload</button>
+          <button type="button" id="desks-how" class="btn ghost">How</button>
+        </div>
+        <pre id="desks-how-box" class="out" hidden></pre>
+        <div id="desks-grid" class="desks-grid"></div>
       </div>
     </section>
 
@@ -161,6 +200,8 @@
             <option value="log_event">log_event</option>
             <option value="brains_demo">brains_demo</option>
             <option value="dualcortex">dualcortex</option>
+            <option value="desktop_hello">desktop_hello</option>
+            <option value="desktop_inventory">desktop_inventory</option>
           </select>
           <button type="button" id="war-dispatch" class="btn">Dispatch</button>
         </div>
@@ -263,11 +304,12 @@
       <a href="https://github.com/egglockedgoof/money-city-ui" target="_blank" rel="noopener">UI repo</a>
     </footer>
   </div>
-  <script src="js/gate_config.js?v=20261002immune"></script>
-  <script src="js/gate.js?v=20261002immune"></script>
-  <script src="js/live_loop.js?v=20261002immune"></script>
-  <script src="js/future_vibe.js?v=20261002immune"></script>
-  <script src="js/city.js?v=20261002immune"></script>
-  <script src="js/brains.js?v=20261002immune"></script>
+  <script src="js/gate_config.js?v=20261002desks"></script>
+  <script src="js/gate.js?v=20261002desks"></script>
+  <script src="js/live_loop.js?v=20261002desks"></script>
+  <script src="js/future_vibe.js?v=20261002desks"></script>
+  <script src="js/city.js?v=20261002desks"></script>
+  <script src="js/desktops.js?v=20261002desks"></script>
+  <script src="js/brains.js?v=20261002desks"></script>
 </body>
 </html>

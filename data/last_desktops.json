@@ -1,0 +1,163 @@
+{
+  "updated_pt": "2026-10-02T14:35:53-07:00",
+  "results": [
+    {
+      "ok": true,
+      "job": "desktop_hello",
+      "agent": "SNATCHER",
+      "where": "local-sandbox",
+      "label": "RAN desktop Gate E hello",
+      "rc": 0,
+      "stdout_tail": "=== MONEY CITY sandbox run 20261002T213553Z-147358 ===\nworkspace=/workspace/jobhunt/money_city/city_runtime/agent_desktop/workspaces/SNATCHER\nuid=1000 gid=1000\nauditor=stub-v0\nobjective:\nOffline hello objective \u2014 no net, no apply, no CAPTCHA.\n\nAUDITOR_PASS file=/workspace/jobhunt/money_city/city_runtime/agent_desktop/workspaces/SNATCHER/scripts/hello.py\n--- run /workspace/jobhunt/money_city/city_runtime/agent_desktop/workspaces/SNATCHER/scripts/hello.py (timeout 300s) ---\n=== done 20261002T213553Z-147358 ===\n",
+      "stderr_tail": ""
+    }
+  ],
+  "index": {
+    "updated_pt": "2026-10-02T14:35:53-07:00",
+    "law": "Year 0 \u00b7 JOB_HALT ON \u00b7 Gate E hello only",
+    "honesty": {
+      "today": "Stub screenshots + sandbox hello logs per agent \u2014 watchable on Pages/Desktops tab",
+      "not_today": "Full Cursor-class desktops / separate Grok Bot machines",
+      "needs_creator_pc": "Docker/VM per agent + RDP/noVNC or local folder watch via watch.ps1"
+    },
+    "agents": [
+      {
+        "agent": "SNATCHER",
+        "updated_pt": "2026-10-02T14:35:53-07:00",
+        "status": "worked",
+        "job": "desktop_hello",
+        "kind": "stub_desktop",
+        "watchable": true,
+        "real_os_desktop": false,
+        "screenshot": "data/desktops/SNATCHER/latest.png",
+        "log": "data/desktops/SNATCHER/session.log",
+        "workspace": "city_runtime/agent_desktop/workspaces/SNATCHER",
+        "law": "Year 0 \u00b7 JOB_HALT ON \u00b7 Gate E hello only",
+        "note": "DualCortex cannot drive Cursor. True multi-desktop = VMs/sandboxes on Creator PC.",
+        "log_tail": [
+          "workspace=/workspace/jobhunt/money_city/city_runtime/agent_desktop/workspaces/SNATCHER",
+          "wrote city_runtime/agent_desktop/workspaces/SNATCHER/scripts/hello.py",
+          "=== MONEY CITY sandbox run 20261002T213553Z-147358 ===\nworkspace=/workspace/jobhunt/money_city/city_runtime/agent_desktop/workspaces/SNATCHER\nuid=1000 gid=1000\nauditor=stub-v0\nobjective:\nOffline hello objective \u2014 no net, no apply, no CAPTCHA.\n\nAUDITOR_PASS file=/workspace/jobhunt/money_city/city_runtime/agent_desktop/workspaces/SNATCHER/scripts/hello.py\n--- run /workspace/jobhunt/money_city/city_runtime/agent_desktop/workspaces/SNATCHER/scripts/hello.py (timeout 300s) ---\n=== done 20261002T213553Z-147358 ===\n",
+          "--- result ---",
+          "{\"ok\": true, \"job\": \"desktop_hello\", \"agent\": \"SNATCHER\", \"where\": \"local-sandbox\", \"label\": \"RAN desktop Gate E hello\", \"rc\": 0, \"stdout_tail\": \"=== MONEY CITY sandbox run 20261002T213553Z-147358 ===\\nworkspace=/workspace/jobhunt/money_city/city_runtime/agent_desktop/workspaces/SNATCHER\\nuid=1000 gid=1000\\nauditor=stub-v0\\nobjective:\\nOffline hello objective \u2014 no net, no apply, no CAPTCHA.\\n\\nAUDITOR_PASS file=/workspace/jobhunt/money_city/city_runtime/agent_desktop/workspaces/SNATCHER/scripts/hello.py\\n--- run /workspace/jobhunt/money_city/city_runtime/agent_desktop/workspaces/SNATCHER/scripts/hello.py (timeout 300s) ---\\n=== done 20261002T213553Z-147358 ===\\n\", \"stderr_tail\": \"\"}"
+        ],
+        "result_ok": true,
+        "result_label": "RAN desktop Gate E hello"
+      },
+      {
+        "agent": "MMM",
+        "updated_pt": "2026-10-02T14:35:53-07:00",
+        "status": "idle",
+        "job": "boot",
+        "kind": "stub_desktop",
+        "watchable": true,
+        "real_os_desktop": false,
+        "screenshot": "data/desktops/MMM/latest.png",
+        "log": "data/desktops/MMM/session.log",
+        "workspace": "city_runtime/agent_desktop/workspaces/MMM",
+        "law": "Year 0 \u00b7 JOB_HALT ON \u00b7 Gate E hello only",
+        "note": "DualCortex cannot drive Cursor. True multi-desktop = VMs/sandboxes on Creator PC.",
+        "log_tail": [
+          "MMM desktop ready \u00b7 DualCortex=speech \u00b7 this=WORK"
+        ],
+        "result_ok": false,
+        "result_label": null
+      },
+      {
+        "agent": "MAGNET",
+        "updated_pt": "2026-10-02T14:35:53-07:00",
+        "status": "idle",
+        "job": "boot",
+        "kind": "stub_desktop",
+        "watchable": true,
+        "real_os_desktop": false,
+        "screenshot": "data/desktops/MAGNET/latest.png",
+        "log": "data/desktops/MAGNET/session.log",
+        "workspace": "city_runtime/agent_desktop/workspaces/MAGNET",
+        "law": "Year 0 \u00b7 JOB_HALT ON \u00b7 Gate E hello only",
+        "note": "DualCortex cannot drive Cursor. True multi-desktop = VMs/sandboxes on Creator PC.",
+        "log_tail": [
+          "MAGNET desktop ready \u00b7 DualCortex=speech \u00b7 this=WORK"
+        ],
+        "result_ok": false,
+        "result_label": null
+      },
+      {
+        "agent": "SEED",
+        "updated_pt": "2026-10-02T14:35:53-07:00",
+        "status": "idle",
+        "job": "boot",
+        "kind": "stub_desktop",
+        "watchable": true,
+        "real_os_desktop": false,
+        "screenshot": "data/desktops/SEED/latest.png",
+        "log": "data/desktops/SEED/session.log",
+        "workspace": "city_runtime/agent_desktop/workspaces/SEED",
+        "law": "Year 0 \u00b7 JOB_HALT ON \u00b7 Gate E hello only",
+        "note": "DualCortex cannot drive Cursor. True multi-desktop = VMs/sandboxes on Creator PC.",
+        "log_tail": [
+          "SEED desktop ready \u00b7 DualCortex=speech \u00b7 this=WORK"
+        ],
+        "result_ok": false,
+        "result_label": null
+      },
+      {
+        "agent": "TRAIL",
+        "updated_pt": "2026-10-02T14:35:53-07:00",
+        "status": "idle",
+        "job": "boot",
+        "kind": "stub_desktop",
+        "watchable": true,
+        "real_os_desktop": false,
+        "screenshot": "data/desktops/TRAIL/latest.png",
+        "log": "data/desktops/TRAIL/session.log",
+        "workspace": "city_runtime/agent_desktop/workspaces/TRAIL",
+        "law": "Year 0 \u00b7 JOB_HALT ON \u00b7 Gate E hello only",
+        "note": "DualCortex cannot drive Cursor. True multi-desktop = VMs/sandboxes on Creator PC.",
+        "log_tail": [
+          "TRAIL desktop ready \u00b7 DualCortex=speech \u00b7 this=WORK"
+        ],
+        "result_ok": false,
+        "result_label": null
+      },
+      {
+        "agent": "VAULT",
+        "updated_pt": "2026-10-02T14:35:53-07:00",
+        "status": "idle",
+        "job": "boot",
+        "kind": "stub_desktop",
+        "watchable": true,
+        "real_os_desktop": false,
+        "screenshot": "data/desktops/VAULT/latest.png",
+        "log": "data/desktops/VAULT/session.log",
+        "workspace": "city_runtime/agent_desktop/workspaces/VAULT",
+        "law": "Year 0 \u00b7 JOB_HALT ON \u00b7 Gate E hello only",
+        "note": "DualCortex cannot drive Cursor. True multi-desktop = VMs/sandboxes on Creator PC.",
+        "log_tail": [
+          "VAULT desktop ready \u00b7 DualCortex=speech \u00b7 this=WORK"
+        ],
+        "result_ok": false,
+        "result_label": null
+      },
+      {
+        "agent": "SIGNAL",
+        "updated_pt": "2026-10-02T14:35:53-07:00",
+        "status": "idle",
+        "job": "boot",
+        "kind": "stub_desktop",
+        "watchable": true,
+        "real_os_desktop": false,
+        "screenshot": "data/desktops/SIGNAL/latest.png",
+        "log": "data/desktops/SIGNAL/session.log",
+        "workspace": "city_runtime/agent_desktop/workspaces/SIGNAL",
+        "law": "Year 0 \u00b7 JOB_HALT ON \u00b7 Gate E hello only",
+        "note": "DualCortex cannot drive Cursor. True multi-desktop = VMs/sandboxes on Creator PC.",
+        "log_tail": [
+          "SIGNAL desktop ready \u00b7 DualCortex=speech \u00b7 this=WORK"
+        ],
+        "result_ok": false,
+        "result_label": null
+      }
+    ]
+  }
+}

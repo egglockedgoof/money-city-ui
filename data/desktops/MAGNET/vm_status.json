@@ -1,0 +1,9 @@
+{
+  "agent": "MAGNET",
+  "updated_pt": "2026-10-02T14:35:54-07:00",
+  "vm": "ready",
+  "docker": "not_started",
+  "path": "city_runtime/agent_vm/agents/MAGNET",
+  "law": "JOB_HALT ON \u00b7 Gate E hello only",
+  "honesty": "Docker/WSL VM sandbox \u2014 not Grok cloud runtime"
+}
