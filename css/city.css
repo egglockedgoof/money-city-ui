@@ -863,3 +863,87 @@ body.locked { overflow: hidden; }
 }
 .lore-card { border-color: rgba(212, 160, 23, 0.5); }
 code { color: var(--gold-bright); font-size: 0.85em; }
+
+/* —— Crew implant + Creator briefing 2026-10-02 —— */
+.map-stage { position: relative; }
+.agent-pins {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.agent-pin {
+  pointer-events: auto;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  appearance: none;
+  border: 1px solid rgba(10, 3, 4, 0.85);
+  background: radial-gradient(circle at 30% 30%, var(--pin-color, #f0d78c), #6b0f16 70%);
+  color: #0a0304;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(212, 160, 23, 0.55), 0 0 0 2px rgba(107, 15, 22, 0.55);
+  animation: pin-breathe 2.8s ease-in-out infinite;
+  z-index: 4;
+}
+.agent-pin span { display: block; text-shadow: 0 1px 0 rgba(255,255,255,0.25); }
+.agent-pin:hover, .agent-pin.lit {
+  transform: translate(-50%, -50%) scale(1.12);
+  box-shadow: 0 0 22px rgba(240, 215, 140, 0.85), 0 0 0 2px #f0d78c;
+  z-index: 5;
+}
+.agent-pin.status-held {
+  opacity: 0.72;
+  filter: grayscale(0.25);
+}
+.agent-pin.status-vacant { display: none; }
+@keyframes pin-breathe {
+  0%, 100% { box-shadow: 0 0 10px rgba(212, 160, 23, 0.4), 0 0 0 2px rgba(107, 15, 22, 0.5); }
+  50% { box-shadow: 0 0 18px rgba(240, 215, 140, 0.75), 0 0 0 2px rgba(212, 160, 23, 0.7); }
+}
+.pin-names { color: var(--gold-bright) !important; font-weight: 700; }
+.agent-card.flash {
+  border-color: var(--gold);
+  box-shadow: var(--glow-gold);
+  animation: halt-pulse 0.6s ease-in-out 2;
+}
+.role-line { color: var(--gold) !important; font-weight: 600; }
+.creator-hero {
+  border-color: rgba(212, 160, 23, 0.55);
+  box-shadow: var(--glow-gold);
+  background:
+    linear-gradient(135deg, rgba(107, 15, 22, 0.35), rgba(10, 3, 4, 0.9)),
+    rgba(20, 6, 8, 0.9);
+}
+.creator-name {
+  font-size: 1.55rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--gold-bright);
+  text-transform: uppercase;
+  margin-top: 0.35rem;
+}
+.creator-meta {
+  margin-top: 0.55rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--cream);
+}
+.creator-chips, .crew-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+.creator-grid { align-items: stretch; }
+.gold-line {
+  display: inline-block;
+  margin-top: 0.35rem;
+  color: var(--gold-bright);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}

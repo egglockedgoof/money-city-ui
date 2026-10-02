@@ -1,35 +1,55 @@
 {
-  "updated_pt": "2026-10-02T13:25:11-07:00",
+  "updated_pt": "2026-10-02T13:28:32-07:00",
   "items": [
     {
-      "ts": "2026-10-02T13:25:11-07:00",
+      "ts": "2026-10-02T13:28:32-07:00",
       "unit": "MONEY SNATCHER 3000",
-      "text": "pulse \u00b7 log_event \u00b7 OK"
+      "text": "Crew implant LANDED \u2014 GOD DOLLAR BOYZ permanent in city UI"
     },
     {
-      "ts": "2026-10-02T13:25:11-07:00",
-      "unit": "MONEY SNATCHER 3000",
-      "text": "pulse \u00b7 sandbox_hello \u00b7 OK"
-    },
-    {
-      "ts": "2026-10-02T13:25:11-07:00",
-      "unit": "MONEY SNATCHER 3000",
-      "text": "pulse \u00b7 thrift_score \u00b7 OK"
-    },
-    {
-      "ts": "2026-10-02T13:25:11-07:00",
-      "unit": "MONEY SNATCHER 3000",
-      "text": "pulse \u00b7 dualcortex \u00b7 OK"
-    },
-    {
-      "ts": "2026-10-02T13:25:11-07:00",
+      "ts": "2026-10-02T13:28:32-07:00",
       "unit": "MONEY VAULT",
-      "text": "JOB_HALT ON \u00b7 freeze authority standing"
+      "text": "Creator dossier sealed private \u00b7 sanitized brief on Pages \u00b7 JOB_HALT ON"
     },
     {
-      "ts": "2026-10-02T13:25:11-07:00",
+      "ts": "2026-10-02T13:28:32-07:00",
       "unit": "MONEY MONEY MONEY",
-      "text": "thrift advisory \u00b7 meta-evolver offline only"
+      "text": "Meta-evolver hub offline \u00b7 thrift meters advisory \u00b7 hard grind continues"
+    },
+    {
+      "ts": "2026-10-02T13:28:32-07:00",
+      "unit": "MONEY MAGNET",
+      "text": "Close-home apply lane PARKED \u00b7 city safety dry-run standing"
+    },
+    {
+      "ts": "2026-10-02T13:28:32-07:00",
+      "unit": "MONEY SEED",
+      "text": "Nursery packs HELD \u00b7 DualCortex box brains ready"
+    },
+    {
+      "ts": "2026-10-02T13:28:32-07:00",
+      "unit": "MONEY TRAIL",
+      "text": "City memory sharp \u00b7 interview/Gmail job watch paused under halt"
+    },
+    {
+      "ts": "2026-10-02T13:28:32-07:00",
+      "unit": "MONEY SIGNAL",
+      "text": "Beta scout online \u00b7 trends to VAULT \u00b7 no job spam"
+    },
+    {
+      "ts": "2026-10-02T13:28:32-07:00",
+      "unit": "CITY",
+      "text": "Creator Briefing panel live \u2014 the city knows Keysean"
+    },
+    {
+      "ts": "2026-10-02T13:28:32-07:00",
+      "unit": "MONEY SNATCHER 3000",
+      "text": "pulse \u00b7 sandbox_hello \u00b7 Gate E hello only"
+    },
+    {
+      "ts": "2026-10-02T13:28:32-07:00",
+      "unit": "MONEY SNATCHER 3000",
+      "text": "pulse \u00b7 thrift_score \u00b7 advisory OK"
     }
   ]
 }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MONEY CITY — Command Deck</title>
   <meta name="description" content="MONEY CITY Year 0 command deck — Creator gothic + gold twist" />
-  <link rel="stylesheet" href="css/city.css?v=20261002adv" />
+  <link rel="stylesheet" href="css/city.css?v=20261002crew" />
 </head>
 <body>
   <div id="app" hidden>
@@ -33,6 +33,7 @@
     <nav class="nav">
       <button class="active" data-panel="panel-map">City Map</button>
       <button data-panel="panel-agents">Agents</button>
+      <button data-panel="panel-creator">Creator</button>
       <button data-panel="panel-systems">Systems</button>
       <button data-panel="panel-actions">Actions</button>
       <button data-panel="panel-thrift">Thrift</button>
@@ -50,6 +51,7 @@
 
       <div class="skyline-wrap" aria-hidden="true">
         <div class="city-lights-overlay"></div>
+        <div id="agent-pins" class="agent-pins" aria-label="Crew map pins"></div>
         <svg viewBox="0 0 960 220" xmlns="http://www.w3.org/2000/svg" role="img">
           <defs>
             <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
@@ -120,12 +122,35 @@
     </section>
 
     <section id="panel-agents" class="panel">
+      <div class="card" style="margin-bottom:1rem">
+        <h4>GOD DOLLAR BOYZ — implanted</h4>
+        <p class="meta">Every crew member is a permanent district agent. Status dots · roles · flavor. Map pins sync with districts.</p>
+      </div>
       <div class="split">
         <div id="roster" class="cards"></div>
         <div class="card feed-card">
           <h4>Agent activity</h4>
           <ul id="activity-list" class="activity-list"></ul>
         </div>
+      </div>
+    </section>
+
+
+    <section id="panel-creator" class="panel">
+      <div class="card creator-hero">
+        <h4>Creator · Briefing Room</h4>
+        <p class="meta">The city knows Keysean. Sanitized public slate below — full private dossier stays under <code>briefing_room/CREATOR_DOSSIER.md</code> (not on Pages).</p>
+        <div id="creator-identity" class="creator-identity"></div>
+      </div>
+      <div class="cards creator-grid" style="margin-top:1rem">
+        <div class="card"><h4>Mission (halted)</h4><div id="creator-mission" class="meta"></div></div>
+        <div class="card"><h4>Safety & halt</h4><div id="creator-safety" class="meta"></div></div>
+        <div class="card"><h4>Doctrine</h4><div id="creator-doctrine" class="meta"></div></div>
+        <div class="card"><h4>History the city remembers</h4><ul id="creator-history" class="activity-list"></ul></div>
+      </div>
+      <div class="card" style="margin-top:1rem">
+        <h4>Crew the city briefs for</h4>
+        <div id="creator-crew" class="crew-chips"></div>
       </div>
     </section>
 
@@ -175,7 +200,7 @@
       </div>
       <div class="card" style="margin-top:1rem">
         <h4>Talk to the city</h4>
-        <textarea id="brains-prompt" rows="3" placeholder="Ask about districts, agents, thrift, halt, brains, actions, lore…"></textarea>
+        <textarea id="brains-prompt" rows="3" placeholder="Ask about Keysean, crew, districts, thrift, halt, DualCortex, lore…"></textarea>
         <div class="brains-actions">
           <button type="button" id="brains-send" class="brains-btn">Send DualCortex</button>
           <button type="button" id="brains-refresh" class="brains-btn secondary">Refresh status</button>
@@ -208,7 +233,7 @@
   </div>
   <script src="js/gate_config.js?v=1"></script>
   <script src="js/gate.js?v=1"></script>
-  <script src="js/city.js?v=20261002adv"></script>
-  <script src="js/brains.js?v=20261002adv"></script>
+  <script src="js/city.js?v=20261002crew"></script>
+  <script src="js/brains.js?v=20261002crew"></script>
 </body>
 </html>

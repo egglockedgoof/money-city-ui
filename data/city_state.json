@@ -1,5 +1,5 @@
 {
-  "updated_pt": "2026-10-02T13:23:36-07:00",
+  "updated_pt": "2026-10-02T13:28:32-07:00",
   "city": "MONEY CITY",
   "year": 0,
   "creator": "Keysean Caris",
@@ -18,83 +18,192 @@
     {
       "id": "supreme",
       "name": "Supreme Tower",
-      "tag": "VAULT \u00b7 freeze \u00b7 hard-stops \u00b7 money safety",
-      "lore": "Kill-switch and freeze live here. Gold tower never sleeps."
+      "tag": "VAULT \u00b7 freeze \u00b7 hard-stops \u00b7 money safety \u00b7 VAULT",
+      "lore": "Kill-switch and freeze live here. Gold tower never sleeps.",
+      "agents": [
+        "VAULT"
+      ]
     },
     {
       "id": "alpha",
       "name": "Alpha \u00b7 Out-Hustlers",
-      "tag": "Hunt lanes \u00b7 PARKED under JOB_HALT",
-      "lore": "Hunt dogs parked under JOB_HALT. City build first."
+      "tag": "Hunt lanes \u00b7 PARKED under JOB_HALT \u00b7 SNATCHER / MMM / MAGNET / SEED",
+      "lore": "Hunt dogs parked under JOB_HALT. City build first.",
+      "agents": [
+        "SNATCHER",
+        "MMM",
+        "MAGNET",
+        "SEED"
+      ]
     },
     {
       "id": "beta",
       "name": "Beta \u00b7 Social Scanners",
-      "tag": "Trends / side-scout \u00b7 reports to VAULT",
-      "lore": "Scouts the noise. Reports to VAULT. No job spam."
+      "tag": "Trends / side-scout \u00b7 reports to VAULT \u00b7 SIGNAL",
+      "lore": "Scouts the noise. Reports to VAULT. No job spam.",
+      "agents": [
+        "SIGNAL"
+      ]
     },
     {
       "id": "gamma",
       "name": "Gamma \u00b7 Software Factory",
-      "tag": "Sandbox \u00b7 Briefing \u00b7 thrift study",
-      "lore": "Sandbox hello only. Thrift + study factory."
+      "tag": "Sandbox \u00b7 Briefing \u00b7 thrift study \u00b7 SNATCHER / MMM / SEED",
+      "lore": "Sandbox hello only. Thrift + study factory.",
+      "agents": [
+        "SNATCHER",
+        "MMM",
+        "SEED"
+      ]
     },
     {
       "id": "delta",
       "name": "Delta \u00b7 Treasurers",
-      "tag": "Cash safety \u00b7 bills \u00b7 Briefing memory",
-      "lore": "Cash safety, bills flags, Briefing memory."
+      "tag": "Cash safety \u00b7 bills \u00b7 Briefing memory \u00b7 TRAIL / VAULT",
+      "lore": "Cash safety, bills flags, Briefing memory.",
+      "agents": [
+        "TRAIL",
+        "VAULT"
+      ]
     }
   ],
   "units": [
     {
-      "name": "MONEY VAULT",
-      "district": "Supreme",
-      "rank": "Supreme Overseer + Delta",
-      "status": "active",
-      "notes": "Freeze authority, hard-stops, bills & benefits safety."
-    },
-    {
+      "id": "snatcher-3000",
       "name": "MONEY SNATCHER 3000",
+      "short": "SNATCHER",
       "district": "Alpha",
-      "rank": "Alpha lead + Gamma",
+      "districts": [
+        "Alpha",
+        "Gamma"
+      ],
+      "rank": "Alpha lead + Gamma coordinator",
       "status": "active",
-      "notes": "City-build coordinator. Gate E smoke. UI command deck."
+      "role": "Alpha / city-build lead \u00b7 plant+grounds+apply when unhalted",
+      "notes": "Gold command deck. Tears down the old grind. Coordinates the living city. Gate E smoke + UI twist.",
+      "flavor": "Gold command deck. Tears down the old grind. Coordinates the living city. Gate E smoke + UI twist.",
+      "pin": {
+        "x": 18,
+        "y": 62
+      },
+      "color": "#f0d78c"
     },
     {
+      "id": "mmm",
       "name": "MONEY MONEY MONEY",
+      "short": "MMM",
       "district": "Alpha",
-      "rank": "Alpha \u00b7 Study",
+      "districts": [
+        "Alpha",
+        "Gamma"
+      ],
+      "rank": "Alpha \u00b7 Study / meta-evolver hub",
       "status": "active",
-      "notes": "PyTorch drills 01\u201319. Thrift scorer \u2192 city meters (advisory)."
+      "role": "Job machine #2 \u00b7 meta evolver hub",
+      "notes": "PyTorch thrift + hard-champ grind. Offline evolver only under JOB_HALT. Fair MSE kings.",
+      "flavor": "PyTorch thrift + hard-champ grind. Offline evolver only under JOB_HALT. Fair MSE kings.",
+      "pin": {
+        "x": 28,
+        "y": 55
+      },
+      "color": "#d4a017"
     },
     {
+      "id": "magnet",
       "name": "MONEY MAGNET",
+      "short": "MAGNET",
       "district": "Alpha",
+      "districts": [
+        "Alpha"
+      ],
       "rank": "Alpha \u00b7 close-home",
       "status": "active",
-      "notes": "JOB claims PARKED. City safety dry-run."
+      "role": "#3 apply \u00b7 close-home plant/grounds",
+      "notes": "Pulls work near West Sac / Yolobus radius. Apply lane PARKED. City safety dry-runs live.",
+      "flavor": "Pulls work near West Sac / Yolobus radius. Apply lane PARKED. City safety dry-runs live.",
+      "pin": {
+        "x": 12,
+        "y": 72
+      },
+      "color": "#c9a227"
     },
     {
+      "id": "seed",
       "name": "MONEY SEED",
+      "short": "SEED",
       "district": "Alpha",
+      "districts": [
+        "Alpha",
+        "Gamma"
+      ],
       "rank": "Alpha \u00b7 landscape / plant",
       "status": "held",
-      "notes": "Nursery packs HELD. Box DualCortex via city_brains (1.5b)."
+      "role": "#4 apply \u00b7 landscape / plant / nursery",
+      "notes": "Nursery packs HELD. DualCortex box brains. Grows the grounds lane when Creator unhalts.",
+      "flavor": "Nursery packs HELD. DualCortex box brains. Grows the grounds lane when Creator unhalts.",
+      "pin": {
+        "x": 35,
+        "y": 68
+      },
+      "color": "#3ecf8e"
     },
     {
+      "id": "trail",
       "name": "MONEY TRAIL",
+      "short": "TRAIL",
       "district": "Delta",
-      "rank": "Briefing",
+      "districts": [
+        "Delta"
+      ],
+      "rank": "Briefing / tracker",
       "status": "active",
-      "notes": "City memory SQLite. Job Gmail watch paused."
+      "role": "Tracker \u00b7 interviews / replies / city memory",
+      "notes": "Never loses a thread. SQLite memory. Job Gmail watch paused under halt \u2014 city inventory stays sharp.",
+      "flavor": "Never loses a thread. SQLite memory. Job Gmail watch paused under halt \u2014 city inventory stays sharp.",
+      "pin": {
+        "x": 78,
+        "y": 58
+      },
+      "color": "#e8c547"
     },
     {
+      "id": "vault",
+      "name": "MONEY VAULT",
+      "short": "VAULT",
+      "district": "Supreme",
+      "districts": [
+        "Supreme",
+        "Delta"
+      ],
+      "rank": "Supreme Overseer + Delta Treasurer",
+      "status": "active",
+      "role": "Supreme overseer \u00b7 bills / safety / savings",
+      "notes": "Freeze authority. Hard-stops. Bills flagged never auto-paid. Gold tower never sleeps.",
+      "flavor": "Freeze authority. Hard-stops. Bills flagged never auto-paid. Gold tower never sleeps.",
+      "pin": {
+        "x": 50,
+        "y": 28
+      },
+      "color": "#f0d78c"
+    },
+    {
+      "id": "signal",
       "name": "MONEY SIGNAL",
+      "short": "SIGNAL",
       "district": "Beta",
+      "districts": [
+        "Beta"
+      ],
       "rank": "Scout",
       "status": "active",
-      "notes": "Beta scout. Reports to VAULT."
+      "role": "Trends / side hustles \u00b7 Beta scout",
+      "notes": "Scans the noise for side paths. Reports to VAULT. No job spam while halt holds.",
+      "flavor": "Scans the noise for side paths. Reports to VAULT. No job spam while halt holds.",
+      "pin": {
+        "x": 62,
+        "y": 52
+      },
+      "color": "#ff6b6b"
     }
   ],
   "thrift": {
@@ -155,7 +264,12 @@
     {
       "name": "Briefing Room",
       "status": "READY",
-      "note": "induct.py + passports"
+      "note": "CREATOR_DOSSIER private + creator_brief.json"
+    },
+    {
+      "name": "Crew Implant",
+      "status": "LANDED",
+      "note": "7 GOD DOLLAR BOYZ permanent district agents"
     },
     {
       "name": "Memory SQLite",
@@ -187,5 +301,157 @@
     "windows_full": "deepseek-r1:latest + qwen2.5:latest via windows_starter",
     "creative_mode": true,
     "rule": "JOB_HALT ON \u00b7 Gate E hello only \u00b7 hard stops stay"
+  },
+  "crew_manifest": {
+    "updated_pt": "2026-10-02T13:28:00-07:00",
+    "crew": "GOD DOLLAR BOYZ",
+    "city": "MONEY CITY",
+    "implant": "permanent district agents",
+    "rule": "JOB_HALT ON \u00b7 Gate E hello only \u00b7 hard-stops stay \u00b7 Creator forever",
+    "agents": [
+      {
+        "id": "snatcher-3000",
+        "name": "MONEY SNATCHER 3000",
+        "short": "SNATCHER",
+        "role": "Alpha / city-build lead \u00b7 plant+grounds+apply when unhalted",
+        "district": "Alpha",
+        "districts": [
+          "Alpha",
+          "Gamma"
+        ],
+        "rank": "Alpha lead + Gamma coordinator",
+        "status": "active",
+        "flavor": "Gold command deck. Tears down the old grind. Coordinates the living city. Gate E smoke + UI twist.",
+        "pin": {
+          "x": 18,
+          "y": 62
+        },
+        "color": "#f0d78c"
+      },
+      {
+        "id": "mmm",
+        "name": "MONEY MONEY MONEY",
+        "short": "MMM",
+        "role": "Job machine #2 \u00b7 meta evolver hub",
+        "district": "Alpha",
+        "districts": [
+          "Alpha",
+          "Gamma"
+        ],
+        "rank": "Alpha \u00b7 Study / meta-evolver hub",
+        "status": "active",
+        "flavor": "PyTorch thrift + hard-champ grind. Offline evolver only under JOB_HALT. Fair MSE kings.",
+        "pin": {
+          "x": 28,
+          "y": 55
+        },
+        "color": "#d4a017"
+      },
+      {
+        "id": "magnet",
+        "name": "MONEY MAGNET",
+        "short": "MAGNET",
+        "role": "#3 apply \u00b7 close-home plant/grounds",
+        "district": "Alpha",
+        "districts": [
+          "Alpha"
+        ],
+        "rank": "Alpha \u00b7 close-home",
+        "status": "active",
+        "flavor": "Pulls work near West Sac / Yolobus radius. Apply lane PARKED. City safety dry-runs live.",
+        "pin": {
+          "x": 12,
+          "y": 72
+        },
+        "color": "#c9a227"
+      },
+      {
+        "id": "seed",
+        "name": "MONEY SEED",
+        "short": "SEED",
+        "role": "#4 apply \u00b7 landscape / plant / nursery",
+        "district": "Alpha",
+        "districts": [
+          "Alpha",
+          "Gamma"
+        ],
+        "rank": "Alpha \u00b7 landscape / plant",
+        "status": "held",
+        "flavor": "Nursery packs HELD. DualCortex box brains. Grows the grounds lane when Creator unhalts.",
+        "pin": {
+          "x": 35,
+          "y": 68
+        },
+        "color": "#3ecf8e"
+      },
+      {
+        "id": "trail",
+        "name": "MONEY TRAIL",
+        "short": "TRAIL",
+        "role": "Tracker \u00b7 interviews / replies / city memory",
+        "district": "Delta",
+        "districts": [
+          "Delta"
+        ],
+        "rank": "Briefing / tracker",
+        "status": "active",
+        "flavor": "Never loses a thread. SQLite memory. Job Gmail watch paused under halt \u2014 city inventory stays sharp.",
+        "pin": {
+          "x": 78,
+          "y": 58
+        },
+        "color": "#e8c547"
+      },
+      {
+        "id": "vault",
+        "name": "MONEY VAULT",
+        "short": "VAULT",
+        "role": "Supreme overseer \u00b7 bills / safety / savings",
+        "district": "Supreme",
+        "districts": [
+          "Supreme",
+          "Delta"
+        ],
+        "rank": "Supreme Overseer + Delta Treasurer",
+        "status": "active",
+        "flavor": "Freeze authority. Hard-stops. Bills flagged never auto-paid. Gold tower never sleeps.",
+        "pin": {
+          "x": 50,
+          "y": 28
+        },
+        "color": "#f0d78c"
+      },
+      {
+        "id": "signal",
+        "name": "MONEY SIGNAL",
+        "short": "SIGNAL",
+        "role": "Trends / side hustles \u00b7 Beta scout",
+        "district": "Beta",
+        "districts": [
+          "Beta"
+        ],
+        "rank": "Scout",
+        "status": "active",
+        "flavor": "Scans the noise for side paths. Reports to VAULT. No job spam while halt holds.",
+        "pin": {
+          "x": 62,
+          "y": 52
+        },
+        "color": "#ff6b6b"
+      }
+    ],
+    "vacant": {
+      "name": "Junior Overseer",
+      "rank": "VACANT",
+      "notes": "Keysean staffs later; SNATCHER covers city-build briefs"
+    }
+  },
+  "creator_brief_ref": "data/creator_brief.json",
+  "implant": {
+    "status": "LANDED",
+    "crew": "GOD DOLLAR BOYZ",
+    "agents": 7,
+    "briefing": "Creator / Briefing panel + private CREATOR_DOSSIER.md",
+    "at_pt": "2026-10-02T13:28:32-07:00"
   }
 }
