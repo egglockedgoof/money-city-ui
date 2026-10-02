@@ -3,213 +3,131 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MONEY CITY — Command Deck</title>
-  <meta name="description" content="MONEY CITY Year 0 command deck — Creator gothic + gold twist" />
-  <link rel="stylesheet" href="css/city.css?v=20261002alive" />
+  <title>MONEY CITY</title>
+  <meta name="description" content="MONEY CITY Year 0 command deck" />
+  <link rel="stylesheet" href="css/city.css?v=20261002lean" />
 </head>
 <body>
   <div id="app" hidden>
     <header class="topbar">
-      <div class="brand">MONEY CITY<small>Year 0 law · future PREVIEW skyline · Living deck</small></div>
+      <div class="brand">MONEY CITY<span>Year 0 · Command Deck</span></div>
       <div class="badges">
-        <span class="badge badge-creator">Creator forever</span>
-        <span class="badge badge-halt">JOB_HALT ON</span>
-        <span class="badge badge-gate">Gate E PASS · hello only</span>
-        <span class="badge badge-year">LAW Year 0</span>
-        <span class="badge badge-preview" id="era-feel-badge">UI: future PREVIEW</span>
-        <span class="badge badge-live" id="live-tick-badge">Living tick …</span>
-        <span class="badge badge-mode" id="brains-mode-badge">Brains: …</span>
+        <span class="badge badge-halt">HALT</span>
+        <span class="badge badge-gate">Gate E</span>
+        <span class="badge badge-year">Y0</span>
+        <span class="badge badge-live" id="live-tick-badge">●</span>
+        <span class="badge badge-mode" id="brains-mode-badge">Brains …</span>
       </div>
     </header>
 
-    <div class="mask-row" aria-hidden="true">
-      <div class="mask smile" title="comedy"></div>
-      <div class="devil-coin" title="snatcher twist — money devil coin"></div>
-      <div class="mask frown" title="tragedy"></div>
-    </div>
-
     <div class="ticker" id="activity-ticker" aria-live="polite">
-      <span class="ticker-label">LIVE</span>
-      <div class="ticker-track"><div class="ticker-inner" id="ticker-inner">Loading city pulse…</div></div>
+      <span class="ticker-label">FEED</span>
+      <div class="ticker-track"><div class="ticker-inner" id="ticker-inner">Standing by…</div></div>
     </div>
-    <div class="law-year-banner" id="law-year-banner">LAW = Year 0 · JOB_HALT ON · Gate E hello only · glowing ahead = PREVIEW / NOT LIVE LAW</div>
-    <p class="preview-disclaimer meta" id="preview-disclaimer">Far-future gothic megacity vibe is UI fantasy. No years claimed passed. No Gate E expand.</p>
 
     <nav class="nav">
-      <button class="active" data-panel="panel-map">City Map</button>
+      <button class="active" data-panel="panel-map">Map</button>
       <button data-panel="panel-agents">Agents</button>
-      <button data-panel="panel-war">War Room</button>
-      <button data-panel="panel-systems">Systems</button>
-      <button data-panel="panel-actions">Actions</button>
-      <button data-panel="panel-thrift">Thrift</button>
+      <button data-panel="panel-war">War</button>
+      <button data-panel="panel-ops">Ops</button>
       <button data-panel="panel-brains">Brains</button>
       <button data-panel="panel-law">Law</button>
     </nav>
 
+    <!-- MAP -->
     <section id="panel-map" class="panel active">
-      <div class="hero-quote">
-        <div class="big">Destruction</div>
-        <div class="mid">is a form of</div>
-        <div class="gold">CREATION</div>
-        <p class="hero-sub">Your line. Our twist: tear down the old grind, build the city that pays.</p>
-      </div>
-
-      <div class="skyline-wrap" aria-hidden="false">
-        <div class="city-lights-overlay"></div>
-        <div id="agent-pins" class="agent-pins" aria-label="Crew map pins"></div>
-        <svg viewBox="0 0 960 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MONEY CITY skyline">
+      <div class="skyline-wrap">
+        <div id="agent-pins" class="agent-pins" aria-label="Crew pins"></div>
+        <svg viewBox="0 0 960 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MONEY CITY skyline">
           <defs>
             <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#2a080c"/>
-              <stop offset="100%" stop-color="#0a0304"/>
+              <stop offset="0%" stop-color="#140608"/>
+              <stop offset="100%" stop-color="#050203"/>
             </linearGradient>
             <linearGradient id="towerGold" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#f0d78c"/>
-              <stop offset="100%" stop-color="#8a6a12"/>
+              <stop offset="0%" stop-color="#e8c96a"/>
+              <stop offset="100%" stop-color="#7a5a10"/>
             </linearGradient>
             <filter id="softGlow">
-              <feGaussianBlur stdDeviation="2.5" result="b"/>
+              <feGaussianBlur stdDeviation="2" result="b"/>
               <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
             </filter>
           </defs>
-          <rect width="960" height="240" fill="url(#sky)"/>
-          <circle cx="860" cy="42" r="18" fill="#f0d78c" opacity="0.85" filter="url(#softGlow)"/>
-          <circle cx="868" cy="38" r="18" fill="#1a0508"/>
-          <!-- ALPHA hit -->
+          <rect width="960" height="220" fill="url(#sky)"/>
+          <circle cx="880" cy="36" r="14" fill="#e8c96a" opacity="0.55" filter="url(#softGlow)"/>
           <g class="district-hit" data-district="alpha" style="cursor:pointer">
-            <rect x="40" y="120" width="50" height="120" fill="#1a080a" stroke="#6b0f16" stroke-width="1"/>
-            <rect x="100" y="90" width="42" height="150" fill="#1a080a" stroke="#6b0f16" stroke-width="1"/>
-            <rect x="155" y="110" width="55" height="130" fill="#1a080a" stroke="#6b0f16" stroke-width="1"/>
-            <rect x="40" y="120" width="170" height="120" fill="transparent"/>
+            <rect x="48" y="110" width="44" height="110" fill="#120608" stroke="#5c1016" stroke-width="1"/>
+            <rect x="100" y="82" width="38" height="138" fill="#120608" stroke="#5c1016" stroke-width="1"/>
+            <rect x="148" y="100" width="48" height="120" fill="#120608" stroke="#5c1016" stroke-width="1"/>
+            <rect x="48" y="82" width="148" height="138" fill="transparent"/>
           </g>
-          <!-- BETA hit -->
           <g class="district-hit" data-district="beta" style="cursor:pointer">
-            <path d="M210 240 V100 H250 V80 H270 V100 H300 V240 Z" fill="#2a0a0e" stroke="#8b151c" stroke-width="1.2"/>
-            <rect x="210" y="100" width="90" height="140" fill="transparent"/>
+            <path d="M220 220 V95 H255 V78 H272 V95 H300 V220 Z" fill="#1a0a0e" stroke="#7a141c" stroke-width="1"/>
+            <rect x="220" y="78" width="80" height="142" fill="transparent"/>
           </g>
-          <!-- SUPREME hit -->
+          <rect x="320" y="88" width="58" height="132" fill="#14080a" stroke="#5c1016" stroke-width="1"/>
+          <rect x="390" y="68" width="40" height="152" fill="#14080a" stroke="#5c1016" stroke-width="1"/>
           <g class="district-hit supreme-hit" data-district="supreme" style="cursor:pointer" filter="url(#softGlow)">
-            <path d="M455 240 V65 L480 38 L505 65 V240 Z" fill="url(#towerGold)" stroke="#f0d78c" stroke-width="1.5"/>
-            <rect x="468" y="28" width="24" height="14" rx="2" fill="#f0d78c"/>
-            <rect x="476" y="18" width="8" height="12" fill="#d4a017"/>
-            <g fill="#f0d78c" opacity="0.9" class="window-blink">
-              <rect x="465" y="80" width="6" height="8"/><rect x="478" y="80" width="6" height="8"/><rect x="491" y="80" width="6" height="8"/>
-              <rect x="465" y="105" width="6" height="8"/><rect x="478" y="105" width="6" height="8"/><rect x="491" y="105" width="6" height="8"/>
-              <rect x="465" y="130" width="6" height="8"/><rect x="478" y="130" width="6" height="8"/><rect x="491" y="130" width="6" height="8"/>
-              <rect x="465" y="155" width="6" height="8"/><rect x="478" y="155" width="6" height="8"/><rect x="491" y="155" width="6" height="8"/>
-              <rect x="465" y="180" width="6" height="8"/><rect x="478" y="180" width="6" height="8"/><rect x="491" y="180" width="6" height="8"/>
+            <path d="M455 220 V58 L480 32 L505 58 V220 Z" fill="url(#towerGold)" stroke="#e8c96a" stroke-width="1.2"/>
+            <rect x="470" y="22" width="20" height="12" rx="1" fill="#e8c96a"/>
+            <g fill="#e8c96a" opacity="0.75" class="window-blink">
+              <rect x="466" y="72" width="5" height="6"/><rect x="478" y="72" width="5" height="6"/><rect x="490" y="72" width="5" height="6"/>
+              <rect x="466" y="96" width="5" height="6"/><rect x="478" y="96" width="5" height="6"/><rect x="490" y="96" width="5" height="6"/>
+              <rect x="466" y="120" width="5" height="6"/><rect x="478" y="120" width="5" height="6"/><rect x="490" y="120" width="5" height="6"/>
+              <rect x="466" y="144" width="5" height="6"/><rect x="478" y="144" width="5" height="6"/><rect x="490" y="144" width="5" height="6"/>
             </g>
           </g>
-          <!-- mid towers -->
-          <g fill="#2a0a0e" stroke="#8b151c" stroke-width="1.2">
-            <rect x="320" y="95" width="70" height="145"/>
-            <rect x="400" y="70" width="45" height="170"/>
-          </g>
-          <!-- GAMMA hit -->
           <g class="district-hit" data-district="gamma" style="cursor:pointer">
-            <path d="M560 240 V110 H590 L610 80 H630 L650 110 H680 V240 Z" fill="#2a0a0e" stroke="#8b151c" stroke-width="1.2"/>
-            <rect x="560" y="110" width="120" height="130" fill="transparent"/>
+            <path d="M560 220 V105 H590 L608 78 H628 L646 105 H676 V220 Z" fill="#1a0a0e" stroke="#7a141c" stroke-width="1"/>
+            <rect x="560" y="78" width="116" height="142" fill="transparent"/>
           </g>
-          <!-- DELTA hit -->
           <g class="district-hit" data-district="delta" style="cursor:pointer">
-            <rect x="720" y="105" width="48" height="135" fill="#1a080a" stroke="#6b0f16" stroke-width="1"/>
-            <rect x="780" y="80" width="55" height="160" fill="#1a080a" stroke="#6b0f16" stroke-width="1"/>
-            <rect x="850" y="115" width="60" height="125" fill="#1a080a" stroke="#6b0f16" stroke-width="1"/>
-            <rect x="720" y="80" width="190" height="160" fill="transparent"/>
+            <rect x="720" y="98" width="42" height="122" fill="#120608" stroke="#5c1016" stroke-width="1"/>
+            <rect x="774" y="74" width="48" height="146" fill="#120608" stroke="#5c1016" stroke-width="1"/>
+            <rect x="836" y="108" width="52" height="112" fill="#120608" stroke="#5c1016" stroke-width="1"/>
+            <rect x="720" y="74" width="168" height="146" fill="transparent"/>
           </g>
-          <g fill="#d4a017" opacity="0.55" class="window-blink">
-            <rect x="112" y="110" width="5" height="6"/><rect x="122" y="110" width="5" height="6"/>
-            <rect x="112" y="130" width="5" height="6"/><rect x="122" y="150" width="5" height="6"/>
-            <rect x="335" y="110" width="5" height="6"/><rect x="350" y="125" width="5" height="6"/>
-            <rect x="410" y="90" width="5" height="6"/><rect x="422" y="110" width="5" height="6"/>
-            <rect x="795" y="100" width="5" height="6"/><rect x="810" y="120" width="5" height="6"/>
-            <rect x="575" y="130" width="5" height="6"/><rect x="640" y="140" width="5" height="6"/>
+          <g fill="#c9a227" opacity="0.4" class="window-blink">
+            <rect x="110" y="100" width="4" height="5"/><rect x="120" y="120" width="4" height="5"/>
+            <rect x="335" y="105" width="4" height="5"/><rect x="400" y="90" width="4" height="5"/>
+            <rect x="580" y="125" width="4" height="5"/><rect x="790" y="95" width="4" height="5"/>
           </g>
-          <ellipse cx="480" cy="238" rx="200" ry="8" fill="#d4a017" opacity="0.2"/>
-          <g font-family="Segoe UI, system-ui, sans-serif" font-size="11" font-weight="700" fill="#f0d78c" letter-spacing="1.5">
-            <text x="120" y="228" text-anchor="middle" opacity="0.85">ALPHA</text>
-            <text x="255" y="228" text-anchor="middle" opacity="0.85">BETA</text>
-            <text x="480" y="228" text-anchor="middle" opacity="0.95">SUPREME</text>
-            <text x="620" y="228" text-anchor="middle" opacity="0.85">GAMMA</text>
-            <text x="820" y="228" text-anchor="middle" opacity="0.85">DELTA</text>
+          <g font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#c9a227" letter-spacing="1.5" opacity="0.85">
+            <text x="120" y="212" text-anchor="middle">ALPHA</text>
+            <text x="260" y="212" text-anchor="middle">BETA</text>
+            <text x="480" y="212" text-anchor="middle">SUPREME</text>
+            <text x="618" y="212" text-anchor="middle">GAMMA</text>
+            <text x="808" y="212" text-anchor="middle">DELTA</text>
           </g>
         </svg>
       </div>
 
-      <p class="meta map-hint">Click a skyline district or card — opens a <strong>room</strong> with agents + real actions. Pins jump to Agents.</p>
       <div id="map-grid" class="map-grid"></div>
       <div id="room-panel" class="room-panel" hidden>
         <div class="room-head">
-          <h3 id="room-title">District Room</h3>
-          <button type="button" id="room-close" class="brains-btn secondary room-close">Close</button>
+          <h3 id="room-title">District</h3>
+          <button type="button" id="room-close" class="btn ghost">Close</button>
         </div>
         <p id="room-lore" class="meta"></p>
         <div id="room-agents" class="room-agents"></div>
         <div id="room-actions" class="room-actions"></div>
-        <pre id="room-output" class="room-output" hidden></pre>
+        <pre id="room-output" class="out" hidden></pre>
       </div>
     </section>
 
-    
-    <section id="panel-war" class="panel">
-      <div class="card war-hero">
-        <h4>District War Room · local army dispatch</h4>
-        <p class="meta">This is where agents do <strong>real offline work</strong> on box/PC. Pages shows the last run. Peer Grok bots (MMM etc.) are separate — city dispatches <em>local workers</em> now.</p>
-        <div class="honesty-grid" id="honesty-grid">
-          <div class="honesty-chip local">Runs on Pages view: last results + DEMO brains + living tick</div>
-          <div class="honesty-chip pc">Needs PC/box script: sandbox hello · inventory · thrift · events</div>
-          <div class="honesty-chip bridge">Needs Ollama + bridge: DualCortex LIVE</div>
-          <div class="honesty-chip halt">Needs Creator unhalt: job applies (JOB_HALT ON)</div>
-        </div>
-        <p class="meta" style="margin-top:0.65rem">On PC/box: <code>python3 city_runtime/dispatch_agent.py --agent ALL --job shift</code></p>
-        <div class="brains-actions" style="margin-top:0.75rem">
-          <button type="button" id="war-reload" class="brains-btn">Reload last dispatch</button>
-          <button type="button" id="war-how" class="brains-btn secondary">How real work runs</button>
-        </div>
-        <pre id="war-how-box" class="room-output" hidden></pre>
-      </div>
-      <div class="card" style="margin-top:1rem">
-        <h4>Last real dispatch <span class="meta" id="war-updated"></span></h4>
-        <div id="war-results" class="war-results"></div>
-      </div>
-      <div class="card" style="margin-top:1rem">
-        <h4>Queue a local job (intent on Pages · execute on PC)</h4>
-        <p class="meta">Pick agent + job. On Pages this logs intent into the feed and shows last matching result. On PC the same choices run for real via <code>dispatch_agent.py</code>.</p>
-        <div class="war-queue">
-          <select id="war-agent"></select>
-          <select id="war-job">
-            <option value="shift">shift (agent default)</option>
-            <option value="sandbox_hello">sandbox_hello (Gate E)</option>
-            <option value="thrift_score">thrift_score (advisory)</option>
-            <option value="inventory">inventory (money_city fs)</option>
-            <option value="log_event">log_event (events.jsonl)</option>
-            <option value="brains_demo">brains_demo (no Ollama)</option>
-            <option value="dualcortex">dualcortex (needs Ollama)</option>
-          </select>
-          <button type="button" id="war-dispatch" class="brains-btn">Dispatch</button>
-        </div>
-        <pre id="war-out" class="room-output" style="margin-top:0.75rem" hidden></pre>
-      </div>
-    </section>
-
+    <!-- AGENTS -->
     <section id="panel-agents" class="panel">
-      <div class="card" style="margin-bottom:1rem">
-        <h4>GOD DOLLAR BOYZ — implanted</h4>
-        <p class="meta">Agents RUN on the living tick (no Ollama). Live status lines update. <strong>Run shift</strong> simulates a short offline patrol. Titles may show PREVIEW fantasy ranks — law still Year 0. Pulse / Brief Me still work. No applies.</p>
-      </div>
       <div class="split agents-layout">
-        <div>
-          <div id="roster" class="cards"></div>
-        </div>
+        <div id="roster" class="cards"></div>
         <div class="agent-side">
           <div id="agent-sheet" class="card agent-sheet">
-            <h4>Agent detail</h4>
-            <p class="meta">Select a crew member to open their sheet.</p>
+            <h4>Select an agent</h4>
+            <p class="meta">Open a sheet for pulse, brief, or war link.</p>
           </div>
-          <div class="card feed-card" style="margin-top:1rem">
+          <div class="card feed-card">
             <div class="feed-head">
-              <h4>Agent activity</h4>
-              <button type="button" id="pulse-feed-btn" class="brains-btn secondary">Pulse feed</button>
+              <h4>Activity</h4>
+              <button type="button" id="pulse-feed-btn" class="btn ghost sm">Refresh</button>
             </div>
             <ul id="activity-list" class="activity-list"></ul>
           </div>
@@ -217,49 +135,85 @@
       </div>
     </section>
 
-    <section id="panel-systems" class="panel">
+    <!-- WAR -->
+    <section id="panel-war" class="panel">
       <div class="card">
-        <h4>City systems</h4>
-        <p class="meta">Click a system to expand. Run pulse shows the matching last_actions snapshot (offline-safe on Pages).</p>
-        <div id="systems" class="systems-list"></div>
-        <p class="meta" style="margin-top:0.75rem">Gate scope: <span id="gate-scope"></span></p>
-        <div id="sandbox-flags" class="meta" style="margin-top:0.5rem"></div>
-        <pre id="systems-output" class="room-output" hidden style="margin-top:0.85rem"></pre>
-      </div>
-    </section>
-
-    <section id="panel-actions" class="panel">
-      <div class="card">
-        <h4>What the city can DO</h4>
-        <p class="meta">Offline pulse via <code>city_actions/run_city_pulse.py</code>. Pages loads the last snapshot. Big buttons below replay results from <code>last_actions.json</code> — no applies, Gate E hello only.</p>
-        <div class="action-grid" id="action-defs"></div>
-      </div>
-      <div class="card" style="margin-top:1rem">
-        <h4>Last pulse <span class="meta" id="pulse-updated"></span></h4>
-        <div class="brains-actions" style="margin-bottom:0.75rem">
-          <button type="button" id="reload-pulse-btn" class="brains-btn">Reload pulse JSON</button>
-          <button type="button" id="how-pulse-btn" class="brains-btn secondary">How to run on PC</button>
+        <div class="card-head">
+          <h4>War Room</h4>
+          <span class="meta" id="war-updated"></span>
         </div>
-        <pre id="how-pulse-box" class="room-output" hidden></pre>
-        <div id="last-actions" class="actions-results"></div>
+        <p class="meta">Last local dispatch. Run on PC: <code>python city_runtime/dispatch_agent.py --agent ALL --job shift</code></p>
+        <div class="row-actions">
+          <button type="button" id="war-reload" class="btn">Reload</button>
+          <button type="button" id="war-how" class="btn ghost">How</button>
+        </div>
+        <pre id="war-how-box" class="out" hidden></pre>
+        <div id="war-results" class="war-results"></div>
+      </div>
+      <div class="card" style="margin-top:0.85rem">
+        <h4>Queue</h4>
+        <div class="war-queue">
+          <select id="war-agent"></select>
+          <select id="war-job">
+            <option value="shift">shift</option>
+            <option value="sandbox_hello">sandbox_hello</option>
+            <option value="thrift_score">thrift_score</option>
+            <option value="inventory">inventory</option>
+            <option value="log_event">log_event</option>
+            <option value="brains_demo">brains_demo</option>
+            <option value="dualcortex">dualcortex</option>
+          </select>
+          <button type="button" id="war-dispatch" class="btn">Dispatch</button>
+        </div>
+        <pre id="war-out" class="out" style="margin-top:0.65rem" hidden></pre>
       </div>
     </section>
 
-    <section id="panel-thrift" class="panel">
-      <div class="card" id="thrift">
-        <h4>Thrift meters</h4>
-        <p class="meta">Pick an objective to score. Advisory only — promote gate required before live use.</p>
+    <!-- OPS = systems + actions + thrift (lean stack) -->
+    <section id="panel-ops" class="panel">
+      <div id="panel-systems" class="ops-block">
+        <div class="card">
+          <h4>Systems</h4>
+          <div id="systems" class="systems-list"></div>
+          <p class="meta" style="margin-top:0.6rem">Gate: <span id="gate-scope"></span></p>
+          <div id="sandbox-flags" class="meta"></div>
+          <pre id="systems-output" class="out" hidden style="margin-top:0.65rem"></pre>
+        </div>
       </div>
-      <div class="card" style="margin-top:1rem" id="thrift-score-card" hidden>
-        <h4>Score result</h4>
-        <div id="thrift-score-out" class="meta"></div>
+      <div id="panel-actions" class="ops-block" style="margin-top:0.85rem">
+        <div class="card">
+          <div class="card-head">
+            <h4>Actions</h4>
+            <span class="meta" id="pulse-updated"></span>
+          </div>
+          <div class="action-grid" id="action-defs"></div>
+          <div class="row-actions" style="margin-top:0.65rem">
+            <button type="button" id="reload-pulse-btn" class="btn">Reload pulse</button>
+            <button type="button" id="how-pulse-btn" class="btn ghost">PC how-to</button>
+          </div>
+          <pre id="how-pulse-box" class="out" hidden></pre>
+          <div id="last-actions" class="actions-results"></div>
+        </div>
+      </div>
+      <div id="panel-thrift" class="ops-block" style="margin-top:0.85rem">
+        <div class="card" id="thrift">
+          <h4>Thrift</h4>
+          <p class="meta">Advisory only — promote gate before live use.</p>
+        </div>
+        <div class="card" style="margin-top:0.65rem" id="thrift-score-card" hidden>
+          <h4>Score</h4>
+          <div id="thrift-score-out" class="meta"></div>
+        </div>
       </div>
     </section>
 
+    <!-- BRAINS -->
     <section id="panel-brains" class="panel">
       <div class="card brains-status">
-        <h4>DualCortex · city brains</h4>
-        <p class="meta">Left = DeepSeek (logic) · Right = Qwen (creative) · Merge = Qwen. Pages = <strong>DEMO</strong> lore with Creator memory baked in. Live = bridge <code>127.0.0.1:8787</code>.</p>
+        <div class="card-head">
+          <h4>DualCortex</h4>
+          <span class="meta">DeepSeek · Qwen · Merge</span>
+        </div>
         <div class="brains-chips" id="brains-chips">
           <span class="sys-chip held" id="chip-mode">Mode: …</span>
           <span class="sys-chip held" id="chip-bridge">Bridge: …</span>
@@ -270,37 +224,40 @@
         </div>
         <div class="quick-prompts" id="quick-prompts"></div>
       </div>
-      <div class="card" style="margin-top:1rem">
-        <h4>Talk to the city</h4>
-        <textarea id="brains-prompt" rows="3" placeholder="Ask about the Creator, crew, districts, thrift, halt, DualCortex, lore…"></textarea>
-        <div class="brains-actions">
-          <button type="button" id="brains-send" class="brains-btn">Send DualCortex</button>
-          <button type="button" id="brains-refresh" class="brains-btn secondary">Refresh status</button>
+      <div class="card" style="margin-top:0.85rem">
+        <textarea id="brains-prompt" rows="3" placeholder="Ask the city — Creator, crew, law, DualCortex…"></textarea>
+        <div class="row-actions">
+          <button type="button" id="brains-send" class="btn">Send</button>
+          <button type="button" id="brains-refresh" class="btn ghost">Status</button>
         </div>
-        <p id="brains-err" class="meta" style="color:var(--halt);margin-top:0.5rem" hidden></p>
+        <p id="brains-err" class="meta err" hidden></p>
       </div>
-      <div class="cards brains-out" style="margin-top:1rem">
-        <div class="card"><h4>Left · DeepSeek</h4><pre id="brains-left" class="brains-pre">—</pre></div>
-        <div class="card"><h4>Right · Qwen</h4><pre id="brains-right" class="brains-pre">—</pre></div>
-        <div class="card brains-merge"><h4>Merge · final</h4><pre id="brains-merged" class="brains-pre">Pick a quick prompt or type — DEMO works on Pages with no Ollama. Creator memory lives here (no separate Creator tab).</pre></div>
+      <div class="brains-out">
+        <div class="card"><h4>Left</h4><pre id="brains-left" class="brains-pre">—</pre></div>
+        <div class="card"><h4>Right</h4><pre id="brains-right" class="brains-pre">—</pre></div>
+        <div class="card brains-merge"><h4>Merge</h4><pre id="brains-merged" class="brains-pre">DEMO works on Pages. LIVE needs Ollama + bridge :8787. Creator brief lives here.</pre></div>
       </div>
     </section>
 
+    <!-- LAW -->
     <section id="panel-law" class="panel">
       <div class="card">
-        <h4>Standing law (Y0)</h4>
-        <p class="meta">Constitution v1.2 · Security pack v1.1 · Army Spec v1.0.1 — click an article to expand.</p>
+        <h4>Law · Year 0</h4>
+        <p class="meta">Constitution v1.2 · Security v1.1 · Army Spec v1.0.1</p>
         <div id="law-articles" class="law-articles"></div>
       </div>
     </section>
 
-    <p class="footer-note">Style: Creator gothic · Twist: SNATCHER gold command deck · Updated <span id="updated"></span> · <a class="foot-link" href="https://github.com/egglockedgoof/money-city-ui" target="_blank" rel="noopener">UI repo</a></p>
+    <footer class="foot">
+      <span id="updated"></span>
+      <a href="https://github.com/egglockedgoof/money-city-ui" target="_blank" rel="noopener">UI repo</a>
+    </footer>
   </div>
   <script src="js/gate_config.js?v=1"></script>
   <script src="js/gate.js?v=1"></script>
-  <script src="js/live_loop.js?v=20261002alive"></script>
-  <script src="js/future_vibe.js?v=20261002alive"></script>
-  <script src="js/city.js?v=20261002alive"></script>
-  <script src="js/brains.js?v=20261002alive"></script>
+  <script src="js/live_loop.js?v=20261002lean"></script>
+  <script src="js/future_vibe.js?v=20261002lean"></script>
+  <script src="js/city.js?v=20261002lean"></script>
+  <script src="js/brains.js?v=20261002lean"></script>
 </body>
 </html>

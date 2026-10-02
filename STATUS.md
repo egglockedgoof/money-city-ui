@@ -1,6 +1,2 @@
-# city_ui STATUS
-
-- Living tick ON (no Ollama)
-- Far-future gothic megacity UI PREVIEW
-- LAW Year 0 · JOB_HALT ON · Gate E hello only
-- Updated 2026-10-02 ~14:10 PT
+# UI status
+Lean redesign 2026-10-02 PT — gothic HUD, Ops stack, quiet tick. JOB_HALT ON · Gate E hello only · no Creator tab · PII stripped.

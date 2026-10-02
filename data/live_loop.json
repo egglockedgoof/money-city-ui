@@ -1,10 +1,10 @@
 {
-  "updated_pt": "2026-10-02T14:10:00-07:00",
+  "updated_pt": "2026-10-02T14:45:00-07:00",
   "year": 0,
-  "tick_ms": 3500,
-  "ticker_ms": 28000,
-  "dispatch_every_ticks": 4,
-  "max_feed": 28,
+  "tick_ms": 6500,
+  "ticker_ms": 48000,
+  "dispatch_every_ticks": 6,
+  "max_feed": 18,
   "rule": "JOB_HALT ON \u00b7 Gate E hello only \u00b7 no applies \u00b7 no PII \u00b7 offline DEMO life",
   "statuses": {
     "SNATCHER": [

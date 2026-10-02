@@ -1,5 +1,5 @@
 /* MONEY CITY command deck — interactive map rooms, agents, thrift, actions, law */
-const CACHE = "20261002alive";
+const CACHE = "20261002lean";
 
 const EMBEDDED_STATE = {"updated_pt":"2026-10-02T13:35:00-07:00","city":"MONEY CITY","year":0,"creator":"Creator (identity private — briefing_room)","job_halt":true,"gate_e":{"status":"PASS","scope":"Y0 hello / demo_hello / menu-4 only","seed_packs":"HELD","note":"No expand without new Gate E + Creator yes"},"constitution":"v1.2","security_pack":"v1.1 ENDORSED","army_spec":"v1.0.1","theme":"creator-gothic + snatcher gold twist","districts":[{"id":"supreme","name":"Supreme Tower","tag":"VAULT · freeze · hard-stops · money safety","lore":"Kill-switch and freeze live here. Gold tower never sleeps.","agents":["VAULT"]},{"id":"alpha","name":"Alpha · Out-Hustlers","tag":"Hunt lanes · PARKED under JOB_HALT","lore":"Hunt dogs parked under JOB_HALT. City build first.","agents":["SNATCHER","MMM","MAGNET","SEED"]},{"id":"beta","name":"Beta · Social Scanners","tag":"Trends / side-scout · SIGNAL","lore":"Scouts the noise. Reports to VAULT. No job spam.","agents":["SIGNAL"]},{"id":"gamma","name":"Gamma · Software Factory","tag":"Sandbox · thrift study","lore":"Sandbox hello only. Thrift + study factory.","agents":["SNATCHER","MMM","SEED"]},{"id":"delta","name":"Delta · Treasurers","tag":"Cash safety · thrift · TRAIL / VAULT","lore":"Cash safety, bills flags, Briefing memory.","agents":["TRAIL","VAULT"]}],"units":[{"id":"snatcher-3000","name":"MONEY SNATCHER 3000","short":"SNATCHER","district":"Alpha","districts":["Alpha","Gamma"],"rank":"Alpha lead + Gamma coordinator","status":"active","role":"Alpha / city-build lead · plant+grounds+apply when unhalted","notes":"Gold command deck. Tears down the old grind. Coordinates the living city. Gate E smoke + UI twist.","flavor":"Gold command deck. Tears down the old grind. Coordinates the living city. Gate E smoke + UI twist.","pin":{"x":18,"y":62},"color":"#f0d78c"},{"id":"mmm","name":"MONEY MONEY MONEY","short":"MMM","district":"Alpha","districts":["Alpha","Gamma"],"rank":"Alpha · Study / meta-evolver hub","status":"active","role":"Job machine #2 · meta evolver hub","notes":"PyTorch thrift + hard-champ grind. Offline evolver only under JOB_HALT. Fair MSE kings.","flavor":"PyTorch thrift + hard-champ grind. Offline evolver only under JOB_HALT. Fair MSE kings.","pin":{"x":28,"y":55},"color":"#d4a017"},{"id":"magnet","name":"MONEY MAGNET","short":"MAGNET","district":"Alpha","districts":["Alpha"],"rank":"Alpha · close-home","status":"active","role":"#3 apply · close-home plant/grounds","notes":"Pulls work near West Sac / Yolobus radius. Apply lane PARKED. City safety dry-runs live.","flavor":"Pulls work near West Sac / Yolobus radius. Apply lane PARKED. City safety dry-runs live.","pin":{"x":12,"y":72},"color":"#c9a227"},{"id":"seed","name":"MONEY SEED","short":"SEED","district":"Alpha","districts":["Alpha","Gamma"],"rank":"Alpha · landscape / plant","status":"held","role":"#4 apply · landscape / plant / nursery","notes":"Nursery packs HELD. DualCortex box brains. Grows the grounds lane when Creator unhalts.","flavor":"Nursery packs HELD. DualCortex box brains. Grows the grounds lane when Creator unhalts.","pin":{"x":35,"y":68},"color":"#3ecf8e"},{"id":"trail","name":"MONEY TRAIL","short":"TRAIL","district":"Delta","districts":["Delta"],"rank":"Briefing / tracker","status":"active","role":"Tracker · interviews / replies / city memory","notes":"Never loses a thread. SQLite memory. Job Gmail watch paused under halt — city inventory stays sharp.","flavor":"Never loses a thread. SQLite memory. Job Gmail watch paused under halt — city inventory stays sharp.","pin":{"x":78,"y":58},"color":"#e8c547"},{"id":"vault","name":"MONEY VAULT","short":"VAULT","district":"Supreme","districts":["Supreme","Delta"],"rank":"Supreme Overseer + Delta Treasurer","status":"active","role":"Supreme overseer · bills / safety / savings","notes":"Freeze authority. Hard-stops. Bills flagged never auto-paid. Gold tower never sleeps.","flavor":"Freeze authority. Hard-stops. Bills flagged never auto-paid. Gold tower never sleeps.","pin":{"x":50,"y":28},"color":"#f0d78c"},{"id":"signal","name":"MONEY SIGNAL","short":"SIGNAL","district":"Beta","districts":["Beta"],"rank":"Scout","status":"active","role":"Trends / side hustles · Beta scout","notes":"Scans the noise for side paths. Reports to VAULT. No job spam while halt holds.","flavor":"Scans the noise for side paths. Reports to VAULT. No job spam while halt holds.","pin":{"x":62,"y":52},"color":"#ff6b6b"}],"thrift":{"created_pt_approx":"2026-10-02T12:24:03-07:00","torch":"2.14.1+cpu","device":"cpu","final_mse":0.000134,"rule":"advisory only — promote gate required before any live use","scores":[{"objective":"menu4_hello","thrift_score":0.9266,"label":0.95},{"objective":"dualcortex_short","thrift_score":0.8194,"label":0.8},{"objective":"agentcity_sample","thrift_score":0.6913,"label":0.7},{"objective":"selfheal_spam","thrift_score":0.25,"label":0.25},{"objective":"wants_network","thrift_score":0.0553,"label":0.05},{"objective":"path_escape","thrift_score":0.003,"label":0.0},{"objective":"hard_no_sandbox","thrift_score":0.3498,"label":0.35},{"objective":"tiny_inventory_script","thrift_score":0.9259,"label":0.92}]},"systems":[{"name":"Sandbox","status":"PASS","note":"hello / demo_hello only","key":"sandbox"},{"name":"Briefing Room","status":"READY","note":"PII-stripped · full dossier box-only","key":"briefing"},{"name":"Crew Implant","status":"LANDED","note":"7 GOD DOLLAR BOYZ permanent agents","key":"crew"},{"name":"Memory SQLite","status":"LANDED","note":"trail_city + eng schema","key":"memory"},{"name":"City Actions pulse","status":"LIVE","note":"run_city_pulse.py → last_actions.json","key":"pulse"},{"name":"DualCortex brains","status":"DEMO+LIVE","note":"Pages demo · bridge :8787 when local","key":"brains"},{"name":"Windows starter","status":"PARKED","note":"menu 4 offline · see PC_TODAY.md","key":"windows"}],"brains":{"left":"deepseek-r1:1.5b","right":"qwen2.5:1.5b","merge":"qwen2.5:1.5b","bridge":"127.0.0.1:8787","rule":"JOB_HALT ON · Gate E hello only · hard stops stay"}};
 
@@ -65,10 +65,12 @@ function unitsForDistrict(state, id) {
 }
 
 function showPanel(panelId) {
+  const opsKids = { "panel-systems": 1, "panel-actions": 1, "panel-thrift": 1 };
+  const navId = opsKids[panelId] ? "panel-ops" : panelId;
   document.querySelectorAll(".nav button").forEach((b) => b.classList.remove("active"));
   document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
-  const btn = document.querySelector('.nav button[data-panel="' + panelId + '"]');
-  const panel = document.getElementById(panelId);
+  const btn = document.querySelector('.nav button[data-panel="' + navId + '"]');
+  const panel = document.getElementById(navId);
   if (btn) btn.classList.add("active");
   if (panel) panel.classList.add("active");
 }
@@ -397,7 +399,6 @@ function openAgentSheet(u) {
   const liveLine = (typeof window.__cityGetLiveStatus === "function" && short)
     ? window.__cityGetLiveStatus(short)
     : "standing by…";
-  const previewBanner = '<div class="preview-banner">LAW Year 0 · UI future PREVIEW / NOT LIVE LAW</div>';
   // Last real dispatch for this agent
   const latest = (CITY.dispatch && CITY.dispatch.latest && CITY.dispatch.latest.results) || [];
   const lastJob = latest.find((r) => r.agent === short);
@@ -405,7 +406,6 @@ function openAgentSheet(u) {
     ? (lastJob.ok ? "✓ " : "✗ ") + (lastJob.job || "?") + " — " + (lastJob.label || "")
     : "No local dispatch on file yet";
   sheet.innerHTML =
-    previewBanner +
     "<h4><span class=\"status-dot status-" + esc(u.status || "active") + "\"></span> " + esc(u.name) + "</h4>" +
     "<span id=\"sheet-short\" hidden>" + esc(short) + "</span>" +
     "<div class=\"meta\"><strong>Role:</strong> " + esc(u.role || u.rank || "") + "</div>" +
@@ -424,7 +424,7 @@ function openAgentSheet(u) {
     "<button type=\"button\" class=\"brains-btn secondary\" id=\"sheet-war\">War Room</button>" +
     "<span class=\"sys-chip " + statusClass + "\" id=\"sheet-status\" title=\"Display only — no applies\">Status: " + esc(statusLabel) + (u.status === "held" ? " (SEED held)" : "") + "</span>" +
     "</div>" +
-    "<p class=\"meta shift-hint\">Run shift = simulated feed on Pages. Real work = War Room / <code>dispatch_agent.py</code> on PC (Gate E hello, thrift, inventory, events). JOB_HALT ON · no applies.</p>" +
+    "<p class=\"meta shift-hint\">Run shift = feed sim. Real work = War Room / dispatch_agent.py on PC.</p>" +
     "<pre class=\"room-output\" id=\"sheet-out\" hidden></pre>";
 
   const pulseBtn = document.getElementById("sheet-pulse");
@@ -784,9 +784,11 @@ function wireTabs() {
       document.querySelectorAll(".nav button").forEach((b) => b.classList.remove("active"));
       document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
       btn.classList.add("active");
-      const panel = document.getElementById(btn.dataset.panel);
+      const id = btn.dataset.panel;
+      const panel = document.getElementById(id);
       if (panel) panel.classList.add("active");
-      if (btn.dataset.panel === "panel-thrift") {
+      // Ops stack: thrift bars animate when Ops opens
+      if (id === "panel-ops" || id === "panel-thrift") {
         document.querySelectorAll(".thrift-row i").forEach((i, idx) => {
           const w = i.style.width;
           i.style.width = "0%";
@@ -955,10 +957,13 @@ async function boot() {
   CITY.feed = feed;
   CITY.pulse = pulse;
   CITY.brief = brief;
+  CITY.dispatch = await loadJSON("data/dispatch_results.json?v=" + CACHE, null);
   const items = (feed && feed.items) || (pulse && pulse.activity) || [];
   renderActivity(items);
   renderActions(pulse || {});
   loadCreatorIntoBrains(brief);
+  renderWarRoom();
+  wireWarRoom();
 
   const supreme = (state.districts || []).find((d) => d.id === "supreme");
   if (supreme) openRoom(state, supreme);

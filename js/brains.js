@@ -2,7 +2,7 @@
 (function () {
   const BRIDGE = "http://127.0.0.1:8787";
   const DEMO_URL = "data/brains_demo.json";
-  const CACHE = "20261002rooms";
+  const CACHE = "20261002lean";
 
   const DEFAULT_PROMPTS = [
     "Who is the Creator of MONEY CITY?",

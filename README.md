@@ -1,9 +1,3 @@
-# MONEY CITY UI (Year 0)
-Creator style (gothic blood-red) + SNATCHER gold command-deck twist.
-
-```bash
-./serve.sh 8765
-# open http://127.0.0.1:8765/
-```
-
-Data: `data/city_state.json` (passports + MMM thrift). Style rules: `STYLE.md`.
+# MONEY CITY UI (Pages)
+Lean Year 0 command deck. Password gate. JOB_HALT ON · Gate E hello only.
+No job files · no contact PII. Brains DEMO on Pages; LIVE needs local bridge.

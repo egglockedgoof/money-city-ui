@@ -1,18 +1,14 @@
-# MONEY CITY UI — Creator style (locked)
-**Order:** Creator 2026-10-02 ~12:50 PT — use HIS collage style; SNATCHER adds twist. Cannot disobey.
+# MONEY CITY UI — lean gothic HUD (locked 2026-10-02 lean)
+Creator blood-red + gold twist — **clean command deck**, not collage.
 
-## Base (Creator)
-- Deep textured blood-red / crimson field with horizontal gradient stripes
-- Macabre gothic energy: jagged brush type, dark shadows
-- Visual language OK: drama masks, devil/demon motifs, noose-heart as *symbols* (not literal violence UI chrome)
-- Palette: #3a0508, #6b0f16, #8b151c, #c41e2a, near-black #0a0304, ash gray
+## Palette
+- Near-black `#070203` / `#100406`
+- Blood `#6b0f16` · crimson accent `#a81824`
+- Gold `#d4a017` / `#e8c96a` (sparse)
+- Cream text `#efe2c6` · muted `#9a8578`
 
-## Twist (SNATCHER)
-- Gold / brass coin accents (#d4a017, #f0d78c) for money + Gate chips
-- Readable glass cards (dark translucent) over the red field
-- Living city map: 4 districts + Supreme tower glow
-- Functional badges: JOB_HALT, Gate E PASS (hello only)
-- Soft ember glow on hover — horror-luxe command deck, not a poster
-
-## Ban
-- Bright emerald/cream “daylight SaaS” look (overridden)
+## Rules
+- Sparse chrome · readable hierarchy · one ticker · small badges
+- No mask row, devil-coin, PREVIEW spam, honesty chip walls, fat banners
+- Tabs: Map · Agents · War · Ops · Brains · Law
+- Password gate · JOB_HALT · Gate E hello · Year 0 law · no PII on Pages
