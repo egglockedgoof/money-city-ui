@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MONEY CITY — Command Deck</title>
+  <link rel="stylesheet" href="css/city.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">MONEY CITY<small>Year 0 · Creator forever</small></div>
+      <div class="badges">
+        <span class="badge badge-creator">Creator: Keysean</span>
+        <span class="badge badge-halt">JOB_HALT ON</span>
+        <span class="badge badge-gate">Gate E PASS · hello only</span>
+      </div>
+    </header>
+
+    <div class="mask-row" aria-hidden="true">
+      <div class="mask smile" title="comedy"></div>
+      <div class="devil-coin" title="snatcher twist — money devil coin"></div>
+      <div class="mask frown" title="tragedy"></div>
+    </div>
+
+    <nav class="nav">
+      <button class="active" data-panel="panel-map">City Map</button>
+      <button data-panel="panel-agents">Agents</button>
+      <button data-panel="panel-systems">Systems</button>
+      <button data-panel="panel-thrift">Thrift</button>
+      <button data-panel="panel-law">Law</button>
+    </nav>
+
+    <section id="panel-map" class="panel active">
+      <div class="hero-quote">
+        <div class="big">Destruction</div>
+        <div class="mid">is a form of</div>
+        <div class="gold">CREATION</div>
+        <p style="margin:0.6rem 0 0;font-size:0.85rem;color:var(--smoke);position:relative">Your line. Our twist: tear down the old grind, build the city that pays.</p>
+      </div>
+
+      <div class="skyline-wrap" aria-hidden="true">
+        <div class="city-lights-overlay"></div>
+        <svg viewBox="0 0 960 220" xmlns="http://www.w3.org/2000/svg" role="img">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2a080c"/>
+              <stop offset="100%" stop-color="#0a0304"/>
+            </linearGradient>
+            <linearGradient id="towerGold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0d78c"/>
+              <stop offset="100%" stop-color="#8a6a12"/>
+            </linearGradient>
+            <filter id="softGlow">
+              <feGaussianBlur stdDeviation="2.5" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <rect width="960" height="220" fill="url(#sky)"/>
+          <!-- moon -->
+          <circle cx="860" cy="42" r="18" fill="#f0d78c" opacity="0.85" filter="url(#softGlow)"/>
+          <circle cx="868" cy="38" r="18" fill="#1a0508"/>
+          <!-- back row buildings -->
+          <g fill="#1a080a" stroke="#6b0f16" stroke-width="1">
+            <rect x="40" y="110" width="50" height="110"/>
+            <rect x="100" y="80" width="42" height="140"/>
+            <rect x="155" y="100" width="55" height="120"/>
+            <rect x="720" y="95" width="48" height="125"/>
+            <rect x="780" y="70" width="55" height="150"/>
+            <rect x="850" y="105" width="60" height="115"/>
+          </g>
+          <!-- mid row -->
+          <g fill="#2a0a0e" stroke="#8b151c" stroke-width="1.2">
+            <path d="M210 220 V90 H250 V70 H270 V90 H300 V220 Z"/>
+            <rect x="320" y="85" width="70" height="135"/>
+            <rect x="400" y="60" width="45" height="160"/>
+            <path d="M560 220 V100 H590 L610 70 H630 L650 100 H680 V220 Z"/>
+            <rect x="690" y="110" width="40" height="110"/>
+          </g>
+          <!-- Supreme tower (center gold) -->
+          <g filter="url(#softGlow)">
+            <path d="M455 220 V55 L480 28 L505 55 V220 Z" fill="url(#towerGold)" stroke="#f0d78c" stroke-width="1.5"/>
+            <rect x="468" y="18" width="24" height="14" rx="2" fill="#f0d78c"/>
+            <rect x="476" y="8" width="8" height="12" fill="#d4a017"/>
+            <!-- windows lit -->
+            <g fill="#f0d78c" opacity="0.9">
+              <rect x="465" y="70" width="6" height="8"/><rect x="478" y="70" width="6" height="8"/><rect x="491" y="70" width="6" height="8"/>
+              <rect x="465" y="95" width="6" height="8"/><rect x="478" y="95" width="6" height="8"/><rect x="491" y="95" width="6" height="8"/>
+              <rect x="465" y="120" width="6" height="8"/><rect x="478" y="120" width="6" height="8"/><rect x="491" y="120" width="6" height="8"/>
+              <rect x="465" y="145" width="6" height="8"/><rect x="478" y="145" width="6" height="8"/><rect x="491" y="145" width="6" height="8"/>
+              <rect x="465" y="170" width="6" height="8"/><rect x="478" y="170" width="6" height="8"/><rect x="491" y="170" width="6" height="8"/>
+            </g>
+          </g>
+          <!-- lit windows on side buildings -->
+          <g fill="#d4a017" opacity="0.55">
+            <rect x="112" y="100" width="5" height="6"/><rect x="122" y="100" width="5" height="6"/>
+            <rect x="112" y="120" width="5" height="6"/><rect x="122" y="140" width="5" height="6"/>
+            <rect x="335" y="100" width="5" height="6"/><rect x="350" y="115" width="5" height="6"/>
+            <rect x="410" y="80" width="5" height="6"/><rect x="422" y="100" width="5" height="6"/>
+            <rect x="795" y="90" width="5" height="6"/><rect x="810" y="110" width="5" height="6"/>
+            <rect x="575" y="120" width="5" height="6"/><rect x="640" y="130" width="5" height="6"/>
+          </g>
+          <!-- ground glow -->
+          <ellipse cx="480" cy="218" rx="200" ry="8" fill="#d4a017" opacity="0.2"/>
+          <!-- district labels -->
+          <g font-family="Segoe UI, system-ui, sans-serif" font-size="11" font-weight="700" fill="#f0d78c" letter-spacing="1.5">
+            <text x="120" y="208" text-anchor="middle" opacity="0.7">ALPHA</text>
+            <text x="250" y="208" text-anchor="middle" opacity="0.7">BETA</text>
+            <text x="480" y="208" text-anchor="middle" opacity="0.95">SUPREME</text>
+            <text x="640" y="208" text-anchor="middle" opacity="0.7">GAMMA</text>
+            <text x="820" y="208" text-anchor="middle" opacity="0.7">DELTA</text>
+          </g>
+        </svg>
+      </div>
+
+      <div id="map-grid" class="map-grid"></div>
+      <div id="district-focus" class="cards" style="margin-top:1rem"></div>
+    </section>
+
+    <section id="panel-agents" class="panel">
+      <div id="roster" class="cards"></div>
+    </section>
+
+    <section id="panel-systems" class="panel">
+      <div class="card">
+        <h4>City systems</h4>
+        <div id="systems"></div>
+        <p class="meta" style="margin-top:0.75rem">Gate scope: <span id="gate-scope"></span></p>
+        <div id="sandbox-flags" class="meta" style="margin-top:0.5rem"></div>
+      </div>
+    </section>
+
+    <section id="panel-thrift" class="panel">
+      <div class="card" id="thrift"></div>
+    </section>
+
+    <section id="panel-law" class="panel">
+      <div class="card">
+        <h4>Standing law (Y0)</h4>
+        <p class="meta">Constitution v1.2 · Security pack v1.1 · Army Spec v1.0.1</p>
+        <ul class="meta">
+          <li>Creator kill-switch / Supreme freeze always wins.</li>
+          <li>JOB_HALT: no applies, ATS, interview booking, Gmail job watch.</li>
+          <li>Live Sandbox = hello / demo_hello only until new Gate E + Creator yes.</li>
+          <li>Hard stops: no full SSN, bank, fees, crypto keys unsupervised.</li>
+          <li>Promote gate: freeze → snapshot → sandbox A/B → Auditor → VAULT → Creator [Y].</li>
+        </ul>
+      </div>
+    </section>
+
+    <p class="footer-note">Style: Creator gothic · Twist: SNATCHER gold command deck · Updated <span id="updated"></span></p>
+  </div>
+  <script src="js/city.js?v=20261002c"></script>
+</body>
+</html>

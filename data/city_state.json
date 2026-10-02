@@ -1,0 +1,172 @@
+{
+  "updated_pt": "2026-10-02T12:54:00-07:00",
+  "city": "MONEY CITY",
+  "year": 0,
+  "creator": "Keysean Caris",
+  "job_halt": true,
+  "gate_e": {
+    "status": "PASS",
+    "scope": "Y0 hello / demo_hello / menu-4 only",
+    "seed_packs": "HELD",
+    "note": "No expand without new Gate E + Creator yes"
+  },
+  "constitution": "v1.2",
+  "security_pack": "v1.1 ENDORSED",
+  "army_spec": "v1.0.1",
+  "theme": "creator-gothic + snatcher gold twist",
+  "districts": [
+    {
+      "id": "supreme",
+      "name": "Supreme Tower",
+      "tag": "VAULT \u00b7 freeze \u00b7 hard-stops \u00b7 money safety"
+    },
+    {
+      "id": "alpha",
+      "name": "Alpha \u00b7 Out-Hustlers",
+      "tag": "Hunt lanes \u00b7 PARKED under JOB_HALT"
+    },
+    {
+      "id": "beta",
+      "name": "Beta \u00b7 Social Scanners",
+      "tag": "Trends / side-scout \u00b7 reports to VAULT"
+    },
+    {
+      "id": "gamma",
+      "name": "Gamma \u00b7 Software Factory",
+      "tag": "Sandbox \u00b7 Briefing \u00b7 thrift study"
+    },
+    {
+      "id": "delta",
+      "name": "Delta \u00b7 Treasurers",
+      "tag": "Cash safety \u00b7 bills \u00b7 Briefing memory"
+    }
+  ],
+  "units": [
+    {
+      "name": "MONEY VAULT",
+      "district": "Supreme",
+      "rank": "Supreme Overseer + Delta",
+      "status": "active",
+      "notes": "Freeze authority, hard-stops, bills & benefits safety."
+    },
+    {
+      "name": "MONEY SNATCHER 3000",
+      "district": "Alpha",
+      "rank": "Alpha lead + Gamma",
+      "status": "active",
+      "notes": "City-build coordinator. Gate E smoke. UI command deck."
+    },
+    {
+      "name": "MONEY MONEY MONEY",
+      "district": "Alpha",
+      "rank": "Alpha \u00b7 Study",
+      "status": "active",
+      "notes": "PyTorch drills 01\u201319. Thrift scorer \u2192 city meters (advisory)."
+    },
+    {
+      "name": "MONEY MAGNET",
+      "district": "Alpha",
+      "rank": "Alpha \u00b7 close-home",
+      "status": "active",
+      "notes": "JOB claims PARKED. City safety dry-run."
+    },
+    {
+      "name": "MONEY SEED",
+      "district": "Alpha",
+      "rank": "Alpha \u00b7 landscape / plant",
+      "status": "held",
+      "notes": "Nursery offline packs PASS. Live DualCortex HELD."
+    },
+    {
+      "name": "MONEY TRAIL",
+      "district": "Delta",
+      "rank": "Briefing",
+      "status": "active",
+      "notes": "City memory SQLite. Job Gmail watch paused."
+    },
+    {
+      "name": "MONEY SIGNAL",
+      "district": "Beta",
+      "rank": "Scout",
+      "status": "active",
+      "notes": "Beta scout. Reports to VAULT."
+    }
+  ],
+  "thrift": {
+    "created_pt_approx": "2026-10-02T12:24:03-07:00",
+    "torch": "2.14.1+cpu",
+    "device": "cpu",
+    "final_mse": 0.000134,
+    "rule": "advisory only \u2014 promote gate required before any live use",
+    "scores": [
+      {
+        "objective": "menu4_hello",
+        "thrift_score": 0.9266,
+        "label": 0.95
+      },
+      {
+        "objective": "dualcortex_short",
+        "thrift_score": 0.8194,
+        "label": 0.8
+      },
+      {
+        "objective": "agentcity_sample",
+        "thrift_score": 0.6913,
+        "label": 0.7
+      },
+      {
+        "objective": "selfheal_spam",
+        "thrift_score": 0.25,
+        "label": 0.25
+      },
+      {
+        "objective": "wants_network",
+        "thrift_score": 0.0553,
+        "label": 0.05
+      },
+      {
+        "objective": "path_escape",
+        "thrift_score": 0.003,
+        "label": 0.0
+      },
+      {
+        "objective": "hard_no_sandbox",
+        "thrift_score": 0.3498,
+        "label": 0.35
+      },
+      {
+        "objective": "tiny_inventory_script",
+        "thrift_score": 0.9259,
+        "label": 0.92
+      }
+    ]
+  },
+  "systems": [
+    {
+      "name": "Sandbox",
+      "status": "PASS",
+      "note": "hello / demo_hello only"
+    },
+    {
+      "name": "Briefing Room",
+      "status": "READY",
+      "note": "induct.py + passports"
+    },
+    {
+      "name": "Memory SQLite",
+      "status": "LANDED",
+      "note": "trail_city + eng schema"
+    },
+    {
+      "name": "Windows starter",
+      "status": "PARKED",
+      "note": "menu 4 offline demo"
+    },
+    {
+      "name": "SEED DualCortex packs",
+      "status": "HELD",
+      "note": "until new Gate E + Creator"
+    }
+  ],
+  "mmm_drills": "01\u201319 shipped (advisory)"
+}
