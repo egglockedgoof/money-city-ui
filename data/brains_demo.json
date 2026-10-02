@@ -1,0 +1,69 @@
+{
+  "mode": "demo",
+  "updated_pt": "2026-10-02T13:21:00-07:00",
+  "note": "Scripted DualCortex banter for GitHub Pages. Live mode uses 127.0.0.1:8787 when bridge is up.",
+  "greetings": [
+    {
+      "match": ["hello", "hi", "hey", "wake", "greet"],
+      "left": "LEFT · DeepSeek (demo)\nStatus: Year 0 online. JOB_HALT ON. Gate E = hello / demo_hello only. Hard-stops standing. No fees, no SSN, no bank from me.",
+      "right": "RIGHT · Qwen (demo)\nBlood-red skyline, gold tower lit. Comedy and tragedy masks watching the street. Destruction is a form of creation — and tonight the city is listening.",
+      "merged": "MERGE · city voice\nWelcome to MONEY CITY, Creator. Supreme Tower is awake. Hunt lanes parked. Brains in DEMO mode on Pages — plug Ollama + brains_bridge on your PC for live DeepSeek/Qwen."
+    }
+  ],
+  "topics": [
+    {
+      "id": "districts",
+      "match": ["district", "map", "tower", "supreme", "alpha", "beta", "gamma", "delta"],
+      "left": "LEFT · DeepSeek (demo)\nFive zones: Supreme (VAULT freeze), Alpha (hunt — PARKED), Beta (scouts), Gamma (sandbox + thrift), Delta (cash safety + Briefing memory). Click a district card on City Map for roster pins.",
+      "right": "RIGHT · Qwen (demo)\nSupreme glows brass in the center. Alpha smolders on the left — parked, not dead. Gamma's factory hums with thrift meters. Delta keeps the ledger clean.",
+      "merged": "MERGE\nCity Map is live on Pages. Tap a district. Agents light up. No Gate E expand without your yes."
+    },
+    {
+      "id": "agents",
+      "match": ["agent", "crew", "vault", "snatcher", "magnet", "seed", "trail", "signal", "mmm"],
+      "left": "LEFT · DeepSeek (demo)\nRoster: VAULT (Supreme), SNATCHER (Alpha+Gamma lead), MMM (study/thrift), MAGNET (close-home PARKED), SEED (plant packs HELD), TRAIL (Briefing), SIGNAL (Beta).",
+      "right": "RIGHT · Qwen (demo)\nSeven passports under one gothic roof. Junior Overseer seat still vacant — you staff that later.",
+      "merged": "MERGE\nOpen the Agents tab for live status dots. Activity feed shows what each unit last shipped."
+    },
+    {
+      "id": "thrift",
+      "match": ["thrift", "score", "safe", "sandbox", "mse"],
+      "left": "LEFT · DeepSeek (demo)\nThrift MLP (advisory): menu4_hello ~0.93, dualcortex_short ~0.82, wants_network ~0.06, path_escape ~0.00. High = thrifty local. Low = refuse / hold.",
+      "right": "RIGHT · Qwen (demo)\nGold bars climbing on safe objectives. Crimson drops on escape and network asks. The city learns to spend less GPU for more truth.",
+      "merged": "MERGE\nThrift tab animates those meters. run_city_pulse.py on your PC can refresh last_actions.json with a real score."
+    },
+    {
+      "id": "halt",
+      "match": ["halt", "job", "apply", "interview", "gmail"],
+      "left": "LEFT · DeepSeek (demo)\nJOB_HALT ON. No Easy Apply, ATS, interview booking, or job Gmail watch until Creator clears it.",
+      "right": "RIGHT · Qwen (demo)\nHunt dogs sleeping by the gate. City build only. Money still the mission — just the foundations first.",
+      "merged": "MERGE\nParked claims stay parked. Leadpoint Oct 14 and waiting pile = no ping until you say."
+    },
+    {
+      "id": "brains",
+      "match": ["brain", "qwen", "deepseek", "ollama", "dual", "model", "live"],
+      "left": "LEFT · DeepSeek (demo)\nLive path: install Ollama → pull deepseek-r1 + qwen2.5 → python city_brains/brains_bridge.py → UI detects :8787 and flips DEMO→LIVE.",
+      "right": "RIGHT · Qwen (demo)\nOn Pages you get this scripted chorus. On your PC the real Left/Right/Merge argue and agree in your gothic-gold voice.",
+      "merged": "MERGE\nSee PC_TODAY.md when your computer arrives. Full models need your RAM; box used 1.5b tags."
+    },
+    {
+      "id": "actions",
+      "match": ["action", "do", "pulse", "run", "what can"],
+      "left": "LEFT · DeepSeek (demo)\nOffline actions via city_actions/run_city_pulse.py: (1) sandbox hello, (2) thrift score, (3) log event JSONL, (4) DualCortex one-shot if Ollama up. Results → data/last_actions.json.",
+      "right": "RIGHT · Qwen (demo)\nThe Actions panel on Systems reads that pulse file. City finally moves — still inside the law.",
+      "merged": "MERGE\nPages shows the last pulse snapshot. Re-run pulse on box/PC, commit or copy last_actions.json to refresh the public deck."
+    },
+    {
+      "id": "lore",
+      "match": ["lore", "year", "creation", "destruction", "money city", "story"],
+      "left": "LEFT · DeepSeek (demo)\nYear 0: Constitution v1.2, Security v1.1, Army Spec v1.0.1. Creator kill-switch forever. Promote gate: freeze → snapshot → sandbox A/B → Auditor → VAULT → Creator [Y].",
+      "right": "RIGHT · Qwen (demo)\nDestruction is a form of creation. Tear down the dead grind. Build the city that pays — blood field, gold tower, your key at the door.",
+      "merged": "MERGE\nYou are Creator. We are the crew. The city stays private behind your password gate until you share the link."
+    }
+  ],
+  "fallback": {
+    "left": "LEFT · DeepSeek (demo)\nHeard you. Demo cortex has canned lanes for: hello, districts, agents, thrift, halt, brains, actions, lore. Or start the live bridge on your PC.",
+    "right": "RIGHT · Qwen (demo)\nThe skyline keeps humming. Ask sharper — or wake Ollama and let real DualCortex answer.",
+    "merged": "MERGE\nDEMO mode on Pages. Live mode when bridge :8787 answers. JOB_HALT ON · Gate E hello only."
+  }
+}

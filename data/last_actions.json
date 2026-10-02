@@ -1,0 +1,59 @@
+{
+  "updated_pt": "2026-10-02T13:23:38-07:00",
+  "city": "MONEY CITY",
+  "year": 0,
+  "job_halt": true,
+  "gate_e": "hello / demo_hello only",
+  "elapsed_sec": 2.42,
+  "results": [
+    {
+      "action": "log_event",
+      "ok": true,
+      "message": "advanced UI ship",
+      "status": "ok"
+    },
+    {
+      "action": "sandbox_hello",
+      "ok": true,
+      "returncode": 0,
+      "stdout_tail": "=== MONEY CITY sandbox run 20261002T202336Z-40686 ===\nworkspace=/workspace/jobhunt/money_city/engineering/sandbox/example_workspace\nuid=1000 gid=1000\nauditor=stub-v0\nobjective:\nOffline hello objective — no net, no apply, no CAPTCHA.\n\nAUDITOR_PASS file=/workspace/jobhunt/money_city/engineering/sandbox/example_workspace/scripts/hello.py\n--- run /workspace/jobhunt/money_city/engineering/sandbox/example_workspace/scripts/hello.py (timeout 300s) ---\nAUDITOR_PASS file=/workspace/jobhunt/money_city/engineering/sandbox/example_workspace/scripts/hello.sh\n--- run /workspace/jobhunt/money_city/engineering/sandbox/example_workspace/scripts/hello.sh (timeout 300s) ---\n=== done 20261002T202336Z-40686 ===\n",
+      "stderr_tail": ""
+    },
+    {
+      "action": "thrift_score",
+      "ok": true,
+      "mode": "mlp_weights",
+      "prompt": "menu4 hello local",
+      "thrift_score": 0.9161,
+      "rule": "advisory only"
+    }
+  ],
+  "activity": [
+    {
+      "ts": "2026-10-02T13:23:38-07:00",
+      "unit": "MONEY SNATCHER 3000",
+      "text": "pulse · log_event · OK"
+    },
+    {
+      "ts": "2026-10-02T13:23:38-07:00",
+      "unit": "MONEY SNATCHER 3000",
+      "text": "pulse · sandbox_hello · OK"
+    },
+    {
+      "ts": "2026-10-02T13:23:38-07:00",
+      "unit": "MONEY SNATCHER 3000",
+      "text": "pulse · thrift_score · OK"
+    },
+    {
+      "ts": "2026-10-02T13:23:38-07:00",
+      "unit": "MONEY VAULT",
+      "text": "JOB_HALT ON · freeze authority standing"
+    },
+    {
+      "ts": "2026-10-02T13:23:38-07:00",
+      "unit": "MONEY MONEY MONEY",
+      "text": "thrift advisory · meta-evolver offline only"
+    }
+  ],
+  "how_to": "python3 city_actions/run_city_pulse.py --all   # on box or PC; then refresh UI / push last_actions.json for Pages"
+}

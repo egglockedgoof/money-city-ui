@@ -1,5 +1,5 @@
 {
-  "updated_pt": "2026-10-02T13:17:35-07:00",
+  "updated_pt": "2026-10-02T13:23:36-07:00",
   "city": "MONEY CITY",
   "year": 0,
   "creator": "Keysean Caris",
@@ -18,27 +18,32 @@
     {
       "id": "supreme",
       "name": "Supreme Tower",
-      "tag": "VAULT \u00b7 freeze \u00b7 hard-stops \u00b7 money safety"
+      "tag": "VAULT \u00b7 freeze \u00b7 hard-stops \u00b7 money safety",
+      "lore": "Kill-switch and freeze live here. Gold tower never sleeps."
     },
     {
       "id": "alpha",
       "name": "Alpha \u00b7 Out-Hustlers",
-      "tag": "Hunt lanes \u00b7 PARKED under JOB_HALT"
+      "tag": "Hunt lanes \u00b7 PARKED under JOB_HALT",
+      "lore": "Hunt dogs parked under JOB_HALT. City build first."
     },
     {
       "id": "beta",
       "name": "Beta \u00b7 Social Scanners",
-      "tag": "Trends / side-scout \u00b7 reports to VAULT"
+      "tag": "Trends / side-scout \u00b7 reports to VAULT",
+      "lore": "Scouts the noise. Reports to VAULT. No job spam."
     },
     {
       "id": "gamma",
       "name": "Gamma \u00b7 Software Factory",
-      "tag": "Sandbox \u00b7 Briefing \u00b7 thrift study"
+      "tag": "Sandbox \u00b7 Briefing \u00b7 thrift study",
+      "lore": "Sandbox hello only. Thrift + study factory."
     },
     {
       "id": "delta",
       "name": "Delta \u00b7 Treasurers",
-      "tag": "Cash safety \u00b7 bills \u00b7 Briefing memory"
+      "tag": "Cash safety \u00b7 bills \u00b7 Briefing memory",
+      "lore": "Cash safety, bills flags, Briefing memory."
     }
   ],
   "units": [
@@ -158,14 +163,19 @@
       "note": "trail_city + eng schema"
     },
     {
-      "name": "Windows starter",
-      "status": "PARKED",
-      "note": "menu 4 offline demo"
+      "name": "City Actions pulse",
+      "status": "LIVE",
+      "note": "run_city_pulse.py \u2192 last_actions.json"
     },
     {
       "name": "DualCortex brains",
-      "status": "LIVE",
-      "note": "Ollama 1.5b L/R + bridge :8787 (hello-only sandbox)"
+      "status": "DEMO+LIVE",
+      "note": "Pages demo lore \u00b7 bridge :8787 when local"
+    },
+    {
+      "name": "Windows starter",
+      "status": "PARKED",
+      "note": "menu 4 offline \u00b7 see PC_TODAY.md"
     }
   ],
   "mmm_drills": "01\u201319 shipped (advisory)",
