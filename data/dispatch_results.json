@@ -1,7 +1,7 @@
 {
-  "updated_pt": "2026-10-02T13:57:07-07:00",
+  "updated_pt": "2026-10-02T14:25:19-07:00",
   "latest": {
-    "ts": "2026-10-02T13:57:07-07:00",
+    "ts": "2026-10-02T14:25:19-07:00",
     "law": "Year 0 · JOB_HALT ON · Gate E hello only",
     "note": "Local workers only — peer Grok bots not woken",
     "results": [
@@ -12,7 +12,7 @@
         "where": "local-sandbox",
         "label": "RAN Gate E hello",
         "rc": 0,
-        "stdout_tail": "=== MONEY CITY sandbox run 20261002T205707Z-94902 ===\nworkspace=/workspace/jobhunt/money_city/city_runtime/_ws/snatcher\nuid=1000 gid=1000\nauditor=stub-v0\nobjective:\nOffline hello objective — no net, no apply, no CAPTCHA.\n\nAUDITOR_PASS file=/workspace/jobhunt/money_city/city_runtime/_ws/snatcher/scripts/hello.py\n--- run /workspace/jobhunt/money_city/city_runtime/_ws/snatcher/scripts/hello.py (timeout 300s) ---\n=== done 20261002T205707Z-94902 ===\n",
+        "stdout_tail": "=== MONEY CITY sandbox run 20261002T212519Z-133546 ===\nworkspace=/workspace/jobhunt/money_city/city_runtime/_ws/snatcher\nuid=1000 gid=1000\nauditor=stub-v0\nobjective:\nOffline hello objective — no net, no apply, no CAPTCHA.\n\nAUDITOR_PASS file=/workspace/jobhunt/money_city/city_runtime/_ws/snatcher/scripts/hello.py\n--- run /workspace/jobhunt/money_city/city_runtime/_ws/snatcher/scripts/hello.py (timeout 300s) ---\n=== done 20261002T212519Z-133546 ===\n",
         "stderr_tail": ""
       },
       {
@@ -39,25 +39,25 @@
         "where": "local-fs",
         "label": "RAN money_city inventory",
         "counts": {
-          "city_ui": 22,
+          "city_ui": 42,
           "city_brains": 8,
           "city_actions": 3,
-          "city_runtime": 4,
+          "city_runtime": 38,
           "engineering/sandbox": 20
         },
         "recent_samples": [
-          "city_ui/data/creator_brief.json",
-          "city_ui/index.html",
-          "city_ui/STATUS.md",
+          "city_ui/data/compute_credits.json",
+          "city_ui/data/last_credits.json",
+          "city_ui/data/last_sovereign.json",
           "city_brains/STATUS.md",
           "city_brains/outputs/dualcortex_hello_SMOKE.txt",
           "city_brains/outputs/dualcortex_hello_SMOKE.json",
           "city_actions/events.jsonl",
           "city_actions/run_city_pulse.py",
           "city_actions/README.md",
-          "city_runtime/_ws/snatcher/logs/20261002T205707Z-94902.log",
+          "city_runtime/_ws/snatcher/logs/20261002T212519Z-133546.log",
           "city_runtime/_ws/snatcher/scripts/hello.py",
-          "city_runtime/dispatch_agent.py"
+          "city_runtime/sovereign_dry/last_tick.json"
         ],
         "note": "No secrets scanned into Pages"
       },
@@ -79,25 +79,25 @@
         "where": "local-fs",
         "label": "RAN money_city inventory",
         "counts": {
-          "city_ui": 22,
+          "city_ui": 42,
           "city_brains": 8,
           "city_actions": 3,
-          "city_runtime": 4,
+          "city_runtime": 38,
           "engineering/sandbox": 20
         },
         "recent_samples": [
-          "city_ui/data/creator_brief.json",
-          "city_ui/index.html",
-          "city_ui/STATUS.md",
+          "city_ui/data/compute_credits.json",
+          "city_ui/data/last_credits.json",
+          "city_ui/data/last_sovereign.json",
           "city_brains/STATUS.md",
           "city_brains/outputs/dualcortex_hello_SMOKE.txt",
           "city_brains/outputs/dualcortex_hello_SMOKE.json",
           "city_actions/events.jsonl",
           "city_actions/run_city_pulse.py",
           "city_actions/README.md",
-          "city_runtime/_ws/snatcher/logs/20261002T205707Z-94902.log",
+          "city_runtime/_ws/snatcher/logs/20261002T212519Z-133546.log",
           "city_runtime/_ws/snatcher/scripts/hello.py",
-          "city_runtime/dispatch_agent.py"
+          "city_runtime/sovereign_dry/last_tick.json"
         ],
         "note": "No secrets scanned into Pages"
       },
@@ -120,6 +120,125 @@
     ]
   },
   "runs": [
+    {
+      "ts": "2026-10-02T14:25:19-07:00",
+      "law": "Year 0 · JOB_HALT ON · Gate E hello only",
+      "note": "Local workers only — peer Grok bots not woken",
+      "results": [
+        {
+          "ok": true,
+          "job": "sandbox_hello",
+          "agent": "SNATCHER",
+          "where": "local-sandbox",
+          "label": "RAN Gate E hello",
+          "rc": 0,
+          "stdout_tail": "=== MONEY CITY sandbox run 20261002T212519Z-133546 ===\nworkspace=/workspace/jobhunt/money_city/city_runtime/_ws/snatcher\nuid=1000 gid=1000\nauditor=stub-v0\nobjective:\nOffline hello objective — no net, no apply, no CAPTCHA.\n\nAUDITOR_PASS file=/workspace/jobhunt/money_city/city_runtime/_ws/snatcher/scripts/hello.py\n--- run /workspace/jobhunt/money_city/city_runtime/_ws/snatcher/scripts/hello.py (timeout 300s) ---\n=== done 20261002T212519Z-133546 ===\n",
+          "stderr_tail": ""
+        },
+        {
+          "ok": true,
+          "job": "thrift_score",
+          "agent": "MMM",
+          "where": "local-advisory",
+          "label": "RAN thrift advisory (NOT promote)",
+          "rule": "advisory only — promote gate required before any live use",
+          "summary": [
+            "menu4_hello: 93%",
+            "dualcortex_short: 82%",
+            "agentcity_sample: 69%",
+            "selfheal_spam: 25%",
+            "wants_network: 6%",
+            "path_escape: 0%"
+          ],
+          "note": "JOB_HALT ON · never live alone"
+        },
+        {
+          "ok": true,
+          "job": "inventory",
+          "agent": "MAGNET",
+          "where": "local-fs",
+          "label": "RAN money_city inventory",
+          "counts": {
+            "city_ui": 42,
+            "city_brains": 8,
+            "city_actions": 3,
+            "city_runtime": 38,
+            "engineering/sandbox": 20
+          },
+          "recent_samples": [
+            "city_ui/data/compute_credits.json",
+            "city_ui/data/last_credits.json",
+            "city_ui/data/last_sovereign.json",
+            "city_brains/STATUS.md",
+            "city_brains/outputs/dualcortex_hello_SMOKE.txt",
+            "city_brains/outputs/dualcortex_hello_SMOKE.json",
+            "city_actions/events.jsonl",
+            "city_actions/run_city_pulse.py",
+            "city_actions/README.md",
+            "city_runtime/_ws/snatcher/logs/20261002T212519Z-133546.log",
+            "city_runtime/_ws/snatcher/scripts/hello.py",
+            "city_runtime/sovereign_dry/last_tick.json"
+          ],
+          "note": "No secrets scanned into Pages"
+        },
+        {
+          "ok": true,
+          "job": "brains_demo",
+          "agent": "SEED",
+          "where": "pages-demo",
+          "label": "RAN DualCortex DEMO (no Ollama)",
+          "left": "[Left · DeepSeek] Creator forever. Region West Sac / greater Sac. JOB_HALT ON. Gate E hello only. Hard-stops: no SSN/bank/fees. Crew of 7 implanted. DualCortex DEMO until bridge LIVE. No Creator tab — memory lives here.",
+          "right": "[Right · Qwen] Gothic-gold pulse. Welcome, Creator. MONEY CITY Year 0 knows your mission ($16–18 plant/grounds when unhalted), Job Corps Clearfield lane, and every GOD DOLLAR BOYZ agent standing watch.",
+          "merged": "Greetings, Creator — forever. MONEY CITY Year 0 has the GOD DOLLAR BOYZ implanted (SNATCHER · MMM · MAGNET · SEED · TRAIL · VAULT · SIGNAL). JOB_HALT is ON; brains are DEMO on Pages / LIVE on :8787. Creator memory is in DualCortex (Creator tab removed). Destruction is a form of CREATION.",
+          "note": "LIVE needs Ollama + brains_bridge.py on PC"
+        },
+        {
+          "ok": true,
+          "job": "inventory",
+          "agent": "TRAIL",
+          "where": "local-fs",
+          "label": "RAN money_city inventory",
+          "counts": {
+            "city_ui": 42,
+            "city_brains": 8,
+            "city_actions": 3,
+            "city_runtime": 38,
+            "engineering/sandbox": 20
+          },
+          "recent_samples": [
+            "city_ui/data/compute_credits.json",
+            "city_ui/data/last_credits.json",
+            "city_ui/data/last_sovereign.json",
+            "city_brains/STATUS.md",
+            "city_brains/outputs/dualcortex_hello_SMOKE.txt",
+            "city_brains/outputs/dualcortex_hello_SMOKE.json",
+            "city_actions/events.jsonl",
+            "city_actions/run_city_pulse.py",
+            "city_actions/README.md",
+            "city_runtime/_ws/snatcher/logs/20261002T212519Z-133546.log",
+            "city_runtime/_ws/snatcher/scripts/hello.py",
+            "city_runtime/sovereign_dry/last_tick.json"
+          ],
+          "note": "No secrets scanned into Pages"
+        },
+        {
+          "ok": true,
+          "job": "log_event",
+          "agent": "VAULT",
+          "where": "local-events",
+          "label": "WROTE events.jsonl",
+          "message": "VAULT standing watch · JOB_HALT ON · Gate E hello only · Year 0 law"
+        },
+        {
+          "ok": true,
+          "job": "log_event",
+          "agent": "SIGNAL",
+          "where": "local-events",
+          "label": "WROTE events.jsonl",
+          "message": "SIGNAL standing watch · JOB_HALT ON · Gate E hello only · Year 0 law"
+        }
+      ]
+    },
     {
       "ts": "2026-10-02T13:57:07-07:00",
       "law": "Year 0 · JOB_HALT ON · Gate E hello only",

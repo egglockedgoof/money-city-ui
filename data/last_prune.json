@@ -1,0 +1,154 @@
+{
+  "updated_pt": "2026-10-02T14:25:19-07:00",
+  "law": "Year 0 · JOB_HALT ON · Gate E hello only · no market · no PII",
+  "module": "apoptosis",
+  "threshold": 0.35,
+  "dry_run": false,
+  "scores": [
+    {
+      "agent": "SNATCHER",
+      "score": 1.0,
+      "n": 2,
+      "ok_rate": 1.0,
+      "job_quality": 1.0,
+      "fail_pen": 0.0,
+      "jobs": [
+        "sandbox_hello"
+      ],
+      "reason": "scored_from_dispatch",
+      "events": {
+        "event_count": 3,
+        "bloat_flag": false
+      }
+    },
+    {
+      "agent": "MMM",
+      "score": 0.9325,
+      "n": 2,
+      "ok_rate": 1.0,
+      "job_quality": 0.85,
+      "fail_pen": 0.0,
+      "jobs": [
+        "thrift_score"
+      ],
+      "reason": "scored_from_dispatch",
+      "events": {
+        "event_count": 2,
+        "bloat_flag": false
+      }
+    },
+    {
+      "agent": "MAGNET",
+      "score": 0.865,
+      "n": 2,
+      "ok_rate": 1.0,
+      "job_quality": 0.7,
+      "fail_pen": 0.0,
+      "jobs": [
+        "inventory"
+      ],
+      "reason": "scored_from_dispatch",
+      "events": {
+        "event_count": 2,
+        "bloat_flag": false
+      }
+    },
+    {
+      "agent": "SEED",
+      "score": 0.7975,
+      "n": 2,
+      "ok_rate": 1.0,
+      "job_quality": 0.55,
+      "fail_pen": 0.0,
+      "jobs": [
+        "brains_demo"
+      ],
+      "reason": "scored_from_dispatch",
+      "events": {
+        "event_count": 2,
+        "bloat_flag": false
+      }
+    },
+    {
+      "agent": "TRAIL",
+      "score": 0.865,
+      "n": 2,
+      "ok_rate": 1.0,
+      "job_quality": 0.7,
+      "fail_pen": 0.0,
+      "jobs": [
+        "inventory"
+      ],
+      "reason": "scored_from_dispatch",
+      "events": {
+        "event_count": 2,
+        "bloat_flag": false
+      }
+    },
+    {
+      "agent": "VAULT",
+      "score": 0.73,
+      "n": 2,
+      "ok_rate": 1.0,
+      "job_quality": 0.4,
+      "fail_pen": 0.0,
+      "jobs": [
+        "log_event"
+      ],
+      "reason": "scored_from_dispatch",
+      "events": {
+        "event_count": 4,
+        "bloat_flag": false
+      }
+    },
+    {
+      "agent": "SIGNAL",
+      "score": 0.73,
+      "n": 2,
+      "ok_rate": 1.0,
+      "job_quality": 0.4,
+      "fail_pen": 0.0,
+      "jobs": [
+        "log_event"
+      ],
+      "reason": "scored_from_dispatch",
+      "events": {
+        "event_count": 6,
+        "bloat_flag": false
+      }
+    }
+  ],
+  "pruned": [],
+  "kept": [
+    {
+      "agent": "SNATCHER",
+      "score": 1.0
+    },
+    {
+      "agent": "MMM",
+      "score": 0.9325
+    },
+    {
+      "agent": "MAGNET",
+      "score": 0.865
+    },
+    {
+      "agent": "SEED",
+      "score": 0.7975
+    },
+    {
+      "agent": "TRAIL",
+      "score": 0.865
+    },
+    {
+      "agent": "VAULT",
+      "score": 0.73
+    },
+    {
+      "agent": "SIGNAL",
+      "score": 0.73
+    }
+  ],
+  "quarantine_dir": "city_runtime/quarantine",
+  "note": "PROTECTED agents (VAULT/SNATCHER) get metadata archive only"
+}

@@ -1,0 +1,43 @@
+{
+  "cells": [
+    {
+      "id": "GENE-MMM-68680F",
+      "signal": "heredity_mutate",
+      "parent": "MMM",
+      "role": "genome_child",
+      "preferred_job": "thrift_score",
+      "mutation": "traits=['thrift_study', 'meta_evolver_offline', 'fair_mse']",
+      "ttl_hours": 8,
+      "spawned_pt": "2026-10-02T14:25:19-07:00",
+      "status": "active",
+      "genome_path": "city_runtime/genomes/mutations/gene-mmm-68680f.json",
+      "law": "Y0 · JOB_HALT · Gate E hello only · genome advisory — never auto-promote"
+    },
+    {
+      "id": "STEM-BRIDGE_D-5E0198",
+      "signal": "bridge_down",
+      "parent": "SNATCHER",
+      "role": "bridge_watch",
+      "preferred_job": "brains_demo",
+      "mutation": "Prefer DEMO brains readout; flag LIVE bridge down; never open ports",
+      "ttl_hours": 6,
+      "spawned_pt": "2026-10-02T14:25:19-07:00",
+      "status": "active",
+      "law": "Year 0 · JOB_HALT ON · Gate E hello only · no market · no PII · no peer wake",
+      "hard_blocks": [
+        "job_apply",
+        "network_egress",
+        "market_trade",
+        "pii_write"
+      ],
+      "path": "city_runtime/stem_cells/stem-bridge_d-5e0198",
+      "probe": {
+        "skipped": false,
+        "ok": true,
+        "mode": "config_only"
+      }
+    }
+  ],
+  "updated_pt": "2026-10-02T14:25:19-07:00",
+  "law": "Year 0 · JOB_HALT ON · Gate E hello only"
+}

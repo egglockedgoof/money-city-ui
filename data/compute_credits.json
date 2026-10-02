@@ -1,0 +1,79 @@
+{
+  "updated_pt": "2026-10-02T14:25:19-07:00",
+  "law": "Y0 · JOB_HALT · credits = compute throttle only · NOT money",
+  "default": 100.0,
+  "balances": {
+    "SNATCHER": 92.0,
+    "MMM": 92.0,
+    "MAGNET": 92.0,
+    "SEED": 92.0,
+    "TRAIL": 92.0,
+    "VAULT": 92.0,
+    "SIGNAL": 92.0
+  },
+  "history": [
+    {
+      "ts": "2026-10-02T14:25:19-07:00",
+      "agent": "SIGNAL",
+      "job": "shift",
+      "cost": 8.0,
+      "balance_after": 92.0,
+      "note": ""
+    },
+    {
+      "ts": "2026-10-02T14:25:19-07:00",
+      "agent": "VAULT",
+      "job": "shift",
+      "cost": 8.0,
+      "balance_after": 92.0,
+      "note": ""
+    },
+    {
+      "ts": "2026-10-02T14:25:19-07:00",
+      "agent": "TRAIL",
+      "job": "shift",
+      "cost": 8.0,
+      "balance_after": 92.0,
+      "note": ""
+    },
+    {
+      "ts": "2026-10-02T14:25:19-07:00",
+      "agent": "SEED",
+      "job": "shift",
+      "cost": 8.0,
+      "balance_after": 92.0,
+      "note": ""
+    },
+    {
+      "ts": "2026-10-02T14:25:19-07:00",
+      "agent": "MAGNET",
+      "job": "shift",
+      "cost": 8.0,
+      "balance_after": 92.0,
+      "note": ""
+    },
+    {
+      "ts": "2026-10-02T14:25:19-07:00",
+      "agent": "MMM",
+      "job": "shift",
+      "cost": 8.0,
+      "balance_after": 92.0,
+      "note": ""
+    },
+    {
+      "ts": "2026-10-02T14:25:19-07:00",
+      "agent": "SNATCHER",
+      "job": "shift",
+      "cost": 8.0,
+      "balance_after": 92.0,
+      "note": ""
+    },
+    {
+      "ts": "2026-10-02T14:25:19-07:00",
+      "agent": "SNATCHER,MMM,MAGNET,SEED,TRAIL,VAULT,SIGNAL",
+      "job": "refill",
+      "cost": 0,
+      "balance_after": 100.0
+    }
+  ]
+}

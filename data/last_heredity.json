@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "module": "heredity",
+  "updated_pt": "2026-10-02T14:25:19-07:00",
+  "child": {
+    "agent": "MMM",
+    "prompt_traits": [
+      "thrift_study",
+      "meta_evolver_offline",
+      "fair_mse"
+    ],
+    "job_bias": {
+      "thrift_score": 0.968,
+      "sandbox_hello": 0.404
+    },
+    "risk": "low",
+    "law": "Y0 · JOB_HALT · Gate E hello only · genome advisory — never auto-promote",
+    "snapshot_pt": "2026-10-02T14:25:19-07:00",
+    "generation": 1,
+    "parent": "MMM",
+    "mutated_pt": "2026-10-02T14:25:19-07:00",
+    "id": "GENE-MMM-68680F"
+  },
+  "path": "city_runtime/genomes/mutations/gene-mmm-68680f.json"
+}

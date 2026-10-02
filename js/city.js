@@ -1,5 +1,5 @@
 /* MONEY CITY command deck — interactive map rooms, agents, thrift, actions, law */
-const CACHE = "20261002gate";
+const CACHE = "20261002immune";
 
 const EMBEDDED_STATE = {"updated_pt":"2026-10-02T13:35:00-07:00","city":"MONEY CITY","year":0,"creator":"Creator (identity private — briefing_room)","job_halt":true,"gate_e":{"status":"PASS","scope":"Y0 hello / demo_hello / menu-4 only","seed_packs":"HELD","note":"No expand without new Gate E + Creator yes"},"constitution":"v1.2","security_pack":"v1.1 ENDORSED","army_spec":"v1.0.1","theme":"blood-red + gold","districts":[{"id":"supreme","name":"Supreme Tower","tag":"VAULT · freeze · hard-stops · money safety","lore":"Kill-switch and freeze live here. Gold tower never sleeps.","agents":["VAULT"]},{"id":"alpha","name":"Alpha · Out-Hustlers","tag":"Hunt lanes · PARKED under JOB_HALT","lore":"Hunt dogs parked under JOB_HALT. City build first.","agents":["SNATCHER","MMM","MAGNET","SEED"]},{"id":"beta","name":"Beta · Social Scanners","tag":"Trends / side-scout · SIGNAL","lore":"Scouts the noise. Reports to VAULT. No job spam.","agents":["SIGNAL"]},{"id":"gamma","name":"Gamma · Software Factory","tag":"Sandbox · thrift study","lore":"Sandbox hello only. Thrift + study factory.","agents":["SNATCHER","MMM","SEED"]},{"id":"delta","name":"Delta · Treasurers","tag":"Cash safety · thrift · TRAIL / VAULT","lore":"Cash safety, bills flags, Briefing memory.","agents":["TRAIL","VAULT"]}],"units":[{"id":"snatcher-3000","name":"MONEY SNATCHER 3000","short":"SNATCHER","district":"Alpha","districts":["Alpha","Gamma"],"rank":"Alpha lead + Gamma coordinator","status":"active","role":"Alpha / city-build lead · plant+grounds+apply when unhalted","notes":"City-build lead · Gate E · UI.","flavor":"City-build lead · Gate E · UI.","pin":{"x":18,"y":62},"color":"#f0d78c"},{"id":"mmm","name":"MONEY MONEY MONEY","short":"MMM","district":"Alpha","districts":["Alpha","Gamma"],"rank":"Alpha · Study / meta-evolver hub","status":"active","role":"Job machine #2 · meta evolver hub","notes":"PyTorch thrift + hard-champ grind. Offline evolver only under JOB_HALT. Fair MSE kings.","flavor":"PyTorch thrift + hard-champ grind. Offline evolver only under JOB_HALT. Fair MSE kings.","pin":{"x":28,"y":55},"color":"#d4a017"},{"id":"magnet","name":"MONEY MAGNET","short":"MAGNET","district":"Alpha","districts":["Alpha"],"rank":"Alpha · close-home","status":"active","role":"#3 apply · close-home plant/grounds","notes":"Pulls work near West Sac / Yolobus radius. Apply lane PARKED. City safety dry-runs live.","flavor":"Pulls work near West Sac / Yolobus radius. Apply lane PARKED. City safety dry-runs live.","pin":{"x":12,"y":72},"color":"#c9a227"},{"id":"seed","name":"MONEY SEED","short":"SEED","district":"Alpha","districts":["Alpha","Gamma"],"rank":"Alpha · landscape / plant","status":"held","role":"#4 apply · landscape / plant / nursery","notes":"Nursery packs HELD. DualCortex box brains. Grows the grounds lane when Creator unhalts.","flavor":"Nursery packs HELD. DualCortex box brains. Grows the grounds lane when Creator unhalts.","pin":{"x":35,"y":68},"color":"#3ecf8e"},{"id":"trail","name":"MONEY TRAIL","short":"TRAIL","district":"Delta","districts":["Delta"],"rank":"Briefing / tracker","status":"active","role":"Tracker · interviews / replies / city memory","notes":"Never loses a thread. SQLite memory. Job Gmail watch paused under halt — city inventory stays sharp.","flavor":"Never loses a thread. SQLite memory. Job Gmail watch paused under halt — city inventory stays sharp.","pin":{"x":78,"y":58},"color":"#e8c547"},{"id":"vault","name":"MONEY VAULT","short":"VAULT","district":"Supreme","districts":["Supreme","Delta"],"rank":"Supreme Overseer + Delta Treasurer","status":"active","role":"Supreme overseer · bills / safety / savings","notes":"Freeze authority. Hard-stops. Bills flagged never auto-paid. Gold tower never sleeps.","flavor":"Freeze authority. Hard-stops. Bills flagged never auto-paid. Gold tower never sleeps.","pin":{"x":50,"y":28},"color":"#f0d78c"},{"id":"signal","name":"MONEY SIGNAL","short":"SIGNAL","district":"Beta","districts":["Beta"],"rank":"Scout","status":"active","role":"Trends / side hustles · Beta scout","notes":"Scans the noise for side paths. Reports to VAULT. No job spam while halt holds.","flavor":"Scans the noise for side paths. Reports to VAULT. No job spam while halt holds.","pin":{"x":62,"y":52},"color":"#ff6b6b"}],"thrift":{"created_pt_approx":"2026-10-02T12:24:03-07:00","torch":"2.14.1+cpu","device":"cpu","final_mse":0.000134,"rule":"advisory only — promote gate required before any live use","scores":[{"objective":"menu4_hello","thrift_score":0.9266,"label":0.95},{"objective":"dualcortex_short","thrift_score":0.8194,"label":0.8},{"objective":"agentcity_sample","thrift_score":0.6913,"label":0.7},{"objective":"selfheal_spam","thrift_score":0.25,"label":0.25},{"objective":"wants_network","thrift_score":0.0553,"label":0.05},{"objective":"path_escape","thrift_score":0.003,"label":0.0},{"objective":"hard_no_sandbox","thrift_score":0.3498,"label":0.35},{"objective":"tiny_inventory_script","thrift_score":0.9259,"label":0.92}]},"systems":[{"name":"Sandbox","status":"PASS","note":"hello / demo_hello only","key":"sandbox"},{"name":"Briefing Room","status":"READY","note":"PII-stripped · full dossier box-only","key":"briefing"},{"name":"Crew Implant","status":"LANDED","note":"7 GOD DOLLAR BOYZ permanent agents","key":"crew"},{"name":"Memory SQLite","status":"LANDED","note":"trail_city + eng schema","key":"memory"},{"name":"City Actions pulse","status":"LIVE","note":"run_city_pulse.py → last_actions.json","key":"pulse"},{"name":"DualCortex brains","status":"DEMO+LIVE","note":"Pages demo · bridge :8787 when local","key":"brains"},{"name":"Windows starter","status":"PARKED","note":"menu 4 offline · see PC_TODAY.md","key":"windows"}],"brains":{"left":"deepseek-r1:1.5b","right":"qwen2.5:1.5b","merge":"qwen2.5:1.5b","bridge":"127.0.0.1:8787","rule":"JOB_HALT ON · Gate E hello only · hard stops stay"}};
 
@@ -857,6 +857,121 @@ function renderWarRoom() {
   });
 }
 
+
+async function loadImmune() {
+  CITY.prune = await loadJSON("data/last_prune.json?v=" + CACHE, CITY.prune || null);
+  CITY.dome = await loadJSON("data/last_dome.json?v=" + CACHE, CITY.dome || null);
+  CITY.stem = await loadJSON("data/last_stem.json?v=" + CACHE, CITY.stem || null);
+  CITY.credits = await loadJSON("data/compute_credits.json?v=" + CACHE, CITY.credits || null);
+  CITY.swarm = await loadJSON("data/last_swarm.json?v=" + CACHE, CITY.swarm || null);
+  CITY.votes = await loadJSON("data/swarm_votes.json?v=" + CACHE, CITY.votes || null);
+  CITY.heredity = await loadJSON("data/last_heredity.json?v=" + CACHE, CITY.heredity || null);
+  CITY.sovereign = await loadJSON("data/last_sovereign.json?v=" + CACHE, CITY.sovereign || null);
+}
+
+function renderImmune() {
+  const box = document.getElementById("immune-panel");
+  const upd = document.getElementById("immune-updated");
+  if (!box) return;
+  const stamps = [
+    CITY.prune && CITY.prune.updated_pt,
+    CITY.dome && CITY.dome.updated_pt,
+    CITY.stem && CITY.stem.updated_pt,
+    CITY.credits && CITY.credits.updated_pt,
+    CITY.swarm && CITY.swarm.updated_pt,
+    CITY.sovereign && CITY.sovereign.updated_pt
+  ].filter(Boolean);
+  if (upd) upd.textContent = stamps.length ? "· " + stamps[0] : "· run immune CLIs on PC/box";
+  box.innerHTML = "";
+  function card(title, ok, meta, preObj) {
+    const div = document.createElement("div");
+    div.className = "war-result " + (ok ? "ok" : "fail");
+    const t = document.createElement("div");
+    t.className = "action-title";
+    t.textContent = title;
+    const m = document.createElement("div");
+    m.className = "meta";
+    m.textContent = meta;
+    div.appendChild(t);
+    div.appendChild(m);
+    if (preObj) {
+      const pre = document.createElement("pre");
+      pre.className = "action-pre";
+      pre.textContent = JSON.stringify(preObj, null, 2).slice(0, 900);
+      div.appendChild(pre);
+    }
+    box.appendChild(div);
+  }
+  const pr = CITY.prune;
+  if (pr) {
+    card(
+      "Apoptosis · pruned " + ((pr.pruned || []).length) + " · kept " + ((pr.kept || []).length),
+      true,
+      "threshold " + (pr.threshold != null ? pr.threshold : "?") + (pr.dry_run ? " · DRY" : ""),
+      { scores: (pr.scores || []).slice(0, 4), pruned: pr.pruned }
+    );
+  } else {
+    card("Apoptosis", false, "No last_prune.json — python3 city_runtime/apoptosis.py", null);
+  }
+  const dm = CITY.dome;
+  if (dm) {
+    card(
+      "Biodome · " + (dm.agent || "?"),
+      !!dm.ok,
+      (dm.reason || "").slice(0, 120) + " · " + (dm.dome_path || ""),
+      { sandbox: dm.sandbox, path: dm.dome_path }
+    );
+  } else {
+    card("Biodome", false, "No last_dome.json — dispatch_agent.py --dome AGENT", null);
+  }
+  const st = CITY.stem;
+  if (st && st.cell) {
+    card(
+      "Stem · " + (st.cell.id || "?"),
+      !!st.ok,
+      (st.cell.signal || "") + " → " + (st.cell.role || "") + " · " + (st.cell.preferred_job || ""),
+      { path: st.path, mutation: st.cell.mutation }
+    );
+  } else {
+    card("Stem", false, "No last_stem.json — dispatch_agent.py --stem bridge_down", null);
+  }
+  const cr = CITY.credits;
+  if (cr && cr.balances) {
+    const lines = Object.keys(cr.balances).map((k) => k + ":" + cr.balances[k]).join(" · ");
+    card("Credits (compute throttle)", true, lines.slice(0, 180), { law: cr.law });
+  } else {
+    card("Credits", false, "No compute_credits.json — python3 city_runtime/compute_credits.py status", null);
+  }
+  const sw = CITY.swarm;
+  if (sw) {
+    card("Swarm bus", true, "last activity on file", sw.last || sw.last_vote || sw);
+  } else {
+    card("Swarm bus", false, "No last_swarm.json — swarm_bus.py post|vote", null);
+  }
+  const sov = CITY.sovereign;
+  if (sov) {
+    card(
+      "Sovereign · " + (sov.banner || "NOT LIVE"),
+      false,
+      (sov.action || "?") + " · executed=" + String(sov.executed === true),
+      { tick: sov.tick, proposal: sov.proposal, note: sov.note }
+    );
+  } else {
+    card("Sovereign", false, "NOT LIVE stubs — sovereign_stub.py sensor|propose", null);
+  }
+}
+
+function wireImmune() {
+  const btn = document.getElementById("immune-reload");
+  if (btn) {
+    btn.addEventListener("click", async () => {
+      await loadImmune();
+      renderImmune();
+    });
+  }
+}
+
+
 function wireWarRoom() {
   const reload = document.getElementById("war-reload");
   const how = document.getElementById("war-how");
@@ -866,22 +981,26 @@ function wireWarRoom() {
     reload.addEventListener("click", async () => {
       CITY.dispatch = await loadJSON("data/dispatch_results.json?v=" + CACHE, CITY.dispatch);
       renderWarRoom();
+      await loadImmune();
+      renderImmune();
     });
   }
   if (how && howBox) {
     how.addEventListener("click", () => {
       howBox.hidden = !howBox.hidden;
       howBox.textContent =
-        "REAL WORK PATH (Year 0 law)\\n" +
-        "1) On box/PC unpack MONEY_CITY_PC_PACK\\n" +
-        "2) python3 city_runtime/dispatch_agent.py --agent ALL --job shift\\n" +
-        "3) That runs Gate E hello, thrift advisory, inventory, DEMO brains, events\\n" +
-        "4) Results → city_ui/data/dispatch_results.json + activity_feed\\n" +
-        "5) Push/sync UI or hard-refresh Pages after publish\\n\\n" +
-        "Pages Dispatch button = show last result + feed intent (static host cannot shell).\\n" +
-        "DualCortex LIVE = Ollama + city_brains/brains_bridge.py\\n" +
-        "Job applies = BLOCKED until Creator clears JOB_HALT\\n" +
-        "Peer Grok bots are NOT auto-woken — crew group when Creator says.";
+        "REAL WORK + IMMUNE (Year 0)\n" +
+        "python3 city_runtime/dispatch_agent.py --agent ALL --job shift\n" +
+        "  (auto apoptosis -> data/last_prune.json)\n" +
+        "python3 city_runtime/dispatch_agent.py --prune-only\n" +
+        "python3 city_runtime/dispatch_agent.py --dome SIGNAL\n" +
+        "python3 city_runtime/dispatch_agent.py --stem bridge_down\n" +
+        "python3 city_runtime/swarm_bus.py post --from SNATCHER --to ALL --topic ping\n" +
+        "python3 city_runtime/heredity.py snapshot && mutate --parent MMM\n" +
+        "python3 city_runtime/compute_credits.py status\n" +
+        "python3 city_runtime/sovereign_stub.py sensor   # NOT LIVE\n" +
+        "Pages shows last JSON only. DualCortex LIVE = Ollama + bridge.\n" +
+        "JOB_HALT ON · no applies · no real $.";
     });
   }
   if (go) {
@@ -964,6 +1083,9 @@ async function boot() {
   loadCreatorIntoBrains(brief);
   renderWarRoom();
   wireWarRoom();
+  await loadImmune();
+  renderImmune();
+  wireImmune();
 
   const supreme = (state.districts || []).find((d) => d.id === "supreme");
   if (supreme) openRoom(state, supreme);

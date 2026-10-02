@@ -1,0 +1,32 @@
+{
+  "proposals": {
+    "keep-halt": {
+      "id": "keep-halt",
+      "created_pt": "2026-10-02T14:25:19-07:00",
+      "votes": {
+        "SNATCHER": {
+          "choice": "aye",
+          "ts": "2026-10-02T14:25:19-07:00",
+          "note": "Year 0 law"
+        },
+        "VAULT": {
+          "choice": "aye",
+          "ts": "2026-10-02T14:25:19-07:00",
+          "note": ""
+        },
+        "MMM": {
+          "choice": "aye",
+          "ts": "2026-10-02T14:25:19-07:00",
+          "note": ""
+        }
+      },
+      "status": "open",
+      "law": "Y0 advisory consensus",
+      "tally": {
+        "aye": 3
+      },
+      "consensus": "aye"
+    }
+  },
+  "updated_pt": "2026-10-02T14:25:19-07:00"
+}

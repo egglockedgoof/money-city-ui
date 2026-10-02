@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "updated_pt": "2026-10-02T14:25:19-07:00",
+  "module": "stem_cell",
+  "cell": {
+    "id": "STEM-BRIDGE_D-5E0198",
+    "signal": "bridge_down",
+    "parent": "SNATCHER",
+    "role": "bridge_watch",
+    "preferred_job": "brains_demo",
+    "mutation": "Prefer DEMO brains readout; flag LIVE bridge down; never open ports",
+    "ttl_hours": 6,
+    "spawned_pt": "2026-10-02T14:25:19-07:00",
+    "status": "active",
+    "law": "Year 0 · JOB_HALT ON · Gate E hello only · no market · no PII · no peer wake",
+    "hard_blocks": [
+      "job_apply",
+      "network_egress",
+      "market_trade",
+      "pii_write"
+    ]
+  },
+  "path": "city_runtime/stem_cells/stem-bridge_d-5e0198",
+  "probe": {
+    "skipped": false,
+    "ok": true,
+    "mode": "config_only"
+  },
+  "registry": "city_ui/data/stem_registry.json"
+}
