@@ -1,9 +1,10 @@
-# MONEY CITY UI status
-Updated: 2026-10-02 ~1:28 PM PT
+# MONEY CITY UI — status
+Updated: 2026-10-02 ~13:38 PT
 
-- GOD DOLLAR BOYZ crew implanted (7 permanent district agents + vacant Junior Overseer)
-- Creator / Briefing panel loads sanitized `data/creator_brief.json`
-- Private full dossier: `../briefing_room/CREATOR_DOSSIER.md` (NOT published to Pages)
-- Map skyline pins + Agents tab + activity feed name every unit
-- JOB_HALT ON · Gate E hello only · password gate stays
+- Creator tab: **HIDDEN** (memory in Brains DEMO/LIVE)
+- Agents: detail sheets · Pulse · Brief me · status display-only
+- Map: clickable district rooms with real actions
+- Systems / Thrift / Actions / Law: interactive
+- PII: public slate stripped (no name/DOB/address/email/phone)
+- JOB_HALT ON · Gate E hello only
 - Pages: https://egglockedgoof.github.io/money-city-ui/

@@ -1,14 +1,23 @@
 {
   "ok": true,
   "status": "demo",
-  "note": "Static DEMO for GitHub Pages. Live DualCortex needs local bridge :8787 + Ollama. Creator brief loaded from creator_brief.json.",
+  "note": "Static DEMO for GitHub Pages. Creator memory baked in (title/region/mission/safety only \u2014 no contact PII). Live DualCortex needs local bridge :8787 + Ollama.",
   "models": {
     "left": "deepseek-r1:1.5b",
     "right": "qwen2.5:1.5b",
     "merge": "qwen2.5:1.5b"
   },
   "models_windows_full": "deepseek-r1:latest + qwen2.5:latest via windows_starter/",
-  "left": "[Left \u00b7 DeepSeek] Creator = the Creator, 18, West Sac. JOB_HALT ON. Gate E hello only. Hard-stops: no SSN/bank/fees. Crew of 7 implanted. DualCortex demo until bridge LIVE.",
-  "right": "[Right \u00b7 Qwen] Gothic-gold pulse. Welcome, Creator. MONEY CITY Year 0 knows your name, your mission ($16\u201318 plant/grounds when unhalted), and every GOD DOLLAR BOYZ agent standing watch.",
-  "merged": "Greetings, the Creator \u2014 Creator forever. MONEY CITY Year 0 has the GOD DOLLAR BOYZ implanted (SNATCHER \u00b7 MMM \u00b7 MAGNET \u00b7 SEED \u00b7 TRAIL \u00b7 VAULT \u00b7 SIGNAL). JOB_HALT is ON; brains are DEMO on Pages / LIVE on :8787. Open Creator / Briefing to see your slate. Destruction is a form of CREATION."
+  "creator_context": {
+    "title": "Creator",
+    "role": "MONEY CITY forever Creator",
+    "region": "West Sacramento / greater Sacramento CA",
+    "job_corps": "Clearfield UT Jan 2024\u2013Dec 2025 \u2014 Industrial Maintenance & Sanitation Lead",
+    "mission": "$16\u201318/hr \u00b7 plant/grounds first \u00b7 PARKED under JOB_HALT",
+    "safety": "JOB_HALT ON \u00b7 Gate E hello only \u00b7 no full SSN/bank/fees/crypto",
+    "doctrine": "Destruction is a form of CREATION"
+  },
+  "left": "[Left \u00b7 DeepSeek] Creator forever. Region West Sac / greater Sac. JOB_HALT ON. Gate E hello only. Hard-stops: no SSN/bank/fees. Crew of 7 implanted. DualCortex DEMO until bridge LIVE. No Creator tab \u2014 memory lives here.",
+  "right": "[Right \u00b7 Qwen] Gothic-gold pulse. Welcome, Creator. MONEY CITY Year 0 knows your mission ($16\u201318 plant/grounds when unhalted), Job Corps Clearfield lane, and every GOD DOLLAR BOYZ agent standing watch.",
+  "merged": "Greetings, Creator \u2014 forever. MONEY CITY Year 0 has the GOD DOLLAR BOYZ implanted (SNATCHER \u00b7 MMM \u00b7 MAGNET \u00b7 SEED \u00b7 TRAIL \u00b7 VAULT \u00b7 SIGNAL). JOB_HALT is ON; brains are DEMO on Pages / LIVE on :8787. Creator memory is in DualCortex (Creator tab removed). Destruction is a form of CREATION."
 }

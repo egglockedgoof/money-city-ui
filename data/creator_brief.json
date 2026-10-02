@@ -1,7 +1,7 @@
 {
-  "updated_pt": "2026-10-02T13:33:13-07:00",
+  "updated_pt": "2026-10-02T13:38:00-07:00",
   "classification": "public_slate_pii_stripped",
-  "note": "Pages-safe Creator slate after VAULT PII flag 2026-10-02. No name/DOB/address/email/phone/SSN/bank/fees/passwords. Full private dossier: money_city/briefing_room/CREATOR_DOSSIER.md (box only).",
+  "note": "Pages-safe Creator slate after VAULT PII flag. No name/DOB/address/email/phone/SSN/bank. Creator tab HIDDEN \u2014 facts injected into Brains DEMO/LIVE. Full private dossier: money_city/briefing_room/CREATOR_DOSSIER.md (box only).",
   "creator": {
     "title": "Creator",
     "role": "MONEY CITY forever Creator",
@@ -122,9 +122,14 @@
   ],
   "brains_prompts": [
     "Who is the Creator of MONEY CITY?",
-    "Summarize Keysean's Oct 2026 job goal (halted).",
+    "Summarize the Creator Oct 2026 job goal (halted).",
     "Name every GOD DOLLAR BOYZ agent and their district.",
     "What are the hard-stops and JOB_HALT?",
     "What is DualCortex and how do brains go LIVE?"
-  ]
+  ],
+  "ui": {
+    "creator_tab": "hidden",
+    "brains_injection": true,
+    "pii_public": false
+  }
 }

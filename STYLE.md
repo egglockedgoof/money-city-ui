@@ -1,5 +1,5 @@
 # MONEY CITY UI — Creator style (locked)
-**Order:** Keysean 2026-10-02 ~12:50 PT — use HIS collage style; SNATCHER adds twist. Cannot disobey.
+**Order:** Creator 2026-10-02 ~12:50 PT — use HIS collage style; SNATCHER adds twist. Cannot disobey.
 
 ## Base (Creator)
 - Deep textured blood-red / crimson field with horizontal gradient stripes

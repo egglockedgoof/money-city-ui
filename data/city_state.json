@@ -1,5 +1,5 @@
 {
-  "updated_pt": "2026-10-02T13:33:25-07:00",
+  "updated_pt": "2026-10-02T13:38:00-07:00",
   "city": "MONEY CITY",
   "year": 0,
   "creator": "Creator (identity private \u2014 see briefing_room)",
@@ -259,37 +259,44 @@
     {
       "name": "Sandbox",
       "status": "PASS",
-      "note": "hello / demo_hello only"
+      "note": "hello / demo_hello only",
+      "key": "sandbox"
     },
     {
       "name": "Briefing Room",
       "status": "READY",
-      "note": "PII-stripped public slate \u00b7 full dossier box-only"
+      "note": "PII-stripped public slate \u00b7 full dossier box-only",
+      "key": "briefing"
     },
     {
       "name": "Crew Implant",
       "status": "LANDED",
-      "note": "7 GOD DOLLAR BOYZ permanent district agents"
+      "note": "7 GOD DOLLAR BOYZ permanent district agents",
+      "key": "crew"
     },
     {
       "name": "Memory SQLite",
       "status": "LANDED",
-      "note": "trail_city + eng schema"
+      "note": "trail_city + eng schema",
+      "key": "memory"
     },
     {
       "name": "City Actions pulse",
       "status": "LIVE",
-      "note": "run_city_pulse.py \u2192 last_actions.json"
+      "note": "run_city_pulse.py \u2192 last_actions.json",
+      "key": "pulse"
     },
     {
       "name": "DualCortex brains",
       "status": "DEMO+LIVE",
-      "note": "Pages demo lore \u00b7 bridge :8787 when local"
+      "note": "Pages demo lore \u00b7 bridge :8787 when local",
+      "key": "brains"
     },
     {
       "name": "Windows starter",
       "status": "PARKED",
-      "note": "menu 4 offline \u00b7 see PC_TODAY.md"
+      "note": "menu 4 offline \u00b7 see PC_TODAY.md",
+      "key": "windows"
     }
   ],
   "mmm_drills": "01\u201319 shipped (advisory)",
@@ -443,7 +450,7 @@
     "vacant": {
       "name": "Junior Overseer",
       "rank": "VACANT",
-      "notes": "Keysean staffs later; SNATCHER covers city-build briefs"
+      "notes": "Creator staffs later; SNATCHER covers city-build briefs"
     }
   },
   "creator_brief_ref": "data/creator_brief.json",
@@ -451,7 +458,7 @@
     "status": "LANDED",
     "crew": "GOD DOLLAR BOYZ",
     "agents": 7,
-    "briefing": "Creator panel = PII-stripped slate; full CREATOR_DOSSIER private",
-    "at_pt": "2026-10-02T13:28:32-07:00"
+    "briefing": "Creator tab hidden; memory in Brains; PII-stripped slate only",
+    "at_pt": "2026-10-02T13:38:00-07:00"
   }
 }

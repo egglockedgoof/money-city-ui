@@ -2,12 +2,13 @@
 (function () {
   const BRIDGE = "http://127.0.0.1:8787";
   const DEMO_URL = "data/brains_demo.json";
+  const CACHE = "20261002rooms";
 
   const DEFAULT_PROMPTS = [
     "Who is the Creator of MONEY CITY?",
     "Name every GOD DOLLAR BOYZ agent and their district.",
     "What are the hard-stops and JOB_HALT?",
-    "Summarize Keysean's Oct 2026 job goal (halted).",
+    "Summarize the Creator Oct 2026 job goal (halted).",
     "What is DualCortex and how do brains go LIVE?",
   ];
 
@@ -39,11 +40,14 @@
   }
 
   function dossierContext(prompt) {
+    const ctx = window.__CITY_BRAINS_CONTEXT__;
+    if (ctx) return ctx + " User: " + prompt;
     const b = window.__CREATOR_BRIEF__;
     if (!b) return prompt;
     const c = b.creator || {};
     const snippet =
-      "[City dossier] Creator=" + (c.name || "Keysean") +
+      "[City dossier · no contact PII] Creator=" + (c.title || "Creator") +
+      "; region=" + (c.region || "West Sacramento / greater Sacramento CA") +
       "; halt=" + !!(b.safety && b.safety.job_halt) +
       "; crew=" + ((b.crew || []).map((x) => x.name).join(", ") || "GOD DOLLAR BOYZ") +
       ". ";
@@ -73,14 +77,14 @@
 
   async function loadDemo() {
     try {
-      const res = await fetch(DEMO_URL + "?v=20261002crew", { cache: "no-store" });
+      const res = await fetch(DEMO_URL + "?v=" + CACHE, { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       return await res.json();
     } catch (_) {
       return {
-        left: "DEMO Left — Ollama offline. Creator = Keysean. JOB_HALT ON.",
-        right: "DEMO Right — gothic-gold. Run city_brains/brains_bridge.py locally.",
-        merged: "Ollama offline — run city_brains.\n\n1) ollama serve\n2) python3 brains_bridge.py\n3) Refresh + Send\n\nPages is display-only; bridge stays 127.0.0.1. Creator Briefing panel still knows Keysean.",
+        left: "DEMO Left — Ollama offline. Creator forever. JOB_HALT ON. Region West Sac / greater Sac.",
+        right: "DEMO Right — gothic-gold. Run city_brains/brains_bridge.py locally for LIVE DualCortex.",
+        merged: "Ollama offline — DEMO mode.\n\n1) ollama serve\n2) python3 brains_bridge.py\n3) Refresh + Send\n\nCreator memory lives in Brains (no Creator tab). JOB_HALT ON · Gate E hello only.",
         models: { left: "deepseek-r1:1.5b", right: "qwen2.5:1.5b", merge: "qwen2.5:1.5b" },
       };
     }
@@ -89,27 +93,64 @@
   function demoAnswer(prompt) {
     const p = (prompt || "").toLowerCase();
     const b = window.__CREATOR_BRIEF__;
-    if (/creator|keysean|who is/.test(p) && b) {
-      const c = b.creator || {};
+    const c = (b && b.creator) || {};
+    const m = (b && b.mission_oct_2026) || {};
+    const s = (b && b.safety) || {};
+    const d = (b && b.money_city) || {};
+    const bg = (b && b.background) || {};
+
+    if (/you are money |brief|in-character|status held|status active/.test(p)) {
       return {
-        left: "Creator identity locked private (dossier box-only). Public slate = role + region. Sovereignty = Article I.",
-        right: "Gothic-gold salute. The city remembers your address, Job Corps Clearfield lane, and Oct mission — parked under halt.",
-        merged: (c.name || "Keysean") + " is Creator forever. See Creator / Briefing panel for the sanitized slate. Full private dossier stays offline Pages.",
+        left: "Agent brief acknowledged. JOB_HALT ON. Gate E hello only. No applies. Standing watch on assigned district.",
+        right: "Gothic-gold salute, Creator. Your agent stands ready — city-build only until you unhalt.",
+        merged: "Brief received. Lane stays offline-safe. Destruction of unsafe hustles is creation of a safer city.",
       };
     }
-    if (/crew|boyz|agent|district/.test(p) && b) {
-      const names = (b.crew || []).map((x) => x.name + " (" + x.role + ")").join("; ");
+    if (/creator|who is|who owns/.test(p)) {
       return {
-        left: "Roster: " + names,
-        right: "Seven permanent implants + vacant Junior Overseer. Map pins glow gold/blood.",
-        merged: "GOD DOLLAR BOYZ implanted: " + names,
+        left:
+          "Creator = forever owner of MONEY CITY. Title locked as Creator. Region: " +
+          (c.region || "West Sacramento / greater Sacramento CA") +
+          ". Background: " + (bg.job_corps || "Job Corps Clearfield Industrial Maintenance") +
+          ". Contact PII is private (box dossier only).",
+        right: "Gothic-gold salute. The city remembers the mission, the halt, and the crew — never public phone/email/address.",
+        merged:
+          (c.title || "Creator") + " is Creator forever. Mission parked under JOB_HALT. Doctrine: “" +
+          (d.doctrine_line || "Destruction is a form of CREATION") +
+          "”. Ask the brains — no separate Creator tab.",
       };
     }
-    if (/halt|hard-stop|safety|ssn|fee/.test(p)) {
+    if (/crew|boyz|agent|district/.test(p)) {
+      const names = (b && b.crew || []).map((x) => x.name + " (" + x.role + ")").join("; ");
       return {
-        left: "JOB_HALT ON. Gate E hello only. Hard-stops: no full SSN, bank, fees, crypto. Last-4 = human only.",
+        left: "Roster: " + (names || "SNATCHER, MMM, MAGNET, SEED, TRAIL, VAULT, SIGNAL"),
+        right: "Seven permanent implants + vacant Junior Overseer. Map pins glow gold/blood. Agents tab has detail sheets.",
+        merged: "GOD DOLLAR BOYZ implanted: " + (names || "full crew on Agents tab"),
+      };
+    }
+    if (/halt|hard-stop|safety|ssn|fee|bank/.test(p)) {
+      return {
+        left: "JOB_HALT " + (s.job_halt !== false ? "ON" : "OFF") + ". Gate E: " + (s.gate_e || "hello only") + ". Hard-stops: no full SSN, bank, fees, crypto. Last-4 = human only.",
         right: "Freeze stands. Destruction of unsafe hustles is creation of a safe city.",
         merged: "Halt holds. Money City build only until Creator says go.",
+      };
+    }
+    if (/mission|job goal|oct 2026|\$16|plant|grounds/.test(p)) {
+      return {
+        left:
+          "Oct mission (halted): " + (m.pay || "$16–18/hr") + ", " + (m.hours || "25–40 hrs") +
+          ", areas " + ((m.areas || []).join(", ") || "West Sac / Sac region") +
+          ", priority " + (m.priority || "plant/grounds") +
+          ", avoid " + ((m.avoid || []).join(", ") || "sales/front desk/restaurant") + ".",
+        right: "Apply lanes PARKED. When Creator unhalts, plant/grounds first. SEED nursery packs stay HELD until go.",
+        merged: "Mission status: " + (m.status || "PARKED under JOB_HALT") + ". City build first.",
+      };
+    }
+    if (/dualcortex|brains|ollama|live|bridge/.test(p)) {
+      return {
+        left: "DualCortex = Left DeepSeek + Right Qwen + Merge. Pages = DEMO. LIVE needs bridge 127.0.0.1:8787 + Ollama.",
+        right: "PC path: ollama serve → brains_bridge.py → refresh Brains tab. Creator memory already injected here.",
+        merged: "DEMO works offline. LIVE when your PC hosts the bridge. See PC_TODAY.md.",
       };
     }
     return null;
@@ -178,12 +219,14 @@
       }
       await refreshStatus();
     } catch (e) {
-      setErr("Bridge unreachable — DEMO with Creator dossier. " + e);
+      setErr("Bridge unreachable — DEMO with Creator city memory. " + e);
       await showOfflineDemo(prompt);
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = "Send DualCortex"; }
     }
   }
+
+  window.__brainsSend = sendPrompt;
 
   function wire() {
     const send = document.getElementById("brains-send");
@@ -198,11 +241,10 @@
         }
       });
     });
-    // wait a tick so city.js can load creator brief
     setTimeout(() => {
       wireQuickPrompts();
       refreshStatus();
-    }, 400);
+    }, 450);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire);
