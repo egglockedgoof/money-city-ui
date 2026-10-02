@@ -1,8 +1,8 @@
 {
-  "updated_pt": "2026-10-02T13:28:32-07:00",
+  "updated_pt": "2026-10-02T13:33:25-07:00",
   "city": "MONEY CITY",
   "year": 0,
-  "creator": "Keysean Caris",
+  "creator": "Creator (identity private \u2014 see briefing_room)",
   "job_halt": true,
   "gate_e": {
     "status": "PASS",
@@ -264,7 +264,7 @@
     {
       "name": "Briefing Room",
       "status": "READY",
-      "note": "CREATOR_DOSSIER private + creator_brief.json"
+      "note": "PII-stripped public slate \u00b7 full dossier box-only"
     },
     {
       "name": "Crew Implant",
@@ -451,7 +451,7 @@
     "status": "LANDED",
     "crew": "GOD DOLLAR BOYZ",
     "agents": 7,
-    "briefing": "Creator / Briefing panel + private CREATOR_DOSSIER.md",
+    "briefing": "Creator panel = PII-stripped slate; full CREATOR_DOSSIER private",
     "at_pt": "2026-10-02T13:28:32-07:00"
   }
 }

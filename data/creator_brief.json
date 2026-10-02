@@ -1,16 +1,14 @@
 {
-  "updated_pt": "2026-10-02T13:28:00-07:00",
-  "classification": "sanitized_public_slate",
-  "note": "Pages-safe Creator brief. No SSN, bank, fees, passwords, or private jobhunt files. Full private dossier: money_city/briefing_room/CREATOR_DOSSIER.md",
+  "updated_pt": "2026-10-02T13:33:13-07:00",
+  "classification": "public_slate_pii_stripped",
+  "note": "Pages-safe Creator slate after VAULT PII flag 2026-10-02. No name/DOB/address/email/phone/SSN/bank/fees/passwords. Full private dossier: money_city/briefing_room/CREATOR_DOSSIER.md (box only).",
   "creator": {
-    "name": "Keysean Caris",
-    "age": 18,
-    "dob": "2007-10-12",
-    "address": "827 Pine St, West Sacramento, CA 95691",
-    "email": "znxgnightmare@gmail.com",
-    "phone": "(385) 299-3500",
-    "github": "egglockedgoof",
-    "pages_ui": "https://egglockedgoof.github.io/money-city-ui/"
+    "title": "Creator",
+    "role": "MONEY CITY forever Creator",
+    "region": "West Sacramento / greater Sacramento CA",
+    "github_public_ui": "egglockedgoof/money-city-ui",
+    "pages_ui": "https://egglockedgoof.github.io/money-city-ui/",
+    "contact": "private \u2014 see briefing_room CREATOR_DOSSIER (not on Pages)"
   },
   "work_auth": {
     "us_authorized": true,
@@ -46,7 +44,7 @@
       "front desk",
       "restaurant"
     ],
-    "benefits_note": "Section 8 / CalFresh \u2014 on-time income report after hire; never hide wages",
+    "benefits_note": "benefits reporting handled privately after hire \u2014 never hide wages",
     "status": "PARKED under JOB_HALT until Creator says go"
   },
   "safety": {

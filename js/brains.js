@@ -92,7 +92,7 @@
     if (/creator|keysean|who is/.test(p) && b) {
       const c = b.creator || {};
       return {
-        left: "Creator identity locked: " + (c.name || "Keysean Caris") + ", age " + (c.age || 18) + ", West Sac. Sovereignty = Article I.",
+        left: "Creator identity locked private (dossier box-only). Public slate = role + region. Sovereignty = Article I.",
         right: "Gothic-gold salute. The city remembers your address, Job Corps Clearfield lane, and Oct mission — parked under halt.",
         merged: (c.name || "Keysean") + " is Creator forever. See Creator / Briefing panel for the sanitized slate. Full private dossier stays offline Pages.",
       };
