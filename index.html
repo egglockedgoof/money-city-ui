@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MONEY CITY</title>
   <meta name="description" content="MONEY CITY" />
-  <link rel="stylesheet" href="css/city.css?v=20261002gate" />
+  <link rel="stylesheet" href="css/city.css?v=20261002noops" />
 </head>
 <body>
   <div id="app" hidden>
@@ -29,7 +29,6 @@
       <button class="active" data-panel="panel-map">Map</button>
       <button data-panel="panel-agents">Agents</button>
       <button data-panel="panel-war">War</button>
-      <button data-panel="panel-ops">Ops</button>
       <button data-panel="panel-brains">Brains</button>
       <button data-panel="panel-law">Law</button>
     </nav>
@@ -169,8 +168,8 @@
       </div>
     </section>
 
-    <!-- OPS -->
-    <section id="panel-ops" class="panel">
+    <!-- OPS (nav hidden 2026-10-02 — dead code; systems/actions/thrift still filled; War/Agents own UX) -->
+    <section id="panel-ops" class="panel" hidden aria-hidden="true">
       <div id="panel-systems" class="ops-block">
         <div class="card">
           <h4>Systems</h4>
@@ -253,11 +252,11 @@
       <a href="https://github.com/egglockedgoof/money-city-ui" target="_blank" rel="noopener">UI repo</a>
     </footer>
   </div>
-  <script src="js/gate_config.js?v=20261002gate"></script>
-  <script src="js/gate.js?v=20261002gate"></script>
-  <script src="js/live_loop.js?v=20261002gate"></script>
-  <script src="js/future_vibe.js?v=20261002gate"></script>
-  <script src="js/city.js?v=20261002gate"></script>
-  <script src="js/brains.js?v=20261002gate"></script>
+  <script src="js/gate_config.js?v=20261002noops"></script>
+  <script src="js/gate.js?v=20261002noops"></script>
+  <script src="js/live_loop.js?v=20261002noops"></script>
+  <script src="js/future_vibe.js?v=20261002noops"></script>
+  <script src="js/city.js?v=20261002noops"></script>
+  <script src="js/brains.js?v=20261002noops"></script>
 </body>
 </html>
