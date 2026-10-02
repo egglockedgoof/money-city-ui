@@ -7,7 +7,8 @@
     "right": "qwen2.5:1.5b",
     "merge": "qwen2.5:1.5b"
   },
-  "left": "DEMO Left (DeepSeek): Year 0 online. JOB_HALT ON. Logic lane ready when Ollama bridge is local.",
-  "right": "DEMO Right (Qwen): Gothic-gold lights on Supreme Tower. City has a pulse \u2014 wire brains_bridge on your box to talk live.",
-  "merged": "DEMO Merge: MONEY CITY Year 0 greets you. Password gate stays. Brains go live only on localhost with Ollama DualCortex \u2014 Pages stays display-safe."
+  "models_windows_full": "deepseek-r1:latest + qwen2.5:latest via windows_starter/",
+  "left": "[smoke Left \u00b7 DeepSeek-R1 1.5b] Reasoning lane online for MONEY CITY Year 0. JOB_HALT ON.",
+  "right": "Greetings, Keysean. Welcome to MONEY CITY, Year 0. As DualCortex right cortex (Qwen) \u2014 gothic-gold pulse. Job apps disabled.",
+  "merged": "Greetings, Keysean. Welcome to MONEY CITY, Year 0. DualCortex online. JOB_HALT is ON, and brains are local Ollama only. (Pages = DEMO; live chat needs brains_bridge on 127.0.0.1:8787)"
 }
