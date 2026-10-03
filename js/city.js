@@ -1071,7 +1071,7 @@ function wireWarRoom() {
 }
 
 async function boot() {
-  const state = await loadJSON("data/city_state.json?v=" + CACHE, EMBEDDED_STATE);
+  let state = await loadJSON("data/city_state.json?v=" + CACHE, EMBEDDED_STATE);
   const crew = await loadJSON("data/crew_manifest.json?v=" + CACHE, null);
   if (crew && crew.agents) {
     const byName = Object.fromEntries(crew.agents.map((a) => [a.name, a]));
