@@ -11,3 +11,8 @@ body.tab-hidden .ticker-inner, body.tab-hidden .window-blink { animation-play-st
 @media (prefers-reduced-motion: reduce) {
   .ticker-inner, .window-blink, .status-flash { animation: none; }
 }
+
+/* Station stays blood and gold. Not the green clip. */
+.station-room, #station-drop, .station-job { background: #100406; border: 1px solid #6b0f16; color: #efe2c6; }
+.station-room h3, #station-drop h3 { color: #e8c96a; }
+#station-drop button { background: #6b0f16; color: #e8c96a; border: 1px solid #d4a017; }
