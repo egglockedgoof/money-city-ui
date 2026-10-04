@@ -1,80 +1,120 @@
-/* MONEY CITY station bus */
+/* MONEY CITY station. Blood street, gold rooms, agents live here. */
 (function () {
   const KEY = "money_city_inbox_v1";
-  const core = window.MONEY_CORE || { ROOMS: [], acceptJob: () => ({ ok: false, errors: ["core missing"] }) };
-  function load() {
-    try { const raw = localStorage.getItem(KEY); const parsed = raw ? JSON.parse(raw) : []; return Array.isArray(parsed) ? parsed : []; }
-    catch (e) { return []; }
-  }
+  const core = window.MONEY_CORE || { ROOMS: [], acceptJob: function () { return { ok: false, errors: ["core missing"] }; } };
+  let active = "street";
+  const KINDS = { research: ["brief"], factory: ["draft"], comms: ["draft"], treasury: ["ledger"], publishing: ["schedule"], war: ["pivot"], archives: ["memory"], quarters: ["status"] };
+  const SCENES = {
+    street: { name: "Blood Street", line: "Wet brick. Gold in the windows. The city is already counting.", crew: "The whole crew walks this block." },
+    research: { name: "The Loft", line: "Maps on the glass. SIGNAL is still up. Nothing here is copied.", crew: "SIGNAL keeps the night notes." },
+    factory: { name: "The Floor", line: "Presses warm. Drafts on the racks. A person still ships.", crew: "SEED and MMM work the tables." },
+    comms: { name: "The Booth", line: "Letters wait. Nobody sends until you say so.", crew: "TRAIL drafts. You approve." },
+    treasury: { name: "The Vault", line: "Heavy door. Thin gold light. Every line needs a receipt.", crew: "VAULT does not spend alone." },
+    publishing: { name: "The Penthouse", line: "City under the glass. Slots on the wall. Drop does not post.", crew: "MAGNET holds the calendar." },
+    war: { name: "The War Room", line: "One table. Dead lanes crossed out. Next lane written in gold.", crew: "SNATCHER calls the cut." },
+    archives: { name: "The Stacks", line: "Paper and tape. Nothing leaves. The city remembers.", crew: "MMM files the night." },
+    quarters: { name: "The Quarters", line: "Coats on hooks. A glass half full. They live here.", crew: "West Sac crew, home between shifts." }
+  };
+  function load() { try { const parsed = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(parsed) ? parsed : []; } catch (e) { return []; } }
   function save(items) { localStorage.setItem(KEY, JSON.stringify(items.slice(0, 80))); }
-  function paint(items) {
-    const list = document.getElementById("station-feed");
-    const counts = document.getElementById("station-counts");
-    if (!list) return;
-    const rows = items || load();
-    list.replaceChildren();
-    rows.slice(0, 24).forEach((job) => {
-      const li = document.createElement("li");
-      li.className = "station-job";
-      const strong = document.createElement("strong");
-      strong.textContent = job.agent + " · " + job.room;
-      const span = document.createElement("span");
-      span.textContent = job.kind + (job.needs_human ? " · human" : "") + " — " + (job.text || "");
-      li.appendChild(strong);
-      li.appendChild(document.createTextNode(" "));
-      li.appendChild(span);
-      list.appendChild(li);
-    });
-    if (counts) {
-      const by = {};
-      rows.forEach((j) => { by[j.room] = (by[j.room] || 0) + 1; });
-      counts.textContent = (core.ROOMS || []).map((r) => r.id + " " + (by[r.id] || 0)).join("  ·  ");
-    }
-  }
   function post(job) {
     const verdict = core.acceptJob(job);
     if (!verdict.ok) return verdict;
+    const allowed = KINDS[verdict.job.room] || [];
+    if (allowed.length && allowed.indexOf(verdict.job.kind) === -1) return { ok: false, errors: [verdict.job.kind + " does not belong in " + verdict.job.room] };
     const row = verdict.job;
     row.ts = row.ts || new Date().toISOString();
-    const items = [row].concat(load()).slice(0, 80);
-    save(items);
-    paint(items);
+    row.status = row.needs_human ? "waiting on you" : "in the room";
+    save([row].concat(load()).slice(0, 80));
+    paint();
     document.dispatchEvent(new CustomEvent("money-city:job", { detail: row }));
     return { ok: true, job: row };
   }
-  function wire() {
-    const rooms = document.getElementById("station-rooms");
-    if (rooms && !rooms.childElementCount) {
-      (core.ROOMS || []).forEach((r) => {
-        const card = document.createElement("article");
-        card.className = "card station-room";
-        const h = document.createElement("h3");
-        h.textContent = r.name;
-        const p = document.createElement("p");
-        p.className = "meta";
-        p.textContent = r.job;
-        card.appendChild(h);
-        card.appendChild(p);
-        rooms.appendChild(card);
-      });
+  function approve(id) {
+    save(load().map(function (job) { if (job.id !== id) return job; return Object.assign({}, job, { status: "approved, not sent", approved_ts: new Date().toISOString() }); }));
+    paint();
+    return { ok: true, id: id, sent: false };
+  }
+  function list(room) { const items = load(); return room ? items.filter(function (job) { return job.room === room; }) : items; }
+  function sceneArt(id) {
+    if (id === "street") return '<div class="blood-street"><div class="rain"></div><div class="tower"></div><div class="tower short"></div><div class="tower gold"></div><div class="neon">MONEY CITY</div><div class="walk"></div></div>';
+    if (id === "treasury") return '<div class="room-scene vault"><div class="door"></div><div class="gold-stream"></div></div>';
+    if (id === "publishing") return '<div class="room-scene penthouse"><div class="glass"></div><div class="gold-stream"></div></div>';
+    if (id === "quarters") return '<div class="room-scene quarters"><div class="lamp"></div><div class="coat"></div></div>';
+    if (id === "factory") return '<div class="room-scene floor"><div class="rack"></div><div class="rack"></div><div class="gold-stream"></div></div>';
+    if (id === "war") return '<div class="room-scene war"><div class="table"></div></div>';
+    if (id === "comms") return '<div class="room-scene booth"><div class="screen"></div></div>';
+    if (id === "archives") return '<div class="room-scene stacks"><div class="shelf"></div><div class="shelf"></div></div>';
+    return '<div class="room-scene loft"><div class="screen"></div><div class="gold-stream"></div></div>';
+  }
+  function paint() {
+    const root = document.getElementById("panel-station");
+    if (!root) return;
+    if (!root.dataset.city) {
+      root.dataset.city = "1";
+      root.innerHTML = '<div class="city-live"><p class="city-kicker">Money City · after midnight</p><h2>The station is awake</h2><p class="meta" id="station-counts"></p><div id="station-street" class="station-street"></div><div id="station-stage" class="station-stage"></div><p id="station-err" class="meta"></p></div>';
     }
-    const form = document.getElementById("station-drop");
-    if (form && !form.dataset.wired) {
-      form.dataset.wired = "1";
-      form.addEventListener("submit", (e) => {
+    const items = load();
+    const counts = document.getElementById("station-counts");
+    if (counts) counts.textContent = items.length ? items.length + " things moving on the block" : "The street is quiet. The rooms are ready.";
+    const street = document.getElementById("station-street");
+    street.replaceChildren();
+    [{ id: "street", name: "Blood Street" }].concat(core.ROOMS || []).forEach(function (room) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "street-door" + (room.id === active ? " on" : "");
+      btn.textContent = room.name;
+      btn.addEventListener("click", function () { active = room.id; paint(); });
+      street.appendChild(btn);
+    });
+    const stage = document.getElementById("station-stage");
+    const scene = SCENES[active] || SCENES.street;
+    stage.className = "station-stage open";
+    stage.innerHTML = sceneArt(active);
+    const copy = document.createElement("div");
+    copy.className = "room-copy";
+    const h = document.createElement("h3"); h.textContent = scene.name;
+    const p = document.createElement("p"); p.textContent = scene.line;
+    const who = document.createElement("p"); who.className = "meta"; who.textContent = scene.crew;
+    copy.appendChild(h); copy.appendChild(p); copy.appendChild(who);
+    if (active !== "street") {
+      const form = document.createElement("form");
+      form.className = "station-form";
+      const agent = document.createElement("input");
+      agent.value = "SIGNAL";
+      const text = document.createElement("textarea");
+      text.placeholder = "What are they doing in this room?";
+      const go = document.createElement("button");
+      go.type = "submit";
+      go.textContent = "Leave it in the room";
+      form.appendChild(agent); form.appendChild(text); form.appendChild(go);
+      form.addEventListener("submit", function (e) {
         e.preventDefault();
         const err = document.getElementById("station-err");
-        let job;
-        try { job = JSON.parse(form.elements.job.value); }
-        catch (parseErr) { if (err) err.textContent = "Invalid JSON"; return; }
-        const result = post(job);
-        if (err) err.textContent = result.ok ? "Accepted " + result.job.id : result.errors.join("; ");
+        const result = post({ id: active + "-" + Date.now(), room: active, agent: agent.value || "CITY", kind: (KINDS[active] || ["brief"])[0], text: text.value });
+        if (err) err.textContent = result.ok ? "It landed in " + scene.name + "." : result.errors.join("; ");
       });
+      copy.appendChild(form);
+      const ul = document.createElement("ul");
+      list(active).forEach(function (job) {
+        const li = document.createElement("li");
+        li.className = "station-job";
+        li.textContent = job.agent + " · " + job.status + " — " + (job.text || "no note");
+        if (job.needs_human && job.status === "waiting on you") {
+          const ok = document.createElement("button");
+          ok.type = "button";
+          ok.textContent = "Approve. Do not send.";
+          ok.addEventListener("click", function () { approve(job.id); });
+          li.appendChild(ok);
+        }
+        ul.appendChild(li);
+      });
+      copy.appendChild(ul);
     }
-    paint(load());
+    stage.appendChild(copy);
   }
-  window.MONEY_CITY_BUS = { post, load, paint };
-  window.__startCityStation = wire;
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire);
-  else wire();
+  window.MONEY_CITY_BUS = { post: post, load: load, list: list, approve: approve, paint: paint, open: function (room) { active = room || "street"; paint(); } };
+  window.__startCityStation = paint;
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", paint);
+  else paint();
 })();
