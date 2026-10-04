@@ -1,7 +1,7 @@
 /* MONEY CITY Desktops — watchable worker frames + VM status
    DualCortex = speech. Desks/VMs = WORK. Grok-class = cloud runtime / heavy VMs on Creator PC. */
 (function () {
-  const CACHE = "20261002desks";
+  const CACHE = (window.MONEY_CORE && MONEY_CORE.CACHE) || "20261004station";
   const DISTRICT_PINS = {
     alpha: { x: 18, y: 62 },
     beta: { x: 62, y: 52 },
@@ -12,7 +12,7 @@
 
   async function loadJSON(url, fb) {
     try {
-      const r = await fetch(url, { cache: "no-store" });
+      const r = await fetch(url, { cache: "default" });
       if (!r.ok) throw new Error(String(r.status));
       return await r.json();
     } catch (e) {
@@ -35,13 +35,20 @@
       upd.textContent = (idx && idx.updated_pt) ? "· " + idx.updated_pt : "· run agent_desktop/runner.py --boot";
     }
     const agents = (idx && idx.agents) || [];
-    grid.innerHTML = "";
+    grid.replaceChildren();
     if (!agents.length) {
-      grid.innerHTML = '<p class="meta">No desktop frames yet. On PC: <code>python city_runtime/agent_desktop/runner.py --boot</code> then <code>--agent ALL --job hello</code></p>';
+      const empty = document.createElement("p");
+      empty.className = "meta";
+      empty.textContent = "No desktop frames yet. On PC: python city_runtime/agent_desktop/runner.py --boot";
+      grid.appendChild(empty);
     }
-    for (const a of agents) {
+    const vms = await Promise.all(agents.map((a) => {
       const id = a.agent || a.short || "?";
-      const vm = await loadJSON("data/desktops/" + id + "/vm_status.json?v=" + CACHE, null);
+      return loadJSON("data/desktops/" + id + "/vm_status.json?v=" + CACHE, null);
+    }));
+    agents.forEach((a, i) => {
+      const id = a.agent || a.short || "?";
+      const vm = vms[i];
       const card = document.createElement("div");
       card.className = "desk-card card";
       const img = "data/desktops/" + id + "/latest.png?v=" + CACHE + "&t=" + encodeURIComponent(a.updated_pt || "");
@@ -59,7 +66,7 @@
         '<button type="button" class="btn ghost sm desk-open" data-agent="' + esc(id) + '">Sheet</button>' +
         '</div>';
       grid.appendChild(card);
-    }
+    });
     if (evolve && evolve.latest) {
       const ev = document.createElement("div");
       ev.className = "card";
