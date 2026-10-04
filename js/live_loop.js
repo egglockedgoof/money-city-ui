@@ -1,6 +1,6 @@
 /* MONEY CITY — living tick (no Ollama). Year 0 DEMO life on Pages. */
 (function () {
-  const CACHE = "20261002gate";
+  const CACHE = (window.MONEY_CORE && MONEY_CORE.CACHE) || "20261004station";
   const SHORT_TO_UNIT = {
     SNATCHER: "MONEY SNATCHER 3000",
     MMM: "MONEY MONEY MONEY",
@@ -72,9 +72,7 @@
       district: item.district || "",
       live: true
     };
-    feedItems.unshift(row);
-    const max = LOOP.max_feed || 28;
-    if (feedItems.length > max) feedItems = feedItems.slice(0, max);
+    feedItems = (window.MONEY_CORE ? MONEY_CORE.capFeed(feedItems, row, LOOP.max_feed || 28) : [row].concat(feedItems).slice(0, LOOP.max_feed || 28));
     if (window.CITY) {
       if (!CITY.feed) CITY.feed = { items: [] };
       CITY.feed.items = feedItems.slice();
@@ -86,13 +84,34 @@
     if (row.district) stampDistrict(row.district, row.short);
   }
 
+  const seenFeed = new Set();
+  let tickerCache = "";
+  function feedKey(it) {
+    return (it.ts || "") + "|" + (it.short || "") + "|" + (it.text || "");
+  }
+  function flash(el) {
+    if (!el) return;
+    el.classList.remove("status-flash");
+    void el.offsetWidth;
+    el.classList.add("status-flash");
+    el.addEventListener("animationend", () => el.classList.remove("status-flash"), { once: true });
+  }
   function renderLiveFeed() {
     const list = document.getElementById("activity-list");
     if (!list) return;
-    list.innerHTML = "";
-    feedItems.forEach((it, i) => {
+    const max = LOOP.max_feed || 28;
+    const fresh = [];
+    feedItems.forEach((it) => {
+      const key = feedKey(it);
+      if (seenFeed.has(key)) return;
+      seenFeed.add(key);
+      fresh.push({ it: it, key: key });
+    });
+    for (let i = fresh.length - 1; i >= 0; i -= 1) {
+      const it = fresh[i].it;
       const li = document.createElement("li");
-      li.className = "feed-item kind-" + (it.kind || "status") + (i === 0 ? " feed-new" : "");
+      li.dataset.key = fresh[i].key;
+      li.className = "feed-item kind-" + (it.kind || "status") + (i === fresh.length - 1 ? " feed-new" : "");
       const strong = document.createElement("strong");
       strong.textContent = it.short || it.unit || "UNIT";
       const span = document.createElement("span");
@@ -104,47 +123,43 @@
       li.appendChild(document.createTextNode(" "));
       li.appendChild(span);
       li.appendChild(time);
-      list.appendChild(li);
-    });
+      list.insertBefore(li, list.firstChild);
+    }
+    while (list.childElementCount > max) {
+      const gone = list.lastElementChild;
+      if (gone && gone.dataset.key) seenFeed.delete(gone.dataset.key);
+      list.removeChild(list.lastElementChild);
+    }
   }
 
   function updateTicker() {
-    const ticker = document.getElementById("ticker-inner");
-    if (!ticker) return;
-    const rows = feedItems.length
-      ? feedItems
-      : [{ short: "CITY", text: "Living tick warming up…" }];
-    const live = rows
-      .slice(0, 8)
-      .map((r) => (r.short || r.unit || "") + ": " + (r.text || ""));
-    const fut = (window.__cityFutureTickerLines || []).slice(0, 6);
-    const line = live.concat(fut).join("   ···   ");
-    ticker.textContent = line + "   ···   " + line + "   ···   ";
-    const label = document.querySelector(".ticker-label");
-    if (label) {
-      label.classList.add("ticker-hot");
-      setTimeout(() => label.classList.remove("ticker-hot"), 600);
-    }
+    const text = document.getElementById("ticker-text") || document.getElementById("ticker-inner");
+    if (!text) return;
+    const rows = feedItems.length ? feedItems : [{ short: "CITY", text: "Living tick warming up…" }];
+    const core = window.MONEY_CORE;
+    const next = core
+      ? core.tickerText(rows, window.__cityFutureTickerLines || [])
+      : rows.slice(0, 8).map((r) => (r.short || "") + ": " + (r.text || "")).join("   ···   ");
+    if (next === tickerCache) return;
+    tickerCache = next;
+    text.textContent = next;
   }
 
   function setAgentStatus(short, text) {
     agentLiveStatus[short] = { text: text, ts: nowStamp() };
     document.querySelectorAll('.agent-live-status[data-short="' + short + '"]').forEach((el) => {
       el.textContent = text;
-      el.classList.add("status-flash");
-      setTimeout(() => el.classList.remove("status-flash"), 700);
+      flash(el);
     });
     document.querySelectorAll('.agent-card[data-short="' + short + '"] .live-line').forEach((el) => {
       el.textContent = text;
-      el.classList.add("status-flash");
-      setTimeout(() => el.classList.remove("status-flash"), 700);
+      flash(el);
     });
     const sheetStatus = document.getElementById("sheet-live-line");
     const sheetShort = document.getElementById("sheet-short");
     if (sheetStatus && sheetShort && sheetShort.textContent === short) {
       sheetStatus.textContent = text;
-      sheetStatus.classList.add("status-flash");
-      setTimeout(() => sheetStatus.classList.remove("status-flash"), 700);
+      flash(sheetStatus);
     }
   }
 
@@ -350,7 +365,18 @@
     });
     updateTicker();
     if (timer) clearInterval(timer);
-    timer = setInterval(nextBeat, LOOP.tick_ms || 3500);
+    const arm = () => {
+      if (timer) clearInterval(timer);
+      timer = setInterval(nextBeat, LOOP.tick_ms || 6500);
+    };
+    arm();
+    document.addEventListener("visibilitychange", () => {
+      document.body.classList.toggle("tab-hidden", document.hidden);
+      if (document.hidden) {
+        if (timer) clearInterval(timer);
+        timer = null;
+      } else arm();
+    });
     // First beat soon so he SEES something
     setTimeout(nextBeat, 900);
     setTimeout(nextBeat, 2000);
