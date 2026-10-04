@@ -37,15 +37,18 @@
   }
   function list(room) { const items = load(); return room ? items.filter(function (job) { return job.room === room; }) : items; }
   function sceneArt(id) {
-    if (id === "street") return '<div class="blood-street"><div class="rain"></div><div class="tower"></div><div class="tower short"></div><div class="tower gold"></div><div class="neon">MONEY CITY</div><div class="walk"></div></div>';
-    if (id === "treasury") return '<div class="room-scene vault"><div class="door"></div><div class="gold-stream"></div></div>';
-    if (id === "publishing") return '<div class="room-scene penthouse"><div class="glass"></div><div class="gold-stream"></div></div>';
-    if (id === "quarters") return '<div class="room-scene quarters"><div class="lamp"></div><div class="coat"></div></div>';
-    if (id === "factory") return '<div class="room-scene floor"><div class="rack"></div><div class="rack"></div><div class="gold-stream"></div></div>';
-    if (id === "war") return '<div class="room-scene war"><div class="table"></div></div>';
-    if (id === "comms") return '<div class="room-scene booth"><div class="screen"></div></div>';
-    if (id === "archives") return '<div class="room-scene stacks"><div class="shelf"></div><div class="shelf"></div></div>';
-    return '<div class="room-scene loft"><div class="screen"></div><div class="gold-stream"></div></div>';
+    const files = {
+      street: "https://tmpfiles.org/dl/wbAafUYfwH8F/street.jpg",
+      research: "https://tmpfiles.org/dl/wtAzfgYLADZz/loft.jpg",
+      factory: "https://tmpfiles.org/dl/wqARfwYOAwKe/factory.jpg",
+      comms: "https://tmpfiles.org/dl/wBA3fSY6A9la/comms.jpg",
+      treasury: "https://tmpfiles.org/dl/wcAvfMY7ANch/vault.jpg",
+      publishing: "https://tmpfiles.org/dl/wVALfVY2Aj6j/penthouse.jpg",
+      war: "https://tmpfiles.org/dl/weAIfzYCAien/war.jpg",
+      archives: "https://tmpfiles.org/dl/wfAnfeYoA1f5/archives.jpg",
+      quarters: "https://tmpfiles.org/dl/wFA0f5YKA7gv/quarters.jpg"
+    };
+    return '<img class="room-photo" alt="" src="' + (files[id] || files.street) + '">';
   }
   function paint() {
     const root = document.getElementById("panel-station");
