@@ -1,1 +1,76 @@
-/* Ops floor. Crew list, map, room terminal. Blood and gold. */\n(function () {\n  const KEY = 'money_city_inbox_v1';\n  const ROOMS = [\n    { id: 'research', name: 'Research', agent: 'SIGNAL' },\n    { id: 'factory', name: 'Factory', agent: 'SEED' },\n    { id: 'comms', name: 'Comms', agent: 'TRAIL' },\n    { id: 'treasury', name: 'Treasury', agent: 'VAULT' },\n    { id: 'publishing', name: 'Publishing', agent: 'MAGNET' },\n    { id: 'war', name: 'War', agent: 'SNATCHER' },\n    { id: 'archives', name: 'Archives', agent: 'MMM' },\n    { id: 'quarters', name: 'Quarters', agent: 'CREW' }\n  ];\n  let open = 'factory'; let busy = '';\n  function load() { try { const p = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(p) ? p : []; } catch (e) { return []; } }\n  function save(items) { localStorage.setItem(KEY, JSON.stringify(items.slice(0, 160))); }\n  function post(room, agent, kind, text) { const bus = window.MONEY_CITY_BUS; const job = { id: room + '-' + Date.now(), room: room, agent: agent, kind: kind, text: text }; if (bus) return bus.post(job); save([Object.assign({ ts: new Date().toISOString(), status: 'on the desk' }, job)].concat(load())); paint(); return { ok: true }; }\n  function mine(room) { return load().filter(function (job) { return job.room === room; }); }\n  function style() { if (document.getElementById('ops-style')) return; const s = document.createElement('style'); s.id = 'ops-style'; s.textContent = '#ops{display:grid;grid-template-columns:132px 1fr;gap:8px;color:#efe2c6;font-size:13px}#ops h2,#ops h3{color:#e8c96a;margin:0 0 6px}#ops .proc,#ops .node,#ops button{background:#140b0b;color:#efe2c6;border:1px solid #6b0f16;padding:8px;font:inherit;text-align:left}#ops .on,#ops .node.on{border-color:#d4a017;color:#e8c96a}#ops .map{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}#ops .term{border:1px solid #6b0f16;background:#0c0707;padding:10px;min-height:200px}#ops input{width:100%;box-sizing:border-box;background:#1a0f0f;color:#efe2c6;border:1px solid #6b0f16;padding:8px;margin:6px 0;font:inherit}#ops .row{border-top:1px solid #331515;padding:6px 0}#ops .go{background:#6b0f16;color:#e8c96a;border-color:#d4a017}'; document.head.appendChild(s); }\n  function field(label, hold, kind) { const form = document.createElement('form'); const input = document.createElement('input'); input.placeholder = label + ': ' + hold; const go = document.createElement('button'); go.className = 'go'; go.type = 'submit'; go.textContent = 'Leave it'; form.appendChild(input); form.appendChild(go); form.addEventListener('submit', function (e) { e.preventDefault(); const room = ROOMS.filter(function (r) { return r.id === open; })[0]; post(open, room.agent, kind, input.value.trim() || hold); }); return form; }\n  function term() { const box = document.createElement('div'); box.className = 'term'; const room = ROOMS.filter(function (r) { return r.id === open; })[0]; const h = document.createElement('h3'); h.textContent = room.name + ' / ' + room.agent + (busy === room.id ? ' / working' : ''); box.appendChild(h); if (open === 'factory') { box.appendChild(field('Lane', 'Original print. Gold night shirt.', 'draft')); ['Print lane', 'Thumbnail lane', 'Asset lane'].forEach(function (lane) { const b = document.createElement('button'); b.className = 'go'; b.textContent = lane; b.addEventListener('click', function () { post('factory', 'SEED', 'draft', lane + ' draft. Original. Not a copy of a listing.'); }); box.appendChild(b); }); } else if (open === 'research') { box.appendChild(field('Category', 'Night-market shirts, public demand', 'brief')); } else if (open === 'comms') { box.appendChild(field('Incoming', 'Asked about the gold shirt', 'draft')); } else if (open === 'treasury') { box.appendChild(field('Real line', 'Ink, 18 dollars', 'ledger')); } else if (open === 'publishing') { ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(function (day) { const b = document.createElement('button'); b.textContent = day; b.addEventListener('click', function () { post('publishing', 'MAGNET', 'schedule', day + ' slot held. Not posted.'); }); box.appendChild(b); }); } else if (open === 'war') { box.appendChild(field('Cut', 'Blank tee lane is dead. Next is the gold shirt.', 'pivot')); } else if (open === 'archives') { const b = document.createElement('button'); b.className = 'go'; b.textContent = 'File the night'; b.addEventListener('click', function () { post('archives', 'MMM', 'memory', load().slice(0, 4).map(function (job) { return job.agent + ': ' + job.text; }).join(' | ') || 'Night was quiet.'); }); box.appendChild(b); } else { box.appendChild(field('Home', 'SEED is in.', 'status')); } mine(open).slice(0, 6).forEach(function (job) { const row = document.createElement('div'); row.className = 'row'; row.textContent = (job.status || 'on the desk') + ' — ' + job.text; if (job.status === 'waiting on you' && window.MONEY_CITY_BUS) { const ok = document.createElement('button'); ok.textContent = 'Approve, do not send'; ok.addEventListener('click', function () { window.MONEY_CITY_BUS.approve(job.id); paint(); }); row.appendChild(ok); } box.appendChild(row); }); return box; }\n  function paint() { style(); const host = document.getElementById('panel-map') || document.getElementById('panel-station'); if (!host) return; let root = document.getElementById('ops'); if (!root) { root = document.createElement('div'); root.id = 'ops'; host.prepend(root); } root.innerHTML = ''; const list = document.createElement('div'); const title = document.createElement('h2'); title.textContent = 'CREW'; list.appendChild(title); ROOMS.forEach(function (room) { const btn = document.createElement('button'); btn.className = 'proc' + (open === room.id ? ' on' : ''); btn.textContent = room.agent + ' ' + mine(room.id).length; btn.addEventListener('click', function () { open = room.id; paint(); }); list.appendChild(btn); }); const main = document.createElement('div'); const map = document.createElement('div'); map.className = 'map'; ROOMS.forEach(function (room) { const node = document.createElement('button'); node.className = 'node' + (open === room.id ? ' on' : ''); node.textContent = room.name + ' ' + mine(room.id).length; node.addEventListener('click', function () { open = room.id; paint(); }); map.appendChild(node); }); const run = document.createElement('button'); run.className = 'go'; run.textContent = busy ? 'Floor running' : 'Run the floor'; run.addEventListener('click', floor); main.appendChild(map); main.appendChild(run); main.appendChild(term()); root.appendChild(list); root.appendChild(main); }\n  async function floor() { if (busy) return; const steps = [['research','SIGNAL','brief','Public category: night-market shirts. Original only.'],['factory','SEED','draft','Gold night shirt draft. Our print.'],['comms','TRAIL','draft','Reply drafted. Waiting. Not sent.'],['publishing','MAGNET','schedule','Friday slot held. Not posted.'],['archives','MMM','memory','Floor filed the pass.']]; for (let i = 0; i < steps.length; i++) { busy = steps[i][0]; open = busy; paint(); await new Promise(function (r) { setTimeout(r, 350); }); post(steps[i][0], steps[i][1], steps[i][2], steps[i][3]); } busy = ''; open = 'factory'; paint(); }\n  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paint); else paint(); setTimeout(paint, 500);\n})();
+/* Ops floor. Valid script. Full screen. Blood and gold. */
+(function () {
+  var KEY = 'money_city_inbox_v1';
+  var ROOMS = [
+    { id: 'research', name: 'Research', agent: 'SIGNAL', job: 'Writes the brief' },
+    { id: 'factory', name: 'Factory', agent: 'SEED', job: 'Cuts the draft' },
+    { id: 'comms', name: 'Comms', agent: 'TRAIL', job: 'Holds the reply' },
+    { id: 'treasury', name: 'Treasury', agent: 'VAULT', job: 'Keeps the ledger' },
+    { id: 'publishing', name: 'Publishing', agent: 'MAGNET', job: 'Holds the slot' },
+    { id: 'war', name: 'War', agent: 'SNATCHER', job: 'Cuts the dead lane' },
+    { id: 'archives', name: 'Archives', agent: 'MMM', job: 'Files the night' },
+    { id: 'quarters', name: 'Quarters', agent: 'CREW', job: 'Who is home' }
+  ];
+  var open = 'factory';
+  var tick = 0;
+  var running = true;
+  function load() { try { var p = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(p) ? p : []; } catch (e) { return []; } }
+  function save(items) { localStorage.setItem(KEY, JSON.stringify(items.slice(0, 160))); }
+  function post(room, agent, kind, text) {
+    var bus = window.MONEY_CITY_BUS;
+    var job = { id: room + '-' + Date.now(), room: room, agent: agent, kind: kind, text: text };
+    if (bus && bus.post) return bus.post(job);
+    var row = { id: job.id, ts: new Date().toISOString(), room: room, agent: agent, kind: kind, text: text, status: (room === 'comms' || room === 'publishing') ? 'waiting on you' : 'on the desk', needs_human: room === 'comms' || room === 'publishing' };
+    save([row].concat(load()));
+    return { ok: true, job: row };
+  }
+  function mine(room) { return load().filter(function (job) { return job.room === room; }); }
+  function style() {
+    if (document.getElementById('ops-style')) return;
+    var s = document.createElement('style');
+    s.id = 'ops-style';
+    s.textContent = '#ops{position:fixed;inset:0;z-index:80;background:#070304;color:#efe2c6;display:flex;flex-direction:column;font:14px/1.35 system-ui,sans-serif;overflow:hidden}#ops header{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #6b0f16;color:#e8c96a}#ops .crew{display:flex;gap:6px;overflow:auto;padding:8px;border-bottom:1px solid #331515}#ops button{background:#140b0b;color:#efe2c6;border:1px solid #6b0f16;padding:8px;font:inherit}#ops .on{border-color:#d4a017;color:#e8c96a}#ops .body{flex:1;overflow:auto;padding:10px}#ops .row{border-top:1px solid #331515;padding:8px 0}#ops input{width:100%;box-sizing:border-box;background:#1a0f0f;color:#efe2c6;border:1px solid #6b0f16;padding:10px;margin:8px 0;font:inherit}#ops .go{background:#6b0f16;color:#e8c96a;border-color:#d4a017}#ops .live{color:#e8c96a}';
+    document.head.appendChild(s);
+  }
+  function paint() {
+    style();
+    var root = document.getElementById('ops');
+    if (!root) { root = document.createElement('div'); root.id = 'ops'; document.body.appendChild(root); }
+    var room = ROOMS.filter(function (r) { return r.id === open; })[0];
+    var items = mine(open).slice(0, 8);
+    var html = '<header><strong>MONEY CITY FLOOR</strong><span class="live">' + (running ? 'SHIFT LIVE' : 'HOLD') + '</span></header>';
+    html += '<div class="crew">';
+    ROOMS.forEach(function (r) { html += '<button data-room="' + r.id + '" class="' + (r.id === open ? 'on' : '') + '">' + r.agent + ' ' + mine(r.id).length + '</button>'; });
+    html += '</div><div class="body"><h2>' + room.name + ' · ' + room.agent + '</h2><p>' + room.job + '</p>';
+    html += '<form id="ops-form"><input id="ops-in" placeholder="Leave work for ' + room.agent + '"><button class="go" type="submit">Leave it in the room</button></form>';
+    html += '<p id="ops-pass"></p>';
+    items.forEach(function (job) { html += '<div class="row">' + (job.status || 'on the desk') + ' — ' + job.text + '</div>'; });
+    if (!items.length) html += '<div class="row">Desk is clear. The shift will pass work here.</div>';
+    html += '<button id="ops-run" class="go">' + (running ? 'Hold the shift' : 'Run the shift') + '</button></div>';
+    root.innerHTML = html;
+    root.querySelectorAll('[data-room]').forEach(function (btn) { btn.addEventListener('click', function () { open = btn.getAttribute('data-room'); paint(); }); });
+    root.querySelector('#ops-form').addEventListener('submit', function (e) { e.preventDefault(); var v = root.querySelector('#ops-in').value.trim(); if (!v) return; post(open, room.agent, 'note', v); paint(); });
+    root.querySelector('#ops-run').addEventListener('click', function () { running = !running; paint(); });
+  }
+  function shift() {
+    if (!running) return;
+    var chain = [
+      ['research', 'SIGNAL', 'brief', 'Public category. Original only. No copied listing.'],
+      ['factory', 'SEED', 'draft', 'Took the brief. Cut an original draft.'],
+      ['comms', 'TRAIL', 'draft', 'Reply is on the desk. Not sent.'],
+      ['publishing', 'MAGNET', 'schedule', 'Slot held. Not posted.'],
+      ['war', 'SNATCHER', 'pivot', 'Dead lane named. Next lane is the one that moved.'],
+      ['archives', 'MMM', 'memory', 'Pass filed.']
+    ];
+    var step = chain[tick % chain.length];
+    tick += 1;
+    open = step[0];
+    post(step[0], step[1], step[2], step[3] + ' Pass ' + tick + '.');
+    paint();
+    var pass = document.getElementById('ops-pass');
+    if (pass) pass.textContent = step[1] + ' just handed work to the next room.';
+  }
+  function boot() { paint(); setInterval(shift, 4000); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
