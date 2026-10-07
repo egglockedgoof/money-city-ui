@@ -31,6 +31,7 @@
      - highway_tasks    : team task board (text, done, createdBy, ts)
      - highway_notes    : shared notes (single doc "shared": content, updatedBy, ts)
      - highway_activity : activity feed (text, by, ts)
+     - News tab reads trending items live from the bridge's /news endpoint (no Firestore collection).
   4. Chat: deviceId match -> right/blue (mine), else left/gray (theirs).
   5. OWNERSHIP (2026-10-07): sin and Trey built this room together.
      Both are owners with equal lead authority. What either of them
@@ -278,6 +279,10 @@
   .row.me-row .who{text-align:right;}
   .ver{font-size:9px;color:var(--green);border:1px solid rgba(255,77,94,.4);border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:1px;letter-spacing:.4px;}
   .crown{font-size:11px;margin-left:5px;vertical-align:1px;filter:drop-shadow(0 0 4px rgba(193,18,31,.9));}
+  .nrow{display:flex;gap:10px;align-items:baseline;background:rgba(193,18,31,.05);border:1px solid var(--line);border-radius:10px;padding:10px 12px;text-decoration:none;color:inherit;}
+  .nrow:hover{border-color:rgba(255,77,94,.5);}
+  .nsrc{flex:none;font-size:9px;font-weight:700;letter-spacing:.6px;color:#ff8a94;border:1px solid rgba(255,77,94,.4);border-radius:4px;padding:2px 6px;}
+  .ntitle{font-size:13px;line-height:1.4;}
   .reacts{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;}
   .rx{font-size:12px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;
     padding:2px 8px;cursor:pointer;color:var(--txt);}
@@ -424,6 +429,7 @@
     <button class="tab" data-v="view-tasks">✅ Tasks</button>
     <button class="tab" data-v="view-notes">📝 Notes</button>
     <button class="tab" data-v="view-activity">📡 Activity</button>
+    <button class="tab" data-v="view-news">📰 News</button>
   </div>
 
   <div class="view active" id="view-chat">
@@ -455,6 +461,10 @@
       <button id="actadd" style="background:linear-gradient(180deg,var(--amber),#d97706);border:none;color:#1a1005;font-weight:700;border-radius:12px;padding:0 18px;font-size:14px;cursor:pointer;">Log</button>
     </div>
     <div id="actlist" style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+
+  <div class="view" id="view-news">
+    <div id="newslist" style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 </div>
 
@@ -749,8 +759,31 @@
       document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active");});
       document.querySelectorAll(".view").forEach(function(x){x.classList.remove("active");});
       t.classList.add("active"); $(t.getAttribute("data-v")).classList.add("active");
+      if(t.getAttribute("data-v")==="view-news" && Date.now()-newsLoadedAt>10*60*1000) loadNews();
     });
   });
+
+  /* ================= NEWS FEED (trending overall) ================= */
+  var NEWS_URL="https://highway-chat-mcp.onrender.com/news";
+  var newsLoadedAt=0;
+  function loadNews(){
+    var list=$("newslist"); if(!list) return;
+    list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Pulling what is trending…</div>';
+    fetch(NEWS_URL).then(function(r){ return r.json(); }).then(function(d){
+      newsLoadedAt=Date.now();
+      var items=(d&&d.items)||[];
+      if(!items.length){ list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Nothing trending right now.</div>'; return; }
+      var html='<div style="color:var(--muted);font-size:11px;text-align:center;letter-spacing:.4px;">TRENDING OVERALL · UPDATED '+esc(new Date(d.updated||Date.now()).toLocaleTimeString())+'</div>';
+      items.forEach(function(n){
+        html+='<a class="nrow" href="'+esc(n.url||"#")+'" target="_blank" rel="noopener">'
+          +'<span class="nsrc">'+esc(n.source||"")+'</span>'
+          +'<span class="ntitle">'+esc(n.title||"")+'</span></a>';
+      });
+      list.innerHTML=html;
+    }).catch(function(){
+      list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Feed is warming up — open the tab again in a minute.</div>';
+    });
+  }
 
   sendBtn.addEventListener("click", sendMsg);
   $("clear").addEventListener("click", function(){
