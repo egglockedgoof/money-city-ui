@@ -490,5 +490,66 @@
   nameIn.focus();
 })();
 </script>
+
+<script>
+/* Highway Chat push notifications */
+(function(){
+  var VAPID_PUBLIC = "BEm8B9zNCKOVR7_nvgrVOrBiVUJTnWTdLkn23Wk---Y03oqTXMDjXwvTliytNJBN412Z8gU7O29YGPpTke0Papk";
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+  function urlB64ToUint8(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    var raw = window.atob(base64);
+    var out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  // Add a bell toggle button to the header
+  function addBell(){
+    var header = document.querySelector('header') || document.body;
+    var btn = document.createElement('button');
+    btn.id = 'pushbell';
+    btn.title = 'Enable live notifications';
+    btn.textContent = '\uD83D\uDD15';
+    btn.style.cssText = 'background:none;border:1px solid #c1121f;color:#c1121f;border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;margin-left:8px;';
+    btn.onclick = enablePush;
+    header.appendChild(btn);
+    // Update bell state if already subscribed
+    navigator.serviceWorker.ready.then(function(reg){
+      reg.pushManager.getSubscription().then(function(sub){
+        if (sub) { btn.textContent = '\uD83D\uDD14'; btn.title = 'Notifications on'; }
+      });
+    });
+  }
+
+  function enablePush(){
+    if (Notification.permission === 'denied') { alert('Notifications blocked. Enable them in Settings > Highway Chat.'); return; }
+    navigator.serviceWorker.ready.then(function(reg){
+      return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
+    }).then(function(sub){
+      var btn = document.getElementById('pushbell');
+      if (btn) { btn.textContent = '\uD83D\uDD14'; btn.title = 'Notifications on'; }
+      // Save subscription to Firestore
+      var subJson = sub.toJSON();
+      if (typeof db !== 'undefined' && db) {
+        var myName = 'anon';
+        try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
+        db.collection('highway_push_subs').doc(btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').substring(0,60)).set({
+          endpoint: sub.endpoint,
+          keys: subJson.keys,
+          name: myName,
+          platform: navigator.platform || 'unknown',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+    }).catch(function(err){ console.warn('push subscribe failed', err); });
+  }
+
+  // Register service worker
+  navigator.serviceWorker.register('sw.js').then(function(){ addBell(); }).catch(function(e){ console.warn('sw failed', e); });
+})();
+</script>
 </body>
 </html>
