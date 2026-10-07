@@ -70,6 +70,45 @@
     transition:opacity .6s var(--soft);
     opacity:0;
   }
+
+  /* ===== iOS SAFARI OPTIMIZATION ===== */
+  /* Prevent iOS auto-zoom on input focus: all inputs 16px+ */
+  #msg, #name, #notes, #actin, #msgin{ font-size:16px !important; }
+  /* Prevent double-tap zoom on interactive elements */
+  button, .tab, .tcheck{ touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+  /* Smooth momentum scrolling on iOS */
+  .view, #chat{ -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; }
+  /* GPU-accelerated animations only */
+  .tab, #send, .msg, .trow, .arow{ transform:translateZ(0); }
+
+  @media (max-width:640px){
+    /* Full-bleed on phones: no wasted padding */
+    body{ padding:0; }
+    .shell{
+      width:100%; height:100%; max-height:none;
+      border-radius:0; border-left:none; border-right:none;
+    }
+    html, body, .shell{ height:100%; }
+    /* Single safe-area handling: shell only */
+    .shell{
+      padding-top:env(safe-area-inset-top, 0px);
+      padding-bottom:env(safe-area-inset-bottom, 0px);
+    }
+    /* Tighter chrome, thumb-friendly targets */
+    .head{ margin:8px 8px 0; border-radius:14px; }
+    .tabs{ margin:8px 8px 0; }
+    .tab{ min-height:44px; font-size:13px; }
+    /* Composer: simple row, no pill squeeze */
+    .foot{
+      margin:8px; padding:8px;
+      border-radius:18px; /* rounded rect, not pill — room for button */
+      display:flex; gap:8px; align-items:center;
+    }
+    #msg{ border-radius:14px; padding:12px 14px; flex:1; min-width:0; }
+    #send{ border-radius:14px; padding:12px 18px; flex:none; min-height:44px; white-space:nowrap; }
+    #chat{ padding:12px 8px; }
+    .msg{ max-width:88%; }
+  }
   /* ===== ETHEREAL ATMOSPHERE ===== */
   /* Breathing background: embers pulse like slow breath */
   @keyframes ember-breathe{
