@@ -277,6 +277,7 @@
   .who{font-size:10.5px;color:var(--muted);margin:0 4px 3px;font-weight:600;letter-spacing:.3px;}
   .row.me-row .who{text-align:right;}
   .ver{font-size:9px;color:var(--green);border:1px solid rgba(255,77,94,.4);border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:1px;letter-spacing:.4px;}
+  .crown{font-size:11px;margin-left:5px;vertical-align:1px;filter:drop-shadow(0 0 4px rgba(193,18,31,.9));}
   .reacts{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;}
   .rx{font-size:12px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;
     padding:2px 8px;cursor:pointer;color:var(--txt);}
@@ -484,6 +485,9 @@
       presenceEl=$("presence"), typingEl=$("typing");
   var MY_NAME=null, db=null, seen={};
   var EMOJIS=["🔥","❤️","👍","😂","💯","👀"];
+  var OWNERS=["sin","grim"]; // co-owners of the Highway — case-insensitive
+  function isOwner(n){ return OWNERS.indexOf(String(n||"").toLowerCase())>=0; }
+  function crownHtml(n){ return isOwner(n)?'<span class="crown" title="Owner">👑</span>':""; }
 
   function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
@@ -511,7 +515,7 @@
     });
     rxHtml+='<span class="rx rx-add" data-id="'+doc.id+'" data-e="__pick__">＋</span>';
     row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+
-      (mine?"":'<span class="ver">VERIFIED</span>')+'</div>'+
+      (mine?"":'<span class="ver">VERIFIED</span>')+crownHtml(m.name)+'</div>'+
       '<div class="bubble">'+esc(m.text||"")+'</div>'+
       '<div class="reacts">'+rxHtml+'</div></div>';
     chat.appendChild(row);
@@ -657,7 +661,7 @@
       var now=Date.now(), html="";
       s.forEach(function(d){
         var p=d.data(); if(!p||!p.ts) return;
-        try{ if(now-p.ts.toDate().getTime()<60000) html+='<span class="p-chip">'+esc(p.name)+'</span>'; }catch(e){}
+        try{ if(now-p.ts.toDate().getTime()<60000) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+'</span>'; }catch(e){}
       });
       presenceEl.innerHTML=html||'<span style="font-size:11px;color:var(--muted)">no one else here</span>';
     });
