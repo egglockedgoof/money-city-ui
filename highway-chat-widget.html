@@ -329,6 +329,30 @@
   #pwjoin{width:100%;background:linear-gradient(180deg,var(--blue),var(--blue-d));border:none;color:#fff;
     font-weight:800;border-radius:12px;padding:12px;font-size:15px;cursor:pointer;}
   #pwerr{color:#f87171;font-size:12px;min-height:16px;margin-top:8px;}
+  /* Moon circle: rotating ring of guardians */
+  .moon-ring{
+    position:absolute; top:50%; left:50%;
+    width:340px; height:340px; margin:-170px 0 0 -170px;
+    animation:moon-orbit 40s linear infinite;
+    pointer-events:none; z-index:1;
+  }
+  .moon{
+    position:absolute; width:72px; height:72px;
+    border-radius:50%; object-fit:cover;
+    border:2px solid rgba(255,130,140,.25);
+    box-shadow:0 0 24px rgba(193,18,31,.4), inset 0 1px 0 rgba(255,160,170,.3);
+    animation:moon-spin 40s linear infinite reverse;
+  }
+  .moon.m1{ top:0; left:50%; margin-left:-36px; }
+  .moon.m2{ top:50%; right:0; margin-top:-36px; }
+  .moon.m3{ bottom:0; left:50%; margin-left:-36px; }
+  .moon.m4{ top:50%; left:0; margin-top:-36px; }
+  @keyframes moon-orbit{ to{ transform:rotate(360deg); } }
+  @keyframes moon-spin{ to{ transform:rotate(-360deg); } }
+  #pwgate .card{ position:relative; z-index:2; }
+  @media (prefers-reduced-motion:reduce){
+    .moon-ring, .moon{ animation:none !important; }
+  }
   #gate{position:fixed;inset:0;background:rgba(4,6,9,.82);backdrop-filter:blur(8px);
     display:flex;align-items:center;justify-content:center;padding:20px;z-index:10;}
   #gate .card{width:min(380px,100%);background:linear-gradient(180deg,rgba(20,5,8,.92),rgba(8,2,4,.95));
@@ -346,6 +370,12 @@
 <body>
 
 <div id="pwgate">
+  <div class="moon-ring">
+    <img src="highway-moons/moon-blue.jpg" class="moon m1" alt="" />
+    <img src="highway-moons/moon-red.jpg" class="moon m2" alt="" />
+    <img src="highway-moons/moon-yellow.jpg" class="moon m3" alt="" />
+    <img src="highway-moons/moon-dark.jpg" class="moon m4" alt="" />
+  </div>
   <div class="card">
     <h2>🔒 Highway Chat</h2>
     <p>This room is locked.<br/>Enter the password to continue.</p>
