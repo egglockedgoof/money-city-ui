@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Highway Chat — Real-Time Team Room</title>
+<!--
+  ============================================================================
+  HIGHWAY CHAT — cross-device real-time team room (no custom backend needed)
+  ----------------------------------------------------------------------------
+  HOW THE CROSS-DEVICE SYNC HANDSHAKE WORKS:
+  1. Every browser tab generates its own random DEVICE_ID on first load and
+     keeps it in sessionStorage (so each tab is a distinct "device").
+  2. When you send a message, it is written as a document into a shared
+     Cloud Firestore collection ("highway_messages"). The write includes
+     your verified display NAME, your DEVICE_ID, the TEXT, and a
+     server-side timestamp (so ordering is consistent everywhere).
+  3. Every open tab/device holds a LIVE LISTENER (onSnapshot) on that same
+     collection, ordered by timestamp. Firestore pushes each new document
+     to ALL connected clients within ~a second — no polling, no refresh.
+  4. On arrival, each client compares the document's deviceId to its own
+     DEVICE_ID: match  -> renders on the RIGHT in blue  ("sent by me");
+     no match -> renders on the LEFT  in gray   ("received").
+  5. The chat window auto-scrolls to the newest message on every update,
+     and pressing Enter submits the input box.
+  ----------------------------------------------------------------------------
+  SETUP (one time, ~3 minutes):
+  1. Go to https://console.firebase.google.com -> create a project (free).
+  2. Build -> Firestore Database -> Create database (production mode is fine,
+     then open the Rules tab and paste the rules from the comment marked
+     [FIRESTORE RULES] below, then Publish).
+  3. Project Settings (gear icon) -> "Your apps" -> Web app (</>) ->
+     copy the firebaseConfig object.
+  4. Paste your values into FIREBASE_CONFIG below, replacing the
+     "PASTE-YOUR-..." placeholders. Save this file and open it on any
+     devices — they will all sync.
+  ============================================================================
+-->
+<!-- [FIRESTORE RULES] — paste into Firestore Rules tab, then Publish.
+     These allow anyone with your config to read/write chat messages.
+     For a private team, tighten "allow" with request.auth != null and
+     enable Anonymous auth, or restrict by IP in App Check. -->
+<!--
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /highway_messages/{doc} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasAll(['name','text','deviceId'])
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() < 2000;
+    }
+  }
+}
+-->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#07090d; --panel:#0d1117; --panel2:#11161d;
+    --line:rgba(255,255,255,.08);
+    --txt:#e8edf3; --muted:#8b94a3;
+    --blue:#2f7bff; --blue-d:#1f5fd6;
+    --gray:#232b36;
+    --green:#34d399; --amber:#fbbf24;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:radial-gradient(1200px 600px at 20% -10%, #101827 0%, var(--bg) 55%) fixed, var(--bg);
+    color:var(--txt); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:16px;
+  }
+  .shell{width:min(560px,100%); height:min(780px,94vh); display:flex; flex-direction:column;
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line); border-radius:20px; overflow:hidden;
+    box-shadow:0 24px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(47,123,255,.06);}
+  .head{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px;}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);flex:none;}
+  .dot.off{background:#525b69;box-shadow:none;}
+  .head h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.4px;}
+  .head small{display:block;color:var(--muted);font-weight:500;font-size:11px;margin-top:2px;}
+  .me{margin-left:auto;font-size:11px;color:var(--muted);background:#161d27;border:1px solid var(--line);
+    padding:5px 10px;border-radius:999px;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #chat{flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth;}
+  .row{display:flex;width:100%;}
+  .row.me-row{justify-content:flex-end;}
+  .bubble{max-width:78%;padding:9px 13px;border-radius:var(--radius);font-size:14px;line-height:1.45;
+    word-wrap:break-word;animation:pop .18s ease-out;}
+  @keyframes pop{from{transform:translateY(6px);opacity:0;}to{transform:none;opacity:1;}}
+  .row.me-row .bubble{background:linear-gradient(180deg,var(--blue),var(--blue-d));color:#fff;
+    border-bottom-right-radius:4px;}
+  .row.them-row .bubble{background:var(--gray);color:var(--txt);border-bottom-left-radius:4px;
+    border:1px solid var(--line);}
+  .who{font-size:10.5px;color:var(--muted);margin:0 4px 3px;font-weight:600;letter-spacing:.3px;}
+  .row.me-row .who{text-align:right;}
+  .sys{align-self:center;font-size:11px;color:var(--muted);background:#141a23;border:1px solid var(--line);
+    padding:4px 12px;border-radius:999px;margin:4px 0;}
+  .foot{padding:12px;border-top:1px solid var(--line);display:flex;gap:8px;background:rgba(0,0,0,.25);}
+  #msg{flex:1;background:#0a0e14;border:1px solid var(--line);border-radius:12px;color:var(--txt);
+    padding:11px 13px;font-size:14px;outline:none;}
+  #msg:focus{border-color:rgba(47,123,255,.55);box-shadow:0 0 0 3px rgba(47,123,255,.15);}
+  #send{background:linear-gradient(180deg,var(--blue),var(--blue-d));border:none;color:#fff;font-weight:700;
+    border-radius:12px;padding:0 18px;font-size:14px;cursor:pointer;}
+  #send:active{transform:scale(.97);}
+  /* name gate */
+  #gate{position:fixed;inset:0;background:rgba(4,6,9,.82);backdrop-filter:blur(8px);
+    display:flex;align-items:center;justify-content:center;padding:20px;z-index:10;}
+  #gate .card{width:min(380px,100%);background:linear-gradient(180deg,#121822,#0c1017);
+    border:1px solid var(--line);border-radius:18px;padding:26px 22px;text-align:center;
+    box-shadow:0 24px 80px rgba(0,0,0,.6);}
+  #gate h2{margin:0 0 6px;font-size:18px;}
+  #gate p{color:var(--muted);font-size:13px;margin:0 0 16px;}
+  #name{width:100%;background:#0a0e14;border:1px solid var(--line);border-radius:12px;color:var(--txt);
+    padding:12px;font-size:15px;outline:none;text-align:center;}
+  #name:focus{border-color:rgba(52,211,153,.6);box-shadow:0 0 0 3px rgba(52,211,153,.12);}
+  #join{width:100%;margin-top:12px;background:linear-gradient(180deg,#34d399,#10b981);border:none;color:#04251a;
+    font-weight:800;border-radius:12px;padding:12px;font-size:15px;cursor:pointer;}
+  #err{color:#f87171;font-size:12px;min-height:16px;margin-top:8px;}
+  .ver{font-size:9px;color:var(--green);border:1px solid rgba(52,211,153,.4);border-radius:4px;
+    padding:1px 5px;margin-left:5px;vertical-align:1px;letter-spacing:.4px;}
+</style>
+</head>
+<body>
+
+<!-- NAME GATE: pick your verified display name before entering the room -->
+<div id="gate">
+  <div class="card">
+    <h2>🛣️ Highway Chat</h2>
+    <p>Choose your verified display name.<br/>It will be badged on every message you send.</p>
+    <input id="name" maxlength="24" placeholder="e.g. whisper" autocomplete="off" />
+    <button id="join">Enter the highway</button>
+    <div id="err"></div>
+  </div>
+</div>
+
+<div class="shell">
+  <div class="head">
+    <span class="dot off" id="livedot"></span>
+    <h1>Highway Chat<small id="sub">connecting…</small></h1>
+    <span class="me" id="mebadge">—</span>
+  </div>
+  <div id="chat" aria-live="polite"></div>
+  <div class="foot">
+    <input id="msg" placeholder="Type a message…" autocomplete="off" maxlength="2000" />
+    <button id="send">Send</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ 1. YOUR FIREBASE PROJECT (paste your own values) ============ */
+  var FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyDmAMnxfBorxPkwt4Y2FjhkEB83914ut1U",
+    authDomain:        "highway-chat.firebaseapp.com",
+    projectId:         "highway-chat",
+    storageBucket:     "highway-chat.firebasestorage.app",
+    messagingSenderId: "1063748874829",
+    appId:             "1:1063748874829:web:5565a2fa6012a0c3b76204"
+  };
+  var COLLECTION = "highway_messages"; // shared room every device reads+writes
+
+  /* ============ 2. DEVICE IDENTIFICATION ============
+     Each tab gets a random ID kept in sessionStorage, so two tabs on the
+     same phone still count as different "devices" and render correctly. */
+  var DEVICE_ID = sessionStorage.getItem("hw_device_id");
+  if(!DEVICE_ID){
+    DEVICE_ID = "d-" + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+    sessionStorage.setItem("hw_device_id", DEVICE_ID);
+  }
+
+  var $ = function(id){ return document.getElementById(id); };
+  var chat=$("chat"), msg=$("msg"), sendBtn=$("send"),
+      gate=$("gate"), nameIn=$("name"), joinBtn=$("join"),
+      err=$("err"), sub=$("sub"), dot=$("livedot"), mebadge=$("mebadge");
+  var MY_NAME = null, db = null, unsub = null, seen = {};
+
+  function sysLine(t){
+    var d=document.createElement("div"); d.className="sys"; d.textContent=t;
+    chat.appendChild(d); scrollDown();
+  }
+  function scrollDown(){ requestAnimationFrame(function(){ chat.scrollTop = chat.scrollHeight; }); }
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+  /* Render one message doc. deviceId match -> right/blue (mine),
+     otherwise left/gray (theirs). `seen` guards against double-render. */
+  function render(doc){
+    var m = doc.data(); if(!m || seen[doc.id]) return; seen[doc.id]=1;
+    var mine = (m.deviceId === DEVICE_ID);
+    var row=document.createElement("div");
+    row.className = "row " + (mine ? "me-row" : "them-row");
+    row.innerHTML =
+      '<div style="max-width:78%">' +
+        '<div class="who">' + esc(m.name||"anon") +
+          (mine ? "" : '<span class="ver">VERIFIED</span>') + '</div>' +
+        '<div class="bubble">' + esc(m.text||"") + '</div>' +
+      '</div>';
+    chat.appendChild(row); scrollDown();
+  }
+
+  /* ============ 3+4. LIVE SUBSCRIPTION (the sync handshake) ============
+     onSnapshot opens a persistent channel to Firestore. The server pushes
+     every new document in COLLECTION (ordered by server timestamp) to ALL
+     connected devices instantly — this single listener is what makes a
+     message typed on one phone appear on every other phone/tab
+     without refresh. docChanges() with type "added" gives only newcomers. */
+  function goLive(){
+    try{
+      firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.firestore();
+    }catch(e){ sub.textContent="config error — check FIREBASE_CONFIG"; return; }
+
+    sysLine("Connected — messages sync across every device in real time.");
+    dot.classList.remove("off"); sub.textContent="live · "+COLLECTION;
+
+    unsub = db.collection(COLLECTION).orderBy("ts","asc").limitToLast(100)
+      .onSnapshot(function(snap){
+        snap.docChanges().forEach(function(ch){
+          if(ch.type==="added") render(ch.doc);
+        });
+      }, function(e){
+        sub.textContent="listener error — check Firestore rules";
+        sysLine("Sync paused: "+(e && e.message || e));
+      });
+  }
+
+  function send(){
+    var t = msg.value.trim();
+    if(!t || !MY_NAME || !db) return;
+    msg.value=""; msg.focus();
+    /* The write is the broadcast: once Firestore accepts this document,
+       the onSnapshot listener on EVERY device (including this one) fires
+       and render() draws it. No manual refresh anywhere. */
+    db.collection(COLLECTION).add({
+      name: MY_NAME,
+      text: t.slice(0,2000),
+      deviceId: DEVICE_ID,
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(function(e){ sysLine("Send failed: "+(e.message||e)); });
+  }
+
+  /* ============ 5. UX: name gate, Enter-to-send, auto-scroll ============ */
+  function join(){
+    var n = nameIn.value.trim().slice(0,24);
+    if(!n){ err.textContent="Pick a name first."; return; }
+    MY_NAME = n;
+    mebadge.textContent = n + " · verified";
+    gate.style.display="none";
+    sysLine("You joined as "+n+" — verified on your messages.");
+    goLive(); msg.focus();
+  }
+  joinBtn.addEventListener("click", join);
+  nameIn.addEventListener("keydown", function(e){ if(e.key==="Enter") join(); });
+
+  sendBtn.addEventListener("click", send);
+  msg.addEventListener("keydown", function(e){
+    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); }
+  });
+
+  nameIn.focus();
+})();
+</script>
+</body>
+</html>
