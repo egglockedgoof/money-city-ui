@@ -109,6 +109,15 @@
     #chat{ padding:12px 8px; }
     .msg{ max-width:88%; }
   }
+  @media (min-width:1024px){
+    /* PC layout: room gets real width. Phones/tablets keep the layout above. */
+    .shell{ width:min(1120px,94vw); height:min(920px,94vh); }
+    #chat{ padding:20px 28px; gap:10px; }
+    .bwrap{ max-width:62%; }
+    .head h1{ font-size:17px; }
+    .foot{ margin:12px 16px 16px; }
+    #msg{ font-size:15px; }
+  }
   /* ===== ETHEREAL ATMOSPHERE ===== */
   /* Breathing background: embers pulse like slow breath */
   @keyframes ember-breathe{
