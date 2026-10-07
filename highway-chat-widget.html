@@ -11,48 +11,18 @@
   HOW THE CROSS-DEVICE SYNC HANDSHAKE WORKS:
   1. Every browser tab generates its own random DEVICE_ID on first load and
      keeps it in sessionStorage (so each tab is a distinct "device").
-  2. When you send a message, it is written as a document into a shared
-     Cloud Firestore collection ("highway_messages"). The write includes
-     your verified display NAME, your DEVICE_ID, the TEXT, and a
-     server-side timestamp (so ordering is consistent everywhere).
-  3. Every open tab/device holds a LIVE LISTENER (onSnapshot) on that same
-     collection, ordered by timestamp. Firestore pushes each new document
-     to ALL connected clients within ~a second — no polling, no refresh.
-  4. On arrival, each client compares the document's deviceId to its own
-     DEVICE_ID: match  -> renders on the RIGHT in blue  ("sent by me");
-     no match -> renders on the LEFT  in gray   ("received").
-  5. The chat window auto-scrolls to the newest message on every update,
-     and pressing Enter submits the input box.
-  ----------------------------------------------------------------------------
-  SETUP (one time, ~3 minutes):
-  1. Go to https://console.firebase.google.com -> create a project (free).
-  2. Build -> Firestore Database -> Create database (production mode is fine,
-     then open the Rules tab and paste the rules from the comment marked
-     [FIRESTORE RULES] below, then Publish).
-  3. Project Settings (gear icon) -> "Your apps" -> Web app (</>) ->
-     copy the firebaseConfig object.
-  4. Paste your values into FIREBASE_CONFIG below, replacing the
-     "PASTE-YOUR-..." placeholders. Save this file and open it on any
-     devices — they will all sync.
+  2. Writes go to shared Cloud Firestore collections; every tab holds a LIVE
+     LISTENER (onSnapshot) on each collection. Firestore pushes new/changed
+     documents to ALL connected clients within ~a second — no polling.
+  3. Collections:
+     - highway_messages : chat (name, text, deviceId, ts, reactions{})
+     - highway_presence : who's online (doc per deviceId: name, ts heartbeat)
+     - highway_typing   : typing indicators (doc per deviceId: name, typing, ts)
+     - highway_tasks    : team task board (text, done, createdBy, ts)
+     - highway_notes    : shared notes (single doc "shared": content, updatedBy, ts)
+     - highway_activity : activity feed (text, by, ts)
+  4. Chat: deviceId match -> right/blue (mine), else left/gray (theirs).
   ============================================================================
--->
-<!-- [FIRESTORE RULES] — paste into Firestore Rules tab, then Publish.
-     These allow anyone with your config to read/write chat messages.
-     For a private team, tighten "allow" with request.auth != null and
-     enable Anonymous auth, or restrict by IP in App Check. -->
-<!--
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /highway_messages/{doc} {
-      allow read: if true;
-      allow create: if request.resource.data.keys().hasAll(['name','text','deviceId'])
-                    && request.resource.data.text is string
-                    && request.resource.data.text.size() > 0
-                    && request.resource.data.text.size() < 2000;
-    }
-  }
-}
 -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -62,8 +32,7 @@ service cloud.firestore {
     --line:rgba(255,255,255,.08);
     --txt:#e8edf3; --muted:#8b94a3;
     --blue:#2f7bff; --blue-d:#1f5fd6;
-    --gray:#232b36;
-    --green:#34d399; --amber:#fbbf24;
+    --gray:#232b36; --green:#34d399; --amber:#fbbf24; --red:#f87171;
     --radius:14px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
@@ -73,31 +42,49 @@ service cloud.firestore {
     color:var(--txt); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     display:flex; align-items:center; justify-content:center; padding:16px;
   }
-  .shell{width:min(560px,100%); height:min(780px,94vh); display:flex; flex-direction:column;
+  .shell{width:min(600px,100%); height:min(820px,94vh); display:flex; flex-direction:column;
     background:linear-gradient(180deg,var(--panel),var(--panel2));
     border:1px solid var(--line); border-radius:20px; overflow:hidden;
     box-shadow:0 24px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(47,123,255,.06);}
-  .head{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px;}
+  .head{padding:12px 16px; border-bottom:1px solid var(--line);}
+  .head-top{display:flex; align-items:center; gap:10px;}
   .dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);flex:none;}
   .dot.off{background:#525b69;box-shadow:none;}
   .head h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.4px;}
   .head small{display:block;color:var(--muted);font-weight:500;font-size:11px;margin-top:2px;}
   .me{margin-left:auto;font-size:11px;color:var(--muted);background:#161d27;border:1px solid var(--line);
-    padding:5px 10px;border-radius:999px;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  #chat{flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth;}
+    padding:5px 10px;border-radius:999px;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #presence{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .p-chip{font-size:11px;background:#14201a;border:1px solid rgba(52,211,153,.3);color:var(--green);
+    padding:3px 9px;border-radius:999px;display:flex;align-items:center;gap:5px;}
+  .p-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);}
+  .tabs{display:flex;border-bottom:1px solid var(--line);background:rgba(0,0,0,.2);}
+  .tab{flex:1;background:none;border:none;color:var(--muted);font-size:12.5px;font-weight:600;
+    padding:11px 4px;cursor:pointer;border-bottom:2px solid transparent;}
+  .tab.active{color:var(--txt);border-bottom-color:var(--blue);}
+  .view{flex:1;overflow-y:auto;display:none;flex-direction:column;}
+  .view.active{display:flex;}
+  /* chat */
+  #chat{padding:16px 12px;gap:8px;scroll-behavior:smooth;}
   .row{display:flex;width:100%;}
   .row.me-row{justify-content:flex-end;}
-  .bubble{max-width:78%;padding:9px 13px;border-radius:var(--radius);font-size:14px;line-height:1.45;
+  .bwrap{max-width:78%;}
+  .bubble{padding:9px 13px;border-radius:var(--radius);font-size:14px;line-height:1.45;
     word-wrap:break-word;animation:pop .18s ease-out;}
   @keyframes pop{from{transform:translateY(6px);opacity:0;}to{transform:none;opacity:1;}}
-  .row.me-row .bubble{background:linear-gradient(180deg,var(--blue),var(--blue-d));color:#fff;
-    border-bottom-right-radius:4px;}
-  .row.them-row .bubble{background:var(--gray);color:var(--txt);border-bottom-left-radius:4px;
-    border:1px solid var(--line);}
+  .row.me-row .bubble{background:linear-gradient(180deg,var(--blue),var(--blue-d));color:#fff;border-bottom-right-radius:4px;}
+  .row.them-row .bubble{background:var(--gray);color:var(--txt);border-bottom-left-radius:4px;border:1px solid var(--line);}
   .who{font-size:10.5px;color:var(--muted);margin:0 4px 3px;font-weight:600;letter-spacing:.3px;}
   .row.me-row .who{text-align:right;}
+  .ver{font-size:9px;color:var(--green);border:1px solid rgba(52,211,153,.4);border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:1px;letter-spacing:.4px;}
+  .reacts{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;}
+  .rx{font-size:12px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;
+    padding:2px 8px;cursor:pointer;color:var(--txt);}
+  .rx.mine{border-color:rgba(47,123,255,.6);background:rgba(47,123,255,.15);}
+  .rx-add{opacity:.5;}
   .sys{align-self:center;font-size:11px;color:var(--muted);background:#141a23;border:1px solid var(--line);
     padding:4px 12px;border-radius:999px;margin:4px 0;}
+  #typing{min-height:18px;font-size:11.5px;color:var(--muted);font-style:italic;padding:2px 14px 0;}
   .foot{padding:12px;border-top:1px solid var(--line);display:flex;gap:8px;background:rgba(0,0,0,.25);}
   #msg{flex:1;background:#0a0e14;border:1px solid var(--line);border-radius:12px;color:var(--txt);
     padding:11px 13px;font-size:14px;outline:none;}
@@ -105,6 +92,28 @@ service cloud.firestore {
   #send{background:linear-gradient(180deg,var(--blue),var(--blue-d));border:none;color:#fff;font-weight:700;
     border-radius:12px;padding:0 18px;font-size:14px;cursor:pointer;}
   #send:active{transform:scale(.97);}
+  /* tasks */
+  #view-tasks{padding:14px;}
+  .trow{display:flex;align-items:center;gap:10px;background:#10151d;border:1px solid var(--line);
+    border-radius:12px;padding:10px 12px;margin-bottom:8px;animation:pop .18s ease-out;}
+  .trow.done .ttext{text-decoration:line-through;color:var(--muted);}
+  .tcheck{width:20px;height:20px;flex:none;accent-color:var(--green);cursor:pointer;}
+  .ttext{flex:1;font-size:14px;}
+  .tby{font-size:10px;color:var(--muted);}
+  .tdel{background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;opacity:.6;}
+  .tdel:hover{opacity:1;}
+  /* notes */
+  #view-notes{padding:14px;}
+  #notes{flex:1;background:#0a0e14;border:1px solid var(--line);border-radius:12px;color:var(--txt);
+    padding:14px;font-size:14px;outline:none;resize:none;font-family:inherit;line-height:1.6;min-height:200px;}
+  #notes:focus{border-color:rgba(52,211,153,.5);}
+  #notes-meta{font-size:11px;color:var(--muted);margin-top:8px;}
+  /* activity */
+  #view-activity{padding:14px;gap:8px;}
+  .arow{background:#10151d;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;
+    animation:pop .18s ease-out;}
+  .arow b{color:var(--amber);}
+  .arow time{display:block;font-size:10px;color:var(--muted);margin-top:2px;}
   /* name gate */
   #gate{position:fixed;inset:0;background:rgba(4,6,9,.82);backdrop-filter:blur(8px);
     display:flex;align-items:center;justify-content:center;padding:20px;z-index:10;}
@@ -115,21 +124,17 @@ service cloud.firestore {
   #gate p{color:var(--muted);font-size:13px;margin:0 0 16px;}
   #name{width:100%;background:#0a0e14;border:1px solid var(--line);border-radius:12px;color:var(--txt);
     padding:12px;font-size:15px;outline:none;text-align:center;}
-  #name:focus{border-color:rgba(52,211,153,.6);box-shadow:0 0 0 3px rgba(52,211,153,.12);}
   #join{width:100%;margin-top:12px;background:linear-gradient(180deg,#34d399,#10b981);border:none;color:#04251a;
     font-weight:800;border-radius:12px;padding:12px;font-size:15px;cursor:pointer;}
   #err{color:#f87171;font-size:12px;min-height:16px;margin-top:8px;}
-  .ver{font-size:9px;color:var(--green);border:1px solid rgba(52,211,153,.4);border-radius:4px;
-    padding:1px 5px;margin-left:5px;vertical-align:1px;letter-spacing:.4px;}
 </style>
 </head>
 <body>
 
-<!-- NAME GATE: pick your verified display name before entering the room -->
 <div id="gate">
   <div class="card">
     <h2>🛣️ Highway Chat</h2>
-    <p>Choose your verified display name.<br/>It will be badged on every message you send.</p>
+    <p>Choose your verified display name.<br/>It will be badged on everything you do.</p>
     <input id="name" maxlength="24" placeholder="e.g. whisper" autocomplete="off" />
     <button id="join">Enter the highway</button>
     <div id="err"></div>
@@ -138,22 +143,56 @@ service cloud.firestore {
 
 <div class="shell">
   <div class="head">
-    <span class="dot off" id="livedot"></span>
-    <h1>Highway Chat<small id="sub">connecting…</small></h1>
-    <span class="me" id="mebadge">—</span>
+    <div class="head-top">
+      <span class="dot off" id="livedot"></span>
+      <h1>Highway Chat<small id="sub">connecting…</small></h1>
+      <span class="me" id="mebadge">—</span>
+    </div>
+    <div id="presence"></div>
   </div>
-  <div id="chat" aria-live="polite"></div>
-  <div class="foot">
-    <input id="msg" placeholder="Type a message…" autocomplete="off" maxlength="2000" />
-    <button id="send">Send</button>
+
+  <div class="tabs">
+    <button class="tab active" data-v="view-chat">💬 Chat</button>
+    <button class="tab" data-v="view-tasks">✅ Tasks</button>
+    <button class="tab" data-v="view-notes">📝 Notes</button>
+    <button class="tab" data-v="view-activity">📡 Activity</button>
+  </div>
+
+  <div class="view active" id="view-chat">
+    <div id="chat" class="view active" style="flex:1;overflow-y:auto;padding:16px 12px;gap:8px;"></div>
+    <div id="typing"></div>
+    <div class="foot">
+      <input id="msg" placeholder="Type a message…" autocomplete="off" maxlength="2000" />
+      <button id="send">Send</button>
+    </div>
+  </div>
+
+  <div class="view" id="view-tasks">
+    <div class="foot" style="border-top:none;border-bottom:1px solid var(--line);">
+      <input id="taskin" placeholder="New team task…" autocomplete="off" maxlength="300" />
+      <button id="taskadd" style="background:linear-gradient(180deg,#34d399,#10b981);border:none;color:#04251a;font-weight:700;border-radius:12px;padding:0 18px;font-size:14px;cursor:pointer;">Add</button>
+    </div>
+    <div id="tasklist" style="padding:14px;overflow-y:auto;flex:1;"></div>
+  </div>
+
+  <div class="view" id="view-notes">
+    <textarea id="notes" placeholder="Shared team notes — everyone edits live…"></textarea>
+    <div id="notes-meta">—</div>
+  </div>
+
+  <div class="view" id="view-activity">
+    <div class="foot" style="border-top:none;border-bottom:1px solid var(--line);">
+      <input id="actin" placeholder="Log what you're working on…" autocomplete="off" maxlength="300" />
+      <button id="actadd" style="background:linear-gradient(180deg,var(--amber),#d97706);border:none;color:#1a1005;font-weight:700;border-radius:12px;padding:0 18px;font-size:14px;cursor:pointer;">Log</button>
+    </div>
+    <div id="actlist" style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 </div>
 
 <script>
 (function(){
   "use strict";
-
-  /* ============ 1. YOUR FIREBASE PROJECT (paste your own values) ============ */
+  /* ============ FIREBASE PROJECT ============ */
   var FIREBASE_CONFIG = {
     apiKey:            "AIzaSyDmAMnxfBorxPkwt4Y2FjhkEB83914ut1U",
     authDomain:        "highway-chat.firebaseapp.com",
@@ -162,11 +201,8 @@ service cloud.firestore {
     messagingSenderId: "1063748874829",
     appId:             "1:1063748874829:web:5565a2fa6012a0c3b76204"
   };
-  var COLLECTION = "highway_messages"; // shared room every device reads+writes
 
-  /* ============ 2. DEVICE IDENTIFICATION ============
-     Each tab gets a random ID kept in sessionStorage, so two tabs on the
-     same phone still count as different "devices" and render correctly. */
+  /* ============ DEVICE ID (per-tab identity) ============ */
   var DEVICE_ID = sessionStorage.getItem("hw_device_id");
   if(!DEVICE_ID){
     DEVICE_ID = "d-" + Math.random().toString(36).slice(2,10) + Date.now().toString(36);
@@ -176,91 +212,254 @@ service cloud.firestore {
   var $ = function(id){ return document.getElementById(id); };
   var chat=$("chat"), msg=$("msg"), sendBtn=$("send"),
       gate=$("gate"), nameIn=$("name"), joinBtn=$("join"),
-      err=$("err"), sub=$("sub"), dot=$("livedot"), mebadge=$("mebadge");
-  var MY_NAME = null, db = null, unsub = null, seen = {};
+      err=$("err"), sub=$("sub"), dot=$("livedot"), mebadge=$("mebadge"),
+      presenceEl=$("presence"), typingEl=$("typing");
+  var MY_NAME=null, db=null, seen={};
+  var EMOJIS=["🔥","❤️","👍","😂","💯","👀"];
 
-  function sysLine(t){
-    var d=document.createElement("div"); d.className="sys"; d.textContent=t;
-    chat.appendChild(d); scrollDown();
-  }
-  function scrollDown(){ requestAnimationFrame(function(){ chat.scrollTop = chat.scrollHeight; }); }
   function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  function scrollDown(el){ requestAnimationFrame(function(){ el.scrollTop = el.scrollHeight; }); }
+  function sysLine(t){
+    var d=document.createElement("div"); d.className="sys"; d.textContent=t;
+    chat.appendChild(d); scrollDown(chat);
+  }
+  function fmtTs(ts){
+    try{ var d=ts.toDate(); return d.toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); }
+    catch(e){ return ""; }
+  }
 
-  /* Render one message doc. deviceId match -> right/blue (mine),
-     otherwise left/gray (theirs). `seen` guards against double-render. */
-  function render(doc){
-    var m = doc.data(); if(!m || seen[doc.id]) return; seen[doc.id]=1;
-    var mine = (m.deviceId === DEVICE_ID);
+  /* ================= CHAT ================= */
+  function renderMsg(doc){
+    var m=doc.data(); if(!m||seen[doc.id]) return; seen[doc.id]=1;
+    var mine=(m.deviceId===DEVICE_ID);
     var row=document.createElement("div");
-    row.className = "row " + (mine ? "me-row" : "them-row");
-    row.innerHTML =
-      '<div style="max-width:78%">' +
-        '<div class="who">' + esc(m.name||"anon") +
-          (mine ? "" : '<span class="ver">VERIFIED</span>') + '</div>' +
-        '<div class="bubble">' + esc(m.text||"") + '</div>' +
-      '</div>';
-    chat.appendChild(row); scrollDown();
+    row.className="row "+(mine?"me-row":"them-row");
+    var rxHtml="";
+    var rx=m.reactions||{};
+    Object.keys(rx).forEach(function(e){
+      var users=rx[e]||[];
+      rxHtml+='<span class="rx'+(users.indexOf(MY_NAME)>=0?" mine":"")+'" data-id="'+doc.id+'" data-e="'+e+'">'+e+' '+(users.length||"")+'</span>';
+    });
+    rxHtml+='<span class="rx rx-add" data-id="'+doc.id+'" data-e="__pick__">＋</span>';
+    row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+
+      (mine?"":'<span class="ver">VERIFIED</span>')+'</div>'+
+      '<div class="bubble">'+esc(m.text||"")+'</div>'+
+      '<div class="reacts">'+rxHtml+'</div></div>';
+    chat.appendChild(row);
+    row.querySelectorAll(".rx").forEach(function(el){
+      el.addEventListener("click", function(){ toggleReaction(el.getAttribute("data-id"), el.getAttribute("data-e")); });
+    });
+    scrollDown(chat);
+  }
+  function toggleReaction(id, emoji){
+    if(emoji==="__pick__"){
+      var e=prompt("Pick an emoji reaction:\n"+EMOJIS.join(" "));
+      if(!e) return; emoji=e.trim().slice(0,4);
+    }
+    var ref=db.collection("highway_messages").doc(id);
+    ref.get().then(function(snap){
+      var rx=(snap.data()&&snap.data().reactions)||{};
+      var users=rx[emoji]||[];
+      var i=users.indexOf(MY_NAME);
+      if(i>=0) users.splice(i,1); else users.push(MY_NAME);
+      if(users.length) rx[emoji]=users; else delete rx[emoji];
+      ref.update({reactions:rx});
+    });
+  }
+  function sendMsg(){
+    var t=msg.value.trim(); if(!t||!MY_NAME||!db) return;
+    msg.value=""; setTyping(false); msg.focus();
+    db.collection("highway_messages").add({
+      name:MY_NAME, text:t.slice(0,2000), deviceId:DEVICE_ID, reactions:{},
+      ts:firebase.firestore.FieldValue.serverTimestamp()
+    });
   }
 
-  /* ============ 3+4. LIVE SUBSCRIPTION (the sync handshake) ============
-     onSnapshot opens a persistent channel to Firestore. The server pushes
-     every new document in COLLECTION (ordered by server timestamp) to ALL
-     connected devices instantly — this single listener is what makes a
-     message typed on one phone appear on every other phone/tab
-     without refresh. docChanges() with type "added" gives only newcomers. */
+  /* ================= PRESENCE (who's online) =================
+     Each device heartbeats its doc every 20s. Anyone whose ts is fresher
+     than 60s counts as online. Best-effort delete on tab close. */
+  function heartbeat(){
+    if(!db||!MY_NAME) return;
+    db.collection("highway_presence").doc(DEVICE_ID).set({
+      name:MY_NAME, ts:firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+  }
+  window.addEventListener("beforeunload", function(){
+    if(db) db.collection("highway_presence").doc(DEVICE_ID).delete().catch(function(){});
+  });
+
+  /* ================= TYPING INDICATORS ================= */
+  var typingTimer=null;
+  function setTyping(on){
+    if(!db||!MY_NAME) return;
+    db.collection("highway_typing").doc(DEVICE_ID).set({
+      name:MY_NAME, typing:!!on, ts:firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+  }
+
+  /* ================= TASKS ================= */
+  function renderTask(doc){
+    var t=doc.data(); if(!t) return;
+    var el=document.createElement("div");
+    el.className="trow"+(t.done?" done":""); el.id="task-"+doc.id;
+    el.innerHTML='<input type="checkbox" class="tcheck"'+(t.done?" checked":"")+'>'+
+      '<span class="ttext">'+esc(t.text||"")+'</span>'+
+      '<span class="tby">'+esc(t.createdBy||"")+'</span>'+
+      '<button class="tdel">×</button>';
+    el.querySelector(".tcheck").addEventListener("change", function(e){
+      db.collection("highway_tasks").doc(doc.id).update({done:e.target.checked});
+    });
+    el.querySelector(".tdel").addEventListener("click", function(){
+      if(confirm("Delete this task?")) db.collection("highway_tasks").doc(doc.id).delete();
+    });
+    return el;
+  }
+
+  /* ================= NOTES (shared live doc) ================= */
+  var notesTimer=null, notesFocused=false, lastNotesTs=null;
+  function saveNotes(){
+    if(!db||!MY_NAME) return;
+    db.collection("highway_notes").doc("shared").set({
+      content:$("notes").value.slice(0,20000),
+      updatedBy:MY_NAME, ts:firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+  }
+
+  /* ================= ACTIVITY FEED ================= */
+  function logActivity(){
+    var t=$("actin").value.trim(); if(!t||!db||!MY_NAME) return;
+    $("actin").value="";
+    db.collection("highway_activity").add({
+      text:t.slice(0,300), by:MY_NAME,
+      ts:firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }
+
+  /* ================= GO LIVE ================= */
   function goLive(){
-    try{
-      firebase.initializeApp(FIREBASE_CONFIG);
-      db = firebase.firestore();
-    }catch(e){ sub.textContent="config error — check FIREBASE_CONFIG"; return; }
+    try{ firebase.initializeApp(FIREBASE_CONFIG); db=firebase.firestore(); }
+    catch(e){ sub.textContent="config error"; return; }
 
-    sysLine("Connected — messages sync across every device in real time.");
-    dot.classList.remove("off"); sub.textContent="live · "+COLLECTION;
+    dot.classList.remove("off"); sub.textContent="live · all systems synced";
+    sysLine("Connected — chat, presence, tasks, notes & activity all sync live.");
 
-    unsub = db.collection(COLLECTION).orderBy("ts","asc").limitToLast(100)
-      .onSnapshot(function(snap){
-        snap.docChanges().forEach(function(ch){
-          if(ch.type==="added") render(ch.doc);
-        });
-      }, function(e){
-        sub.textContent="listener error — check Firestore rules";
-        sysLine("Sync paused: "+(e && e.message || e));
+    // chat listener
+    db.collection("highway_messages").orderBy("ts","asc").limitToLast(100)
+      .onSnapshot(function(s){ s.docChanges().forEach(function(c){
+        if(c.type==="added") renderMsg(c.doc);
+        if(c.type==="modified"){ // reactions changed -> re-render
+          var old=document.querySelector('[data-id="'+c.doc.id+'"]');
+          if(old){ delete seen[c.doc.id]; var rows=chat.querySelectorAll(".row");
+            for(var i=0;i<rows.length;i++){ if(rows[i].innerHTML.indexOf('data-id="'+c.doc.id+'"')>=0){ rows[i].remove(); break; } }
+            renderMsg(c.doc); }
+        }
+      }); });
+
+    // presence listener
+    db.collection("highway_presence").onSnapshot(function(s){
+      var now=Date.now(), html="";
+      s.forEach(function(d){
+        var p=d.data(); if(!p||!p.ts) return;
+        try{ if(now-p.ts.toDate().getTime()<60000) html+='<span class="p-chip">'+esc(p.name)+'</span>'; }catch(e){}
       });
+      presenceEl.innerHTML=html||'<span style="font-size:11px;color:var(--muted)">no one else here</span>';
+    });
+
+    // typing listener
+    db.collection("highway_typing").onSnapshot(function(s){
+      var names=[];
+      s.forEach(function(d){
+        var t=d.data();
+        if(t&&t.typing&&d.id!==DEVICE_ID){
+          try{ if(Date.now()-t.ts.toDate().getTime()<8000) names.push(t.name); }catch(e){}
+        }
+      });
+      typingEl.textContent=names.length?names.join(", ")+(names.length>1?" are":" is")+" typing…":"";
+    });
+
+    // tasks listener
+    db.collection("highway_tasks").orderBy("ts","asc")
+      .onSnapshot(function(s){
+        var list=$("tasklist"); list.innerHTML="";
+        s.forEach(function(d){ var el=renderTask(d); if(el) list.appendChild(el); });
+        if(!s.size) list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">No tasks yet — add one above.</div>';
+      });
+
+    // notes listener
+    db.collection("highway_notes").doc("shared")
+      .onSnapshot(function(s){
+        var d=s.data(); if(!d) return;
+        if(!notesFocused && d.ts && (!lastNotesTs || d.ts.toMillis()>lastNotesTs)){
+          lastNotesTs=d.ts.toMillis();
+          $("notes").value=d.content||"";
+        }
+        $("notes-meta").textContent=d.updatedBy?("last edited by "+d.updatedBy):"";
+      });
+
+    // activity listener
+    db.collection("highway_activity").orderBy("ts","desc").limit(30)
+      .onSnapshot(function(s){
+        var list=$("actlist"); list.innerHTML="";
+        s.forEach(function(d){
+          var a=d.data(); if(!a) return;
+          var el=document.createElement("div"); el.className="arow";
+          el.innerHTML="<b>"+esc(a.by||"")+"</b> "+esc(a.text||"")+"<time>"+fmtTs(a.ts)+"</time>";
+          list.appendChild(el);
+        });
+        if(!s.size) list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Nothing logged yet.</div>';
+      });
+
+    heartbeat(); setInterval(heartbeat, 20000);
   }
 
-  function send(){
-    var t = msg.value.trim();
-    if(!t || !MY_NAME || !db) return;
-    msg.value=""; msg.focus();
-    /* The write is the broadcast: once Firestore accepts this document,
-       the onSnapshot listener on EVERY device (including this one) fires
-       and render() draws it. No manual refresh anywhere. */
-    db.collection(COLLECTION).add({
-      name: MY_NAME,
-      text: t.slice(0,2000),
-      deviceId: DEVICE_ID,
-      ts: firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(function(e){ sysLine("Send failed: "+(e.message||e)); });
-  }
-
-  /* ============ 5. UX: name gate, Enter-to-send, auto-scroll ============ */
+  /* ================= UI EVENTS ================= */
   function join(){
-    var n = nameIn.value.trim().slice(0,24);
+    var n=nameIn.value.trim().slice(0,24);
     if(!n){ err.textContent="Pick a name first."; return; }
-    MY_NAME = n;
-    mebadge.textContent = n + " · verified";
+    MY_NAME=n;
+    mebadge.textContent=n+" · verified";
     gate.style.display="none";
-    sysLine("You joined as "+n+" — verified on your messages.");
+    sysLine("You joined as "+n+" — verified on everything you do.");
     goLive(); msg.focus();
   }
   joinBtn.addEventListener("click", join);
   nameIn.addEventListener("keydown", function(e){ if(e.key==="Enter") join(); });
 
-  sendBtn.addEventListener("click", send);
-  msg.addEventListener("keydown", function(e){
-    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); }
+  document.querySelectorAll(".tab").forEach(function(t){
+    t.addEventListener("click", function(){
+      document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active");});
+      document.querySelectorAll(".view").forEach(function(x){x.classList.remove("active");});
+      t.classList.add("active"); $(t.getAttribute("data-v")).classList.add("active");
+    });
   });
+
+  sendBtn.addEventListener("click", sendMsg);
+  msg.addEventListener("keydown", function(e){
+    if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMsg(); }
+  });
+  msg.addEventListener("input", function(){
+    setTyping(true);
+    clearTimeout(typingTimer);
+    typingTimer=setTimeout(function(){ setTyping(false); }, 2000);
+  });
+
+  $("taskadd").addEventListener("click", function(){
+    var t=$("taskin").value.trim(); if(!t||!db||!MY_NAME) return;
+    $("taskin").value="";
+    db.collection("highway_tasks").add({text:t.slice(0,300),done:false,createdBy:MY_NAME,
+      ts:firebase.firestore.FieldValue.serverTimestamp()});
+  });
+  $("taskin").addEventListener("keydown", function(e){ if(e.key==="Enter") $("taskadd").click(); });
+
+  $("notes").addEventListener("focus", function(){ notesFocused=true; });
+  $("notes").addEventListener("blur", function(){ notesFocused=false; saveNotes(); });
+  $("notes").addEventListener("input", function(){
+    clearTimeout(notesTimer); notesTimer=setTimeout(saveNotes, 1000);
+  });
+
+  $("actadd").addEventListener("click", logActivity);
+  $("actin").addEventListener("keydown", function(e){ if(e.key==="Enter") logActivity(); });
 
   nameIn.focus();
 })();
