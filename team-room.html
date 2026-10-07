@@ -45,6 +45,130 @@
     --gray:#232b36; --green:#ff4d5e; --amber:#fbbf24; --red:#f87171;
     --radius:14px;
   }
+
+
+
+
+  /* ===== FLUID CONTINUITY ===== */
+  /* Views melt, never blink */
+  .view{
+    transition:opacity .35s var(--soft), transform .45s var(--spring), filter .35s var(--soft);
+  }
+  .view.active{
+    animation:view-melt .45s var(--spring);
+  }
+  @keyframes view-melt{
+    0%{ opacity:0; transform:translateY(14px) scale(.985); filter:blur(6px); }
+    60%{ opacity:1; transform:translateY(-2px) scale(1.004); filter:blur(0); }
+    100%{ opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+  }
+  /* Luminescent trail: glow follows touch */
+  .touch-glow{
+    position:fixed; border-radius:50%; pointer-events:none; z-index:50;
+    width:120px; height:120px; margin:-60px 0 0 -60px;
+    background:radial-gradient(circle, rgba(255,100,110,.14), rgba(193,18,31,.05) 40%, transparent 70%);
+    transition:opacity .6s var(--soft);
+    opacity:0;
+  }
+  /* ===== ETHEREAL ATMOSPHERE ===== */
+  /* Breathing background: embers pulse like slow breath */
+  @keyframes ember-breathe{
+    0%,100%{ opacity:.55; transform:scale(1); }
+    50%{ opacity:.9; transform:scale(1.06); }
+  }
+  @keyframes ember-drift{
+    0%{ transform:translateY(0) translateX(0); opacity:0; }
+    10%{ opacity:.7; }
+    90%{ opacity:.3; }
+    100%{ transform:translateY(-120px) translateX(12px); opacity:0; }
+  }
+  @keyframes shimmer-sweep{
+    0%{ transform:translateX(-100%) skewX(-15deg); }
+    100%{ transform:translateX(250%) skewX(-15deg); }
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(600px 400px at 20% 10%, rgba(193,18,31,.22), transparent 70%),
+      radial-gradient(500px 500px at 85% 90%, rgba(139,0,0,.18), transparent 70%);
+    animation:ember-breathe 8s ease-in-out infinite;
+  }
+  /* Floating ember particles */
+  .ember{ position:fixed; border-radius:50%; pointer-events:none; z-index:0;
+    background:radial-gradient(circle, rgba(255,80,90,.8), rgba(193,18,31,0) 70%);
+    animation:ember-drift linear infinite; }
+  /* Shell: dissolving edges, floating in void */
+  .shell{
+    position:relative; z-index:1;
+    border:1px solid rgba(255,130,140,.1);
+    box-shadow:0 30px 100px rgba(0,0,0,.7),
+      0 0 80px rgba(193,18,31,.08),
+      inset 0 1px 0 rgba(255,160,170,.12);
+  }
+  /* Shimmer sweep across glass surfaces */
+  .tabs::after, .foot::after{
+    content:""; position:absolute; top:0; bottom:0; width:40%;
+    background:linear-gradient(90deg, transparent, rgba(255,150,160,.06), transparent);
+    animation:shimmer-sweep 7s ease-in-out infinite;
+    pointer-events:none; border-radius:inherit;
+  }
+  .tabs, .foot{ position:relative; overflow:hidden; }
+  /* Messages glow from within */
+  .msg-mine{
+    box-shadow:inset 0 1px 0 rgba(255,160,170,.2),
+      0 2px 16px rgba(193,18,31,.25);
+  }
+  /* Typing indicator breathes */
+  #typing{ animation:ember-breathe 3s ease-in-out infinite; }
+  @media (prefers-reduced-motion:reduce){
+    body::before, .ember, .tabs::after, .foot::after, #typing{ animation:none !important; }
+  }
+  /* ===== LIQUID GLASS MOTION ===== */
+  :root{
+    --spring:cubic-bezier(.34,1.56,.64,1);   /* bouncy spring */
+    --soft:cubic-bezier(.2,.8,.2,1);          /* soft ease */
+  }
+  /* Press flex: gel-like expansion + spring back. Glass never fades, only morphs. */
+  .tab, #send, .tdel, #pushbell{
+    transition:transform .35s var(--spring), box-shadow .25s var(--soft), background .25s var(--soft);
+    will-change:transform;
+  }
+  .tab:active{ transform:scale(1.06); }
+  #send:active{ transform:scale(1.05);
+    box-shadow:inset 0 1px 0 rgba(255,200,210,.55),0 4px 24px rgba(193,18,31,.65); }
+  /* Tab bar scroll morph: shrinks on scroll down, blooms on scroll up */
+  .tabs{
+    transition:transform .45s var(--spring), opacity .3s var(--soft), padding .35s var(--spring), margin .35s var(--spring);
+  }
+  .tabs.min{
+    transform:scaleX(.82) translateY(-2px);
+    opacity:.92;
+  }
+  .tabs.min .tab{ padding:7px 4px; font-size:11px; }
+  /* Illuminate: glass energizes under touch */
+  .tab.active{
+    transition:transform .35s var(--spring), box-shadow .3s var(--soft), background .3s var(--soft);
+  }
+  /* Message pop: spring entrance, not fade */
+  @keyframes pop{
+    0%{ transform:scale(.92) translateY(6px); opacity:0; }
+    60%{ transform:scale(1.02) translateY(-1px); opacity:1; }
+    100%{ transform:scale(1) translateY(0); opacity:1; }
+  }
+  /* Composer focus: glass brightens */
+  #msg{ transition:border-color .25s var(--soft), box-shadow .25s var(--soft), transform .3s var(--spring); }
+  #msg:focus{ transform:scale(1.01);
+    box-shadow:0 0 0 3px rgba(193,18,31,.18), inset 0 1px 0 rgba(255,160,170,.2); }
+  /* ===== LIQUID GLASS (blood-tinted) ===== */
+  .liquid-glass{
+    background:rgba(193,18,31,.07);
+    -webkit-backdrop-filter:blur(22px) saturate(180%);
+    backdrop-filter:blur(22px) saturate(180%);
+    border:1px solid rgba(255,130,140,.16);
+    box-shadow:0 10px 36px rgba(0,0,0,.5),
+      inset 0 1px 0 rgba(255,160,170,.30),
+      inset 0 -1px 0 rgba(0,0,0,.28);
+  }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
   body{
@@ -61,7 +185,14 @@
     background:linear-gradient(180deg,var(--panel),var(--panel2));
     border:1px solid var(--line); border-radius:20px; overflow:hidden;
     box-shadow:0 24px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(193,18,31,.06);}
-  .head{padding:12px 16px; border-bottom:1px solid var(--line);}
+  .head{padding:12px 16px;margin:12px 12px 0;border-radius:18px;
+    background:rgba(193,18,31,.06);
+    -webkit-backdrop-filter:blur(22px) saturate(180%);
+    backdrop-filter:blur(22px) saturate(180%);
+    border:1px solid rgba(255,130,140,.14);
+    box-shadow:0 8px 28px rgba(0,0,0,.45),
+      inset 0 1px 0 rgba(255,160,170,.25),
+      inset 0 -1px 0 rgba(0,0,0,.25);}
   .head-top{display:flex; align-items:center; gap:10px;}
   .dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);flex:none;}
   .dot.off{background:#525b69;box-shadow:none;}
@@ -73,10 +204,20 @@
   .p-chip{font-size:11px;background:#14201a;border:1px solid rgba(255,77,94,.3);color:var(--green);
     padding:3px 9px;border-radius:999px;display:flex;align-items:center;gap:5px;}
   .p-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);}
-  .tabs{display:flex;border-bottom:1px solid var(--line);background:rgba(0,0,0,.2);}
+  .tabs{display:flex;gap:4px;margin:10px 12px 0;padding:5px;
+    background:rgba(193,18,31,.07);
+    -webkit-backdrop-filter:blur(22px) saturate(180%);
+    backdrop-filter:blur(22px) saturate(180%);
+    border:1px solid rgba(255,130,140,.16);border-radius:999px;
+    box-shadow:0 10px 36px rgba(0,0,0,.5),
+      inset 0 1px 0 rgba(255,160,170,.30),
+      inset 0 -1px 0 rgba(0,0,0,.28);}
   .tab{flex:1;background:none;border:none;color:var(--muted);font-size:12.5px;font-weight:600;
-    padding:11px 4px;cursor:pointer;border-bottom:2px solid transparent;}
-  .tab.active{color:var(--txt);border-bottom-color:var(--blue);}
+    padding:10px 4px;cursor:pointer;border-radius:999px;transition:all .18s ease;}
+  .tab.active{color:#fff;background:rgba(193,18,31,.28);
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,130,140,.25);
+    box-shadow:inset 0 1px 0 rgba(255,180,190,.35),0 2px 12px rgba(193,18,31,.35);}
   .view{flex:1;overflow-y:auto;display:none;flex-direction:column;}
   .view.active{display:flex;}
   /* chat */
@@ -101,12 +242,22 @@
   .sys{align-self:center;font-size:11px;color:var(--muted);background:rgba(10,3,5,.85);border:1px solid var(--line);
     padding:4px 12px;border-radius:999px;margin:4px 0;}
   #typing{min-height:18px;font-size:11.5px;color:var(--muted);font-style:italic;padding:2px 14px 0;}
-  .foot{padding:12px;border-top:1px solid var(--line);display:flex;gap:8px;background:rgba(0,0,0,.25);}
-  #msg{flex:1;background:rgba(8,2,4,.9);border:1px solid var(--line);border-radius:12px;color:var(--txt);
-    padding:11px 13px;font-size:14px;outline:none;}
+  .foot{margin:10px 12px 12px;padding:8px;display:flex;gap:8px;align-items:center;
+    background:rgba(193,18,31,.07);
+    -webkit-backdrop-filter:blur(22px) saturate(180%);
+    backdrop-filter:blur(22px) saturate(180%);
+    border:1px solid rgba(255,130,140,.16);border-radius:999px;
+    box-shadow:0 10px 36px rgba(0,0,0,.5),
+      inset 0 1px 0 rgba(255,160,170,.30),
+      inset 0 -1px 0 rgba(0,0,0,.28);}
+  #msg{flex:1;background:rgba(0,0,0,.35);border:1px solid rgba(255,130,140,.12);border-radius:999px;color:var(--txt);
+    padding:11px 16px;font-size:14px;outline:none;
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);}
   #msg:focus{border-color:rgba(193,18,31,.55);box-shadow:0 0 0 3px rgba(193,18,31,.15);}
-  #send{background:linear-gradient(180deg,var(--blue),var(--blue-d));border:none;color:#fff;font-weight:700;
-    border-radius:12px;padding:0 18px;font-size:14px;cursor:pointer;}
+  #send{background:rgba(193,18,31,.35);border:1px solid rgba(255,140,150,.3);color:#fff;font-weight:700;
+    border-radius:999px;padding:11px 20px;font-size:14px;cursor:pointer;flex:none;
+    -webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);
+    box-shadow:inset 0 1px 0 rgba(255,180,190,.4),0 4px 16px rgba(193,18,31,.4);}
   #send:active{transform:scale(.97);}
   /* tasks */
   #view-tasks{padding:14px;}
@@ -491,6 +642,62 @@
 })();
 </script>
 
+
+<script>
+/* Liquid Glass scroll morph: tab bar shrinks on scroll down, blooms on scroll up */
+(function(){
+  var tabs = document.querySelector('.tabs');
+  if (!tabs) return;
+  var lastY = 0, ticking = false;
+  function onScroll(){
+    var views = document.querySelectorAll('.view.active');
+    var y = 0;
+    views.forEach(function(v){ y = Math.max(y, v.scrollTop); });
+    if (y > 60 && y > lastY + 4) tabs.classList.add('min');
+    else if (y < lastY - 4 || y < 30) tabs.classList.remove('min');
+    lastY = y;
+    ticking = false;
+  }
+  document.querySelectorAll('.view').forEach(function(v){
+    v.addEventListener('scroll', function(){
+      if (!ticking){ requestAnimationFrame(onScroll); ticking = true; }
+    }, { passive:true });
+  });
+  /* Ethereal embers: slow drifting particles */
+  var reduced = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if (!reduced){
+    for (var i = 0; i < 14; i++){
+      var e = document.createElement('div');
+      e.className = 'ember';
+      var sz = 3 + Math.random() * 5;
+      e.style.width = sz + 'px'; e.style.height = sz + 'px';
+      e.style.left = (Math.random() * 100) + 'vw';
+      e.style.top = (60 + Math.random() * 40) + 'vh';
+      e.style.animationDuration = (9 + Math.random() * 8) + 's';
+      e.style.animationDelay = (Math.random() * 10) + 's';
+      document.body.appendChild(e);
+    }
+  }
+  /* Luminescent trail follows touch */
+  var glow = document.createElement('div');
+  glow.className = 'touch-glow';
+  document.body.appendChild(glow);
+  var glowTimer = null;
+  function showGlow(x, y){
+    glow.style.left = x + 'px';
+    glow.style.top = y + 'px';
+    glow.style.opacity = '1';
+    clearTimeout(glowTimer);
+    glowTimer = setTimeout(function(){ glow.style.opacity = '0'; }, 800);
+  }
+  document.addEventListener('touchstart', function(e){
+    if (e.touches.length > 0) showGlow(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive:true });
+  document.addEventListener('mousemove', function(e){
+    showGlow(e.clientX, e.clientY);
+  }, { passive:true });
+})();
+</script>
 <script>
 /* Highway Chat push notifications */
 (function(){
