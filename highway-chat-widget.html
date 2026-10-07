@@ -486,12 +486,40 @@
   /* ================= PRESENCE (who's online) =================
      Each device heartbeats its doc every 20s. Anyone whose ts is fresher
      than 60s counts as online. Best-effort delete on tab close. */
-  function heartbeat(){
-    if(!db||!MY_NAME) return;
-    db.collection("highway_presence").doc(DEVICE_ID).set({
-      name:MY_NAME, ts:firebase.firestore.FieldValue.serverTimestamp()
-    }, {merge:true});
+  var _yielded=false, _hbTimer=null;
+  function stopHeartbeat(){ if(_hbTimer){ clearInterval(_hbTimer); _hbTimer=null; } }
+  function startHeartbeat(){ stopHeartbeat(); _yielded=false; doBeat(); _hbTimer=setInterval(doBeat, 20000); }
+  function kickDuplicates(){
+    if(!db||!MY_NAME||_yielded) return;
+    db.collection("highway_presence").where("name","==",MY_NAME).get().then(function(snap){
+      snap.forEach(function(d){ if(d.id!==DEVICE_ID) d.ref.delete().catch(function(){}); });
+    }).catch(function(){});
   }
+  function doBeat(){
+    if(!db||!MY_NAME||_yielded) return;
+    var myRef=db.collection("highway_presence").doc(DEVICE_ID);
+    myRef.get().then(function(doc){
+      if(!doc.exists){
+        return db.collection("highway_presence").where("name","==",MY_NAME).limit(1).get().then(function(snap){
+          if(!snap.empty){
+            _yielded=true; stopHeartbeat();
+            myRef.delete().catch(function(){});
+            if(presenceEl) presenceEl.innerHTML='<span style="font-size:11px;color:var(--amber)">signed in on another tab — this one is idle</span>';
+            return "yielded";
+          }
+          return "recreate";
+        });
+      }
+      return "beat";
+    }).then(function(action){
+      if(action==="yielded"||_yielded) return;
+      myRef.set({name:MY_NAME, ts:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true}).catch(function(){});
+      kickDuplicates();
+    }).catch(function(){
+      myRef.set({name:MY_NAME, ts:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true}).catch(function(){});
+    });
+  }
+  function heartbeat(){ doBeat(); }
   window.addEventListener("beforeunload", function(){
     if(db) db.collection("highway_presence").doc(DEVICE_ID).delete().catch(function(){});
   });
@@ -617,7 +645,7 @@
         if(!s.size) list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Nothing logged yet.</div>';
       });
 
-    heartbeat(); setInterval(heartbeat, 20000);
+    startHeartbeat();
   }
 
   /* ================= UI EVENTS ================= */
@@ -627,6 +655,7 @@
     MY_NAME=n;
     mebadge.textContent=n+" · verified";
     gate.style.display="none";
+    kickDuplicates();
     sysLine("You joined as "+n+" — verified on everything you do.");
     goLive(); msg.focus();
   }
