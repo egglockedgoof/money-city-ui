@@ -337,17 +337,17 @@
     pointer-events:none; z-index:1;
   }
   .moon{
-    position:absolute; width:96px; height:96px;
+    position:absolute; width:64px; height:64px;
     border-radius:50%; object-fit:cover;
     background:radial-gradient(circle, rgba(193,18,31,.3), rgba(20,5,8,.9));
     border:2px solid rgba(255,130,140,.35);
     box-shadow:0 0 32px rgba(193,18,31,.55), inset 0 1px 0 rgba(255,160,170,.3);
     animation:moon-spin 40s linear infinite reverse;
   }
-  .moon.m1{ top:-8px; left:50%; margin-left:-48px; }
-  .moon.m2{ top:50%; right:-8px; margin-top:-48px; }
-  .moon.m3{ bottom:-8px; left:50%; margin-left:-48px; }
-  .moon.m4{ top:50%; left:-8px; margin-top:-48px; }
+  .moon.m1{ top:-8px; left:50%; margin-left:-32px; }
+  .moon.m2{ top:50%; right:-8px; margin-top:-32px; }
+  .moon.m3{ bottom:-8px; left:50%; margin-left:-32px; }
+  .moon.m4{ top:50%; left:-8px; margin-top:-32px; }
   @keyframes moon-orbit{ to{ transform:rotate(360deg); } }
   @keyframes moon-spin{ to{ transform:rotate(-360deg); } }
   #pwgate .card{ position:relative; z-index:2; }
@@ -372,10 +372,10 @@
 
 <div id="pwgate">
   <div class="moon-ring">
-    <img src="highway-moons/moon-blue.jpg" class="moon m1" alt="" />
-    <img src="highway-moons/moon-red.jpg" class="moon m2" alt="" />
-    <img src="highway-moons/moon-yellow.jpg" class="moon m3" alt="" />
-    <img src="highway-moons/moon-dark.jpg" class="moon m4" alt="" />
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCABAADQDASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAAAAYBBAUHAgP/xAAwEAACAQMCBAQEBgMAAAAAAAABAgMABBEFIQYSMVEUQWFxEyIygVKRobHB8FOi0f/EABkBAAMBAQEAAAAAAAAAAAAAAAIDBAEABf/EAB0RAAMAAgMBAQAAAAAAAAAAAAABAgMRBBIxIUH/2gAMAwEAAhEDEQA/AOgVFTVW9uhbRgLvI2yj+a5LZjaS2z3cXUduuXO/XA61Ttb27vnZoI444Acc75Yk+g2rD1m4aKBvmJcjJJpm0+JYbCCNeixqP0o6nqhEZHkp/iRYXPKMnJ8zU0UUBQFFFFccQSACScClo3njL5pM5QnC+w6Vq6/cG10W6lXryco++380s6XIORSadiXrI+VbXVH01WEzCQdxW7w9qKXlgkTMBPCoV1PU42BqjdRo7qquOcjPL51j3lrNbyi4t3aOVdwQcUdJWhWO3ht78Y91NKWk8XZcQ6iBscGVRjHuP+U1o6yIrowZWGQQcgip2mj0E0/D1RRRWGmNxYM8P3HoUP8AsKVtNlBiGDuKd9VtfG6Zc2/nJGQPfy/WuXw3D20xU7elOxPRJycbtfBy0+/d4ZPhW/OQx5mZwvMew71GoOrkEKGIweXmxmsKDVY1KqxC52HlmomvJfFCVioiRSOxwe9M0k9omdXU9WijqoCagxQcqsMgU18E37vHLZSEkIPiR+gJ3H5/vSdcz+IkyOh6Ux8FRsdXkYfSkBB+5FKrxlWLa0h5ooopRURSPxdoLRTPf265hc5kAH0N39jTzUEBgQQCD1BrU9GNbRyBUYdd6szTXVyqrNNJKqjYN/d6d77hOyuJDJbM1sx6qoyv5eX2qkvB0vP818oX0j3/AHpnaWJcUKaxcpGQWc7ADc5p+4X0ptNsWedcXE5DOPwjyH97199M0Gy05hIimSb/ACSbke3atOhqt+BxGvrJooooBh//2Q==" class="moon m1" alt="" />
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCABAADIDASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAAAAcBBAUGA//EADEQAAIBAgQEAwUJAAAAAAAAAAECAwAEBRESIQYxQVETYXEUIzJSgRUiQkORsbLR8P/EABkBAAIDAQAAAAAAAAAAAAAAAAEDAAIEBf/EACARAAMAAgIDAAMAAAAAAAAAAAABAgMRBCESEzEjMlH/2gAMAwEAAhEDEQA/AGBXnNNHBGZJpFjRebMcgKmSRYo2kdgqICxJ6AVxV8ZuIEmuWn8KKPPwYzyHmR3peTIoXY/Dh9j2+kjem4pwmE5e0M/mkbEftXvY8QYXiDiO3vIzIeSNmrH6GlwhLxDWBq5EDvVG70CTRGMtAGo9S1UjK29M2Z+FEQql/Rz1NcNwZxPJJMmGYhIXLbQSsd8/lJ6+RruKens5rWnomiiioAxuLJWi4euiue+lT6FgDXBpcSrCyxPlmOWdMnF7IYjhdzaE5GVCAex6H9cqUrtNazvBOjRyxtpdSNwaRmjy7Olws8xLmizdSmFnkhAMexKvkpBOxAyO+9Vp4ly8VA2/xlvm8vKt2TEsEWzhh+zTcSJuzg6N/XmaxcQlieQtAhRT+HLYUEtfC7t1+yeivbkh9cZKyIQykdCOVOHDbsX2HW90PzY1cjsSN6T1qpMm1NPhMEcN2QPRT/I0yX20Zs8/jmjYooophjIrKxjh+yxb78yaJgMhKvP6961qKDWwpuXtCyxzh+4wjJ295ATkJF5D17VjTQtGubKR13pw3NvHdW8kEyho5F0sD1FLLGB4UYtnOqW3doie4B2pFz4NaOpx8vtlzX1GZZqWbYZ9qbWGW3seG29v1jjAPr1rg+DsLN5iCyuvuYCHY9z0H+7UxqvjXbYjl3qZx/zsmiiimmEKKKKhDyuJ47a3knmYLHGpZiegpa29jecR4rLLDGVjeQuzn4VzPX+qYV7h0N+VFy0jxA5+FqyUnzy51Zggit4hFBGsaLyVRkKpU+TH4sqxJ6+s8MMw+HDLNLeAbDck82Pc1booq6WhLbb2woooqAP/2Q==" class="moon m2" alt="" />
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAAvAEADASIAAhEBAxEB/8QAGwAAAQUBAQAAAAAAAAAAAAAABQABAwQGAgf/xAAuEAACAQMCAwYFBQAAAAAAAAABAgMABBEFIRIxURMUIkFhgQYyUnGRFUKhseH/xAAZAQACAwEAAAAAAAAAAAAAAAABBAACAwX/xAAeEQACAgIDAQEAAAAAAAAAAAAAAQIRAyEEEjFRBf/aAAwDAQACEQMRAD8A9ApqVB9S1GZ5mtLI4Zdnk+n0HrVMmSOOPaQUm3SCc11BAcSyop6E7/iof1K28nY/ZTQiCxbPiJLHmTzNW1tljG+1c186b3COjTpFesvxX1tM3Ckq8XQ7H+asUGYRD5ivvSivOxOIpQw+gnb/ACjj/RTdTVAcPgapVFbzpcR8S+48xUtdOMlJWjMgvZxa2c0x/YpI+/lWXEiokMZ8Ukxyd9j1Jo/ryNJo10F5hM/g5rN6bewFUEqrxqMBiNxXO516+GuPxh60kiEDBRjszwkDrQjVLlImSaPHjJBKmpL29dbcdyEblmHEeLHDgjf15YoVezLdSEAARqdgBsKXvvGKrQUq2yJriSVj4mHvU8NjfTqHghlYeTchVr4e09b66eWQZghxkfU3StiAAAAMAU3i46krZm8jfhkLS5vdMu071HIgOx4hsw+9a5GDorKchhkGuZoY54mjlQOjcwa4s4Tb26wkkhCQpPPGdqYxY3jdLwjdkrKHUqwyCMEHzrAavpkml3RRs9gxzE/kR0PrXoNcSxRzxmOVFdG5qwyDV8kFNUVPPYXZFISVkDfMFOM06gyssMCF3c4AHMmta/w3pbNkQFPRXYD+6u2mnWlkD3aBEJ5tzJ96XXGd7ZLb9ONIsF06wjg2L/M56sedXaanptKlRBUqVKiQ/9k=" class="moon m3" alt="" />
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAAvAEADASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAABQcABAYDAQL/xAAvEAACAQMDAwIEBQUAAAAAAAABAgMABBEFEjEGIVETQTJhcYEHIlLB8BUWkbHR/8QAFwEBAQEBAAAAAAAAAAAAAAAAAQADAv/EABkRAQEAAwEAAAAAAAAAAAAAAAABAhEhEv/aAAwDAQACEQMRAD8AYFSpUqSV5XtDdZvDbQxwxttlnbap8D3P880W6m04at1Np+luYnZ5phzHCuSPqeBQqP8AEDTzJtmtbqJf1YVsfYGiB6etngxgbyM5rHdR6Kltuf1UTHwqeW84H71x7u+wmLYahaalbieznSaPglfY+CParVJnQNXm0bUkuY2JjziVM9nX3H18U44pEmiSWM7kdQynyDWgcL69SxWOSb8sLNtZ/wBJPBPyqwjK6hkYMp7gg5BrjfWkd9ZS20udsi4yOR4P2rAw6xcaBevY6lG4ZDjfGxXcPY44OaLbEYcsscMZklcIg5JOKxWpXrXd+98+5IIxshB7Ejz96uxaxpFwBKTJK3sJGzQHqHVDdkLHGEiThRWOWfrhgpD1DqTW2V9NTnaC0BOB5BDUGvruA3DpfPLK7x7WkVQW5zgDhck8+BQmTVrh7dbYy7Y0OQAKq30lwJ/UuS/qOAQW7HAGB2HypktvU4zxPbzNG6MhB4YYOKbnSbs/TGnls59EDv8ALtSkjWfULtEBaWaVgi57kk9hTq0+1Wx0+3tU+GGNUz5wK2CzQzW9Ds9btvSukw6/BKvxIf57USqVIqdV6V1fSHZoka4gHEkIz2+a8ig7Xk2CrjJHmndVW60ywvMm5tIJSfdkBP8Ami4ynZJEsx4r7gtp7qZYoYnllbsFUZJpuf2roe7P9Oiz9T/2iNrY2lku21t4oQediAZpDM9H9JnSyL6/AN2R+SMdxED+/wDqtbUqVJ//2Q==" class="moon m4" alt="" />
   </div>
   <div class="card">
     <h2>🔒 Highway Chat</h2>
