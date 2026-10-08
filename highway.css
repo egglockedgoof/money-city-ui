@@ -490,3 +490,29 @@ body{background:radial-gradient(120% 90% at 50% 0%,rgba(193,18,31,.14),transpare
 .msg:hover{transform:translateY(-1px);}
 .p-chip{transition:transform .2s;} .p-chip:hover{transform:scale(1.05);}
 
+
+/* ============ ROOM MOODS ============ */
+.mood-dawn{ --mood-glow: rgba(255,150,80,.08); }
+.mood-day{ --mood-glow: rgba(255,255,255,.03); }
+.mood-dusk{ --mood-glow: rgba(200,80,40,.1); }
+.mood-night{ --mood-glow: rgba(193,18,31,.12); }
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:1;
+  background: radial-gradient(ellipse at center, transparent 40%, var(--mood-glow, transparent) 100%);
+}
+
+/* ============ HUDDLE MODE ============ */
+.huddle-active .view:not(#view-chat){ display:none !important; }
+.huddle-banner{
+  background: linear-gradient(90deg, rgba(193,18,31,.2), transparent);
+  padding: 8px 12px; font-weight: 700; color: var(--red);
+  border-bottom: 1px solid var(--line);
+}
+
+/* ============ CITY BRIDGE ============ */
+.city-teaser{
+  margin: 12px; padding: 16px; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(193,18,31,.15), rgba(0,0,0,.3));
+  border: 1px solid rgba(193,18,31,.3); text-align: center;
+}
+.city-teaser h4{ margin: 0 0 8px; color: var(--red); }
