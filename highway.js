@@ -288,11 +288,11 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     TAB_SESSION=Math.max(Date.now(),_prevSess+1);
     sessionStorage.setItem("hw_session",String(TAB_SESSION));
   }catch(e){ warn(e); }
-  function stopHeartbeat(){ if(_hbTimer){clearInterval(_hbTimer);_hbTimer=null;} if(_kickTimer){clearInterval(_kickTimer);_kickTimer=null;} }
+  function stopHeartbeat(){ if(_hbTimer){clearInterval(_hbTimer);_hbTimer=null;} if(_kickUnsub){_kickUnsub();_kickUnsub=null;} }
   function startHeartbeat(){
     stopHeartbeat(); _yielded=false; doBeat();
-    _hbTimer=setInterval(doBeat,20000);
-    _kickTimer=setInterval(checkKicked,15000); }
+    _hbTimer=setInterval(doBeat,60000);
+    _startKickListener(); }
   function kickDuplicates(){
     if(!db||!MY_NAME||_yielded) return;
     db.collection("highway_presence").where("name","==",MY_NAME).get().then(function(snap){
@@ -310,17 +310,8 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp(), session:TAB_SESSION}, {merge:true}).catch(warn);
     kickDuplicates();
   }
-  function checkKicked(){
-    if(!db||!MY_NAME||_yielded) return;
-    // If our presence doc was deleted by a newer session, go idle silently
-    db.collection("highway_presence").doc(DEVICE_ID).get().then(function(doc){
-      if(!doc.exists && !_yielded){
-        _yielded=true; stopHeartbeat();
-        // Silent: no annoying message, just stop
-      }
-    }).catch(warn);
-  }
-  function _presenceCleanup(){
+  
+    var _kickUnsub=null; function _startKickListener(){ if(!db||!MY_NAME||_yielded||_kickUnsub) return; _kickUnsub=db.collection("highway_presence").doc(DEVICE_ID).onSnapshot(function(doc){ if(!doc.exists && !_yielded){ _yielded=true; stopHeartbeat(); } }, warn); } function _presenceCleanup(){
     if(db){ try{ db.collection("highway_presence").doc(DEVICE_ID).delete().catch(warn); }catch(e){ warn(e); } }
   }
   window.addEventListener("beforeunload", _presenceCleanup);
