@@ -150,7 +150,8 @@
      than 60s counts as online. Best-effort delete on tab close. */
   var _yielded=false, _hbTimer=null;
   function stopHeartbeat(){ if(_hbTimer){ clearInterval(_hbTimer); _hbTimer=null; } }
-  function startHeartbeat(){ stopHeartbeat(); _yielded=false; doBeat(); _hbTimer=setInterval(doBeat, 20000); }
+  function startHeartbeat(){
+    setInterval(checkKicked, 5000); stopHeartbeat(); _yielded=false; doBeat(); _hbTimer=setInterval(doBeat, 20000); }
   function kickDuplicates(){
     if(!db||!MY_NAME||_yielded) return;
     db.collection("highway_presence").where("name","==",MY_NAME).get().then(function(snap){
@@ -160,26 +161,19 @@
   function doBeat(){
     if(!db||!MY_NAME||_yielded) return;
     var myRef=db.collection("highway_presence").doc(DEVICE_ID);
-    myRef.get().then(function(doc){
-      if(!doc.exists){
-        return db.collection("highway_presence").where("name","==",MY_NAME).limit(1).get().then(function(snap){
-          if(!snap.empty){
-            _yielded=true; stopHeartbeat();
-            myRef.delete().catch(function(){});
-            if(presenceEl) presenceEl.innerHTML='<span style="font-size:11px;color:var(--amber)">signed in on another tab — this one is idle</span>';
-            return "yielded";
-          }
-          return "recreate";
-        });
+    // New session takes over: claim presence, old tabs will see their doc gone and go quiet
+    myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp(), session:Date.now()}, {merge:true}).catch(function(){});
+    kickDuplicates();
+  }
+  function checkKicked(){
+    if(!db||!MY_NAME||_yielded) return;
+    // If our presence doc was deleted by a newer session, go idle silently
+    db.collection("highway_presence").doc(DEVICE_ID).get().then(function(doc){
+      if(!doc.exists && !_yielded){
+        _yielded=true; stopHeartbeat();
+        // Silent: no annoying message, just stop
       }
-      return "beat";
-    }).then(function(action){
-      if(action==="yielded"||_yielded) return;
-      myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true}).catch(function(){});
-      kickDuplicates();
-    }).catch(function(){
-      myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true}).catch(function(){});
-    });
+    }).catch(function(){});
   }
   function heartbeat(){ doBeat(); }
   window.addEventListener("beforeunload", function(){
@@ -255,7 +249,7 @@
     }
     catch(e){ sub.textContent="config error"; return; }
 
-    dot.classList.remove("off"); sub.textContent="live · all systems synced";
+    dot.classList.remove("off"); sub.textContent="live";
     sysLine("Connected — chat, presence, tasks, notes & activity all sync live.");
 
     db.collection("highway_messages").orderBy("tsNum","asc").limitToLast(100)
