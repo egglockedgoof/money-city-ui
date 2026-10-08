@@ -14,31 +14,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="highway-icons/icon-180.png" />
 <link rel="icon" type="image/png" sizes="192x192" href="highway-icons/icon-192.png" />
 <link rel="icon" type="image/png" sizes="512x512" href="highway-icons/icon-512.png" />
-<!--
-  ============================================================================
-  HIGHWAY CHAT — cross-device real-time team room (no custom backend needed)
-  ----------------------------------------------------------------------------
-  HOW THE CROSS-DEVICE SYNC HANDSHAKE WORKS:
-  1. Every browser tab generates its own random DEVICE_ID on first load and
-     keeps it in sessionStorage (so each tab is a distinct "device").
-  2. Writes go to shared Cloud Firestore collections; every tab holds a LIVE
-     LISTENER (onSnapshot) on each collection. Firestore pushes new/changed
-     documents to ALL connected clients within ~a second — no polling.
-  3. Collections:
-     - highway_messages : chat (name, text, deviceId, ts, reactions{})
-     - highway_presence : who's online (doc per deviceId: name, ts heartbeat)
-     - highway_typing   : typing indicators (doc per deviceId: name, typing, ts)
-     - highway_tasks    : team task board (text, done, createdBy, ts)
-     - highway_notes    : shared notes (single doc "shared": content, updatedBy, ts)
-     - highway_activity : activity feed (text, by, ts)
-     - News tab reads trending items live from the bridge's /news endpoint (no Firestore collection).
-  4. Chat: deviceId match -> right/blue (mine), else left/gray (theirs).
-  5. OWNERSHIP (2026-10-07): sin and Trey built this room together.
-     Both are owners with equal lead authority. What either of them
-     says goes — no verification, gate, or filter in this client
-     may treat Trey as anything less than a full owner.
-  ============================================================================
--->
+
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
@@ -633,9 +609,6 @@ filter .25s ease, background .3s ease;
     return "Other";
   })();
   (function(){
-    var narrow=Math.min(screen.width,screen.height)<768;
-    var coarse=window.matchMedia&&matchMedia("(pointer: coarse)").matches;
-    document.body.classList.add(narrow||coarse?"device-phone":"device-desktop");
     if(PLATFORM==="iOS")document.body.classList.add("device-ios");
     var db=document.getElementById("devbadge");
     if(db)db.textContent=PLATFORM;
@@ -655,6 +628,7 @@ filter .25s ease, background .3s ease;
 
   function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  function safeUrl(u){ try{ var p=new URL(u,location.href); return (p.protocol==="http:"||p.protocol==="https:")?p.href:"#"; }catch(e){ return "#"; } }
   function scrollDown(el){ requestAnimationFrame(function(){ el.scrollTop = el.scrollHeight; }); }
   function sysLine(t){
     var d=document.createElement("div"); d.className="sys"; d.textContent=t;
@@ -729,14 +703,16 @@ filter .25s ease, background .3s ease;
       return;
     }
     var ref=db.collection("highway_messages").doc(id);
-    ref.get().then(function(snap){
-      var rx=(snap.data()&&snap.data().reactions)||{};
-      var users=rx[emoji]||[];
-      var i=users.indexOf(MY_NAME);
-      if(i>=0) users.splice(i,1); else users.push(MY_NAME);
-      if(users.length) rx[emoji]=users; else delete rx[emoji];
-      ref.update({reactions:rx});
-    });
+    db.runTransaction(function(tx){
+      return tx.get(ref).then(function(snap){
+        var rx=(snap.data()&&snap.data().reactions)||{};
+        var users=rx[emoji]||[];
+        var i=users.indexOf(MY_NAME);
+        if(i>=0) users.splice(i,1); else users.push(MY_NAME);
+        if(users.length) rx[emoji]=users; else delete rx[emoji];
+        tx.update(ref,{reactions:rx});
+      });
+    }).catch(function(){});
   }
   function sendMsg(){
     var t=msg.value.trim(); if(!t||!MY_NAME||!db) return;
@@ -871,27 +847,35 @@ filter .25s ease, background .3s ease;
         }
       }); });
 
-    // presence listener
-    db.collection("highway_presence").onSnapshot(function(s){
+    // presence listener (re-renders on interval too, so stale chips expire)
+    var _presSnap=null;
+    function renderPresence(){
+      if(!_presSnap||!presenceEl) return;
       var now=Date.now(), html="";
-      s.forEach(function(d){
+      _presSnap.forEach(function(d){
         var p=d.data(); if(!p||!p.ts) return;
         try{ if(now-p.ts.toDate().getTime()<60000) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+(p.platform?' <span style="font-size:9px;opacity:.55">'+esc(p.platform)+'</span>':'')+'</span>'; }catch(e){}
       });
       presenceEl.innerHTML=html||'<span style="font-size:11px;color:var(--muted)">no one else here</span>';
-    });
+    }
+    db.collection("highway_presence").onSnapshot(function(s){ _presSnap=s; renderPresence(); });
+    setInterval(renderPresence,15000);
 
     // typing listener
-    db.collection("highway_typing").onSnapshot(function(s){
+    var _typeSnap=null;
+    function renderTyping(){
+      if(!_typeSnap||!typingEl) return;
       var names=[];
-      s.forEach(function(d){
+      _typeSnap.forEach(function(d){
         var t=d.data();
         if(t&&t.typing&&d.id!==DEVICE_ID){
           try{ if(Date.now()-t.ts.toDate().getTime()<8000) names.push(t.name); }catch(e){}
         }
       });
       typingEl.textContent=names.length?names.join(", ")+(names.length>1?" are":" is")+" typing…":"";
-    });
+    }
+    db.collection("highway_typing").onSnapshot(function(s){ _typeSnap=s; renderTyping(); });
+    setInterval(renderTyping,5000);
 
     // tasks listener
     db.collection("highway_tasks").orderBy("ts","asc")
@@ -956,6 +940,7 @@ filter .25s ease, background .3s ease;
     var n=nameIn.value.trim().slice(0,24);
     if(!n){ err.textContent="Pick a name first."; return; }
     MY_NAME=n;
+    try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); }catch(e){}
     mebadge.textContent=n+" · verified";
     gate.style.display="none";
     kickDuplicates();
@@ -1016,7 +1001,7 @@ filter .25s ease, background .3s ease;
         var img=n.image?'<img class="nthumb" src="'+esc(n.image)+'" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">':'';
         var ph='<span class="nthumb nph" style="'+(n.image?'display:none;':'display:flex;')+'">'+initial+'</span>';
         var desc=n.description?'<span class="ndesc">'+esc(n.description)+'</span>':'';
-        html+='<a class="ncard" href="'+esc(n.url||"#")+'" target="_blank" rel="noopener">'
+        html+='<a class="ncard" href="'+safeUrl(n.url||"#")+'" target="_blank" rel="noopener">'
           +'<span class="nthumbwrap">'+img+ph+'</span>'
           +'<span class="nbody"><span class="nsrc">'+esc(src)+'</span>'
           +'<span class="ntitle">'+esc(n.title||"")+'</span>'+desc+'</span></a>';
@@ -1031,9 +1016,14 @@ filter .25s ease, background .3s ease;
   $("clear").addEventListener("click", function(){
     if(!db||!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
     db.collection("highway_messages").get().then(function(s){
-      var batch=db.batch();
-      s.forEach(function(d){ batch.delete(d.ref); });
-      return batch.commit();
+      var docs=[]; s.forEach(function(d){ docs.push(d.ref); });
+      function next(){
+        if(!docs.length) return Promise.resolve();
+        var b=db.batch();
+        docs.splice(0,450).forEach(function(r){ b.delete(r); });
+        return b.commit().then(next);
+      }
+      return next();
     }).then(function(){ sysLine("Chat cleared — fresh highway."); })
     .catch(function(e){ sysLine("Clear failed: "+(e.message||e)); });
   });
