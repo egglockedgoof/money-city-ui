@@ -384,7 +384,7 @@
   function completeJoin(n,verified){
     MY_NAME=n;
     try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); }catch(e){}
-    mebadge.textContent=n+(verified?" · verified ✓":" · verified");
+    mebadge.textContent=n+(verified?" ✓":"");
     gate.style.display="none";
     kickDuplicates();
     sysLine("You joined as "+n+" — verified on everything you do.");
