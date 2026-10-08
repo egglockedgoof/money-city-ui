@@ -368,7 +368,7 @@
   .tdel:hover{opacity:1;background:rgba(193,18,31,.15);transform:rotate(90deg);}
   /* ===== NOTES AS JOURNAL ===== */
   #view-notes{padding:16px;display:flex;flex-direction:column;}
-  #view-notes::before{content:"📖 The Grimoire";display:block;text-align:center;font-size:13px;font-weight:700;
+  #view-notes.active::before{content:"📖 The Grimoire";display:block;text-align:center;font-size:13px;font-weight:700;
     letter-spacing:2px;color:rgba(255,138,148,.7);margin-bottom:12px;text-transform:uppercase;}
   #notes{flex:1;background:linear-gradient(180deg,rgba(20,5,8,.95),rgba(8,2,4,.95));
     border:1px solid rgba(255,130,140,.18);border-radius:8px 22px 22px 22px;color:var(--txt);
@@ -803,9 +803,23 @@
     el.querySelector(".tcheck").addEventListener("change", function(e){
       if(e.target.checked){ el.classList.add("completing"); setTimeout(function(){el.classList.remove("completing");},650); }
       db.collection("highway_tasks").doc(doc.id).update({done:e.target.checked});
+      // Activity: quest completed (or reopened)
+      if(db && MY_NAME){
+        var action = e.target.checked ? "completed quest" : "reopened quest";
+        db.collection("highway_activity").add({text:action+": "+(t.text||"").slice(0,200), by:MY_NAME,
+          ts:firebase.firestore.FieldValue.serverTimestamp()});
+      }
     });
     el.querySelector(".tdel").addEventListener("click", function(){
-      if(confirm("Abandon this quest?")) db.collection("highway_tasks").doc(doc.id).delete();
+      if(confirm("Abandon this quest?")){
+        var taskText = (t.text||"").slice(0,200);
+        db.collection("highway_tasks").doc(doc.id).delete();
+        // Activity: quest abandoned
+        if(db && MY_NAME){
+          db.collection("highway_activity").add({text:"abandoned quest: "+taskText, by:MY_NAME,
+            ts:firebase.firestore.FieldValue.serverTimestamp()});
+        }
+      }
     });
     return el;
   }
@@ -1029,6 +1043,9 @@
     $("taskin").value="";
     db.collection("highway_tasks").add({text:t.slice(0,300),done:false,createdBy:MY_NAME,
       ts:firebase.firestore.FieldValue.serverTimestamp()});
+    // Activity: quest started
+    db.collection("highway_activity").add({text:"started quest: "+t.slice(0,200), by:MY_NAME,
+      ts:firebase.firestore.FieldValue.serverTimestamp()});
   });
   $("taskin").addEventListener("keydown", function(e){ if(e.key==="Enter") $("taskadd").click(); });
 
@@ -1205,7 +1222,7 @@
     scheduleChords();
 
     // Fade in over 8 seconds
-    master.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 8);
+    master.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 8);
   }
 
   function makeImpulse(dur, decay) {
@@ -1230,7 +1247,7 @@
     src.buffer = buf; src.loop = true;
     var bp = ctx.createBiquadFilter();
     bp.type = "bandpass"; bp.frequency.value = 3200; bp.Q.value = 0.6;
-    var g = ctx.createGain(); g.gain.value = 0.045;
+    var g = ctx.createGain(); g.gain.value = 0.08;
     // Slow rain swell LFO
     var lfo = ctx.createOscillator(); lfo.frequency.value = 0.07;
     var lfoG = ctx.createGain(); lfoG.gain.value = 0.02;
@@ -1249,7 +1266,7 @@
     var lfo = ctx.createOscillator(); lfo.frequency.value = 0.025;
     var lfoG = ctx.createGain(); lfoG.gain.value = 160;
     lfo.connect(lfoG); lfoG.connect(f.frequency); lfo.start();
-    var g = ctx.createGain(); g.gain.value = 0.06;
+    var g = ctx.createGain(); g.gain.value = 0.1;
     o1.connect(f); o2.connect(f); f.connect(g); g.connect(master);
     o1.start(); o2.start();
   }
@@ -1262,7 +1279,7 @@
       // Rhodes-ish: fast attack, long release
       var g = ctx.createGain();
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.08, t + 0.08 + i*0.03);
+      g.gain.linearRampToValueAtTime(0.12, t + 0.08 + i*0.03);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 9);
       // Gentle tremolo for Rhodes wobble
       var tr = ctx.createOscillator(); tr.frequency.value = 4.5;
@@ -1280,16 +1297,25 @@
     setTimeout(scheduleChords, 10000 + Math.random()*4000);
   }
 
-  // iOS audio unlock: init on first touch
+  // iOS audio unlock: init on first user gesture (touchstart is most reliable on iOS)
   function unlock() {
-    if (!started) {
-      started = true;
+    if (started) return;
+    try {
       initAudio();
       if (ctx && ctx.state === "suspended") ctx.resume();
+      // Only mark started if we actually got a context
+      if (ctx) {
+        started = true;
+        window.removeEventListener("touchstart", unlock);
+        window.removeEventListener("touchend", unlock);
+        window.removeEventListener("click", unlock);
+      }
+    } catch (e) {
+      // Don't mark started — allow retry on next gesture
+      if (window.console) console.warn("HighwayAmbient unlock failed, will retry:", e);
     }
-    window.removeEventListener("touchend", unlock);
-    window.removeEventListener("click", unlock);
   }
+  window.addEventListener("touchstart", unlock, {passive: true});
   window.addEventListener("touchend", unlock, false);
   window.addEventListener("click", unlock, false);
 
