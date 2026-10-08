@@ -66,8 +66,16 @@
   }
 
   /* ================= CHAT ================= */
-  function renderMsg(doc){
-    var m=doc.data(); if(!m||seen[doc.id]) return; seen[doc.id]=1;
+  function findRow(id){
+    var rows=chat.querySelectorAll(".row");
+    for(var i=0;i<rows.length;i++){ if(rows[i].getAttribute("data-mid")===id) return rows[i]; }
+    return null;
+  }
+  function renderMsg(doc, opts){
+    var m=doc.data(); if(!m) return;
+    var replacing=!!(opts&&opts.replace);
+    if(!replacing && seen[doc.id]) return;
+    seen[doc.id]=1;
     var mine=(m.deviceId===DEVICE_ID);
     var row=document.createElement("div");
     row.className="row "+(mine?"me-row":"them-row");
@@ -75,21 +83,23 @@
     var rx=m.reactions||{};
     Object.keys(rx).forEach(function(e){
       var users=rx[e]||[];
-      rxHtml+='<span class="rx'+(users.indexOf(MY_NAME)>=0?" mine":"")+'" data-id="'+doc.id+'" data-e="'+esc(e)+'">'+esc(e)+' '+(users.length||"")+'</span>';
+      rxHtml+='<span class="rx'+(users.indexOf(MY_NAME)>=0?" mine":"")+'" data-id="'+esc(doc.id)+'" data-e="'+esc(e)+'">'+esc(e)+' '+(users.length||"")+'</span>';
     });
-    rxHtml+='<span class="rx rx-add" data-id="'+doc.id+'" data-e="__pick__">＋</span>';
+    rxHtml+='<span class="rx rx-add" data-id="'+esc(doc.id)+'" data-e="__pick__">＋</span>';
+    row.setAttribute("data-mid", doc.id);
     row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+
       (mine?"":'<span class="ver">VERIFIED</span>')+crownHtml(m.name)+
       '<span class=ts>'+fmtTime(m)+'</span></div>'+
       '<div class="bubble">'+pingify(m.text||"")+'</div>'+
       '<div class="reacts">'+rxHtml+'</div></div>';
-    chat.appendChild(row);
+    if(replacing && opts.replace.parentNode){ opts.replace.parentNode.replaceChild(row, opts.replace); }
+    else { chat.appendChild(row); }
     /* Crimson pulse on new arrival: the room breathes */
-    if(!mine){ row.classList.add("arrived"); setTimeout(function(){row.classList.remove("arrived");},1200); }
+    if(!mine && !replacing){ row.classList.add("arrived"); setTimeout(function(){row.classList.remove("arrived");},1200); }
     row.querySelectorAll(".rx").forEach(function(el){
       el.addEventListener("click", function(ev){ ev.stopPropagation(); toggleReaction(el.getAttribute("data-id"), el.getAttribute("data-e")); });
     });
-    scrollDown(chat);
+    if(!replacing) scrollDown(chat);
   }
   var _pickerFor=null;
   function buildPicker(){
@@ -187,9 +197,14 @@
   });
 
   /* ================= TYPING INDICATORS ================= */
-  var typingTimer=null;
+  var typingTimer=null, _typingOn=false, _typingSentAt=0;
   function setTyping(on){
     if(!db||!MY_NAME) return;
+    /* Throttle: at most one write per 3s while typing; always write on stop */
+    var now=Date.now();
+    if(on && _typingOn && now-_typingSentAt<3000) return;
+    if(!on && !_typingOn) return;
+    _typingOn=!!on; _typingSentAt=now;
     db.collection("highway_typing").doc(DEVICE_ID).set({
       name:MY_NAME, typing:!!on, ts:firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
@@ -248,7 +263,7 @@
 
   /* ================= GO LIVE ================= */
   function goLive(){
-    try{ firebase.initializeApp(FIREBASE_CONFIG); db=firebase.firestore(); }
+    try{ firebase.initializeApp(FIREBASE_CONFIG); db=firebase.firestore(); window.__hwDb=db; }
     catch(e){ sub.textContent="config error"; return; }
 
     dot.classList.remove("off"); sub.textContent="live · all systems synced";
@@ -257,11 +272,14 @@
     db.collection("highway_messages").orderBy("tsNum","asc").limitToLast(100)
       .onSnapshot(function(s){ s.docChanges().forEach(function(c){
         if(c.type==="added") renderMsg(c.doc);
-        if(c.type==="modified"){ // reactions changed -> re-render
-          var old=document.querySelector('[data-id="'+c.doc.id+'"]');
-          if(old){ delete seen[c.doc.id]; var rows=chat.querySelectorAll(".row");
-            for(var i=0;i<rows.length;i++){ if(rows[i].innerHTML.indexOf('data-id="'+c.doc.id+'"')>=0){ rows[i].remove(); break; } }
-            renderMsg(c.doc); }
+        if(c.type==="modified"){ // reactions/edits -> replace in place (keeps position)
+          var old=findRow(c.doc.id);
+          if(old) renderMsg(c.doc, {replace:old});
+        }
+        if(c.type==="removed"){ // deleted (edit/delete tools, clear chat) -> drop from screen
+          var gone=findRow(c.doc.id);
+          if(gone) gone.remove();
+          delete seen[c.doc.id];
         }
       }); });
 
@@ -328,7 +346,12 @@
           +'<div style="font-size:13px;">Every message, quest, and moment<br>will be written here.</div></div>';
       });
 
-    startHeartbeat();
+    /* Create our presence doc FIRST, then clear stale same-name docs, then beat.
+       Otherwise the first beat races the cleanup, finds the old doc and wrongly goes idle. */
+    db.collection("highway_presence").doc(DEVICE_ID)
+      .set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true})
+      .catch(function(){})
+      .then(function(){ kickDuplicates(); startHeartbeat(); });
   }
 
   /* ================= PASSWORD GATE ================= */
@@ -356,7 +379,9 @@
     try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); }catch(e){}
     mebadge.textContent=n+" · verified";
     gate.style.display="none";
-    kickDuplicates();
+    window.__hwName=n;
+    /* Clear-chat is owner-only in the UI (also enforce with Firestore rules) */
+    var clr=$("clear"); if(clr) clr.style.display=isOwner(n)?"":"none";
     sysLine("You joined as "+n+" — verified on everything you do.");
     goLive(); msg.focus();
   }
@@ -387,18 +412,7 @@
   window.addEventListener("resize", moveGlider);
   setTimeout(moveGlider, 300);
 
-  /* Ember particles: subtle life */
-  (function(){
-    var c=$("embers"); if(!c) return;
-    for(var i=0;i<14;i++){
-      var e=document.createElement("i");
-      e.style.left=(Math.random()*100)+"%";
-      e.style.animationDuration=(9+Math.random()*14)+"s";
-      e.style.animationDelay=(Math.random()*14)+"s";
-      var s=2+Math.random()*4; e.style.width=s+"px"; e.style.height=s+"px";
-      c.appendChild(e);
-    }
-  })();
+  /* (Duplicate ember spawner removed — the liquid-glass script below owns embers.) */
 
   /* ============ NEWS FEED (money moves: crypto + stocks + macro) ============ */
   var NEWS_URL="https://highway-chat-mcp.onrender.com/news";
@@ -432,7 +446,8 @@
 
   sendBtn.addEventListener("click", sendMsg);
   $("clear").addEventListener("click", function(){
-    if(!db||!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
+    if(!db||!isOwner(MY_NAME)) return;
+    if(!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
     db.collection("highway_messages").get().then(function(s){
       var docs=[]; s.forEach(function(d){ docs.push(d.ref); });
       function next(){
@@ -472,6 +487,18 @@
 
   $("actadd").addEventListener("click", logActivity);
   $("actin").addEventListener("keydown", function(e){ if(e.key==="Enter") logActivity(); });
+
+  /* Bridge: the Quests / Wins / Ambient / Huddle features below live outside this
+     closure, so they reach the database and helpers through HW instead of bare globals. */
+  window.HW={
+    esc:esc, fmtTime:fmtTime, fmtTs:fmtTs,
+    db:function(){ return db; },
+    log:function(t){
+      if(!db||!MY_NAME) return;
+      db.collection("highway_activity").add({text:String(t).slice(0,300), by:MY_NAME,
+        ts:firebase.firestore.FieldValue.serverTimestamp()});
+    }
+  };
 
   nameIn.focus();
 }
@@ -552,12 +579,13 @@
   }
 
   function addBell(){
-    var header = document.querySelector('header') || document.body;
+    var header = document.querySelector('.head-top') || document.body;
     var btn = document.createElement('button');
     btn.id = 'pushbell';
     btn.title = 'Enable live notifications';
+    btn.setAttribute('aria-label', 'Toggle live notifications');
     btn.textContent = '\uD83D\uDD15';
-    btn.style.cssText = 'background:none;border:1px solid #c1121f;color:#c1121f;border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;margin-left:8px;';
+    btn.style.cssText = 'flex:none;width:36px;height:36px;min-width:0;padding:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid #c1121f;color:#c1121f;border-radius:10px;font-size:16px;cursor:pointer;margin-left:8px;';
     btn.onclick = enablePush;
     header.appendChild(btn);
     navigator.serviceWorker.ready.then(function(reg){
@@ -575,10 +603,11 @@
       var btn = document.getElementById('pushbell');
       if (btn) { btn.textContent = '\uD83D\uDD14'; btn.title = 'Notifications on'; }
       var subJson = sub.toJSON();
-      if (typeof db !== 'undefined' && db) {
-        var myName = 'anon';
-        try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
-        db.collection('highway_push_subs').doc(btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').substring(0,60)).set({
+      var hwdb = window.__hwDb;
+      if (hwdb) {
+        var myName = window.__hwName || 'anon';
+        try { myName = myName !== 'anon' ? myName : (sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'); } catch(e){}
+        hwdb.collection('highway_push_subs').doc(btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').substring(0,60)).set({
           endpoint: sub.endpoint,
           keys: subJson.keys,
           name: myName,
@@ -758,6 +787,12 @@
     if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA")&&t.type!=="password"&&t.type!=="checkbox")thock();
   });
 
+  // Pause the soundscape while the tab is hidden, resume when it returns
+  document.addEventListener("visibilitychange", function(){
+    if (!ctx) return;
+    try { if (document.hidden) { ctx.suspend(); } else { ctx.resume(); } } catch(e){}
+  });
+
   window.HighwayAmbient = { init: function(){ unlock(); }, thock:thock, shimmer:shimmer, sendChime:sendChime, tone:tone };
 })();
 
@@ -766,8 +801,9 @@
 function loadQuests(){
   var el = document.getElementById("questlist");
   if(!el) return;
+  if(!window.HW||!HW.db()) return;
   // Quests are tasks with "quest" in the title, or all tasks displayed as quests
-  db.collection("highway_tasks").orderBy("tsNum","desc").limit(20).get().then(function(snap){
+  HW.db().collection("highway_tasks").orderBy("ts","desc").limit(20).get().then(function(snap){
     var h = '<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">⚔️ QUEST BOARD</h3>';
     if(snap.empty){
       h += '<p style="color:var(--muted);">No active quests. Add one from the Tasks tab.</p>';
@@ -776,8 +812,8 @@ function loadQuests(){
         var d = doc.data();
         var done = d.done ? '✅' : '⏳';
         h += '<div style="padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;">'
-           + '<div>' + done + ' <b>' + esc(d.title||"Untitled") + '</b></div>'
-           + '<div style="font-size:12px;color:var(--muted);">by ' + esc(d.by||"unknown") + '</div></div>';
+           + '<div>' + done + ' <b>' + HW.esc(d.text||d.title||"Untitled") + '</b></div>'
+           + '<div style="font-size:12px;color:var(--muted);">by ' + HW.esc(d.createdBy||d.by||"unknown") + '</div></div>';
       });
     }
     el.innerHTML = h + '</div>';
@@ -788,7 +824,8 @@ function loadQuests(){
 function loadWins(){
   var el = document.getElementById("winlist");
   if(!el) return;
-  db.collection("highway_activity").orderBy("tsNum","desc").limit(30).get().then(function(snap){
+  if(!window.HW||!HW.db()) return;
+  HW.db().collection("highway_activity").orderBy("ts","desc").limit(30).get().then(function(snap){
     var h = '<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">🏆 WIN FEED</h3>';
     var found = 0;
     snap.forEach(function(doc){
@@ -796,8 +833,8 @@ function loadWins(){
       var txt = (d.text||"").toLowerCase();
       if(/win|completed|beat|crushed|done|success/.test(txt)){
         h += '<div style="padding:8px;border-bottom:1px solid var(--line);">'
-           + '<div>' + esc(d.text||"") + '</div>'
-           + '<div style="font-size:11px;color:var(--muted);">' + esc(d.by||"") + ' • ' + fmtTime(d) + '</div></div>';
+           + '<div>' + HW.esc(d.text||"") + '</div>'
+           + '<div style="font-size:11px;color:var(--muted);">' + HW.esc(d.by||"") + ' • ' + (HW.fmtTime(d)||HW.fmtTs(d.ts)) + '</div></div>';
         found++;
       }
     });
@@ -811,11 +848,12 @@ function loadWins(){
 function updateAmbientStatus(){
   var el = document.getElementById("ambient");
   if(!el) return;
-  db.collection("highway_activity").orderBy("tsNum","desc").limit(5).get().then(function(snap){
+  if(!window.HW||!HW.db()) return;
+  HW.db().collection("highway_activity").orderBy("ts","desc").limit(5).get().then(function(snap){
     var h = "";
     snap.forEach(function(doc){
       var d = doc.data();
-      h += '<span style="margin-right:12px;">' + esc(d.by||"") + ': ' + esc((d.text||"").slice(0,40)) + '</span>';
+      h += '<span style="margin-right:12px;">' + HW.esc(d.by||"") + ': ' + HW.esc((d.text||"").slice(0,40)) + '</span>';
     });
     el.innerHTML = h || '<span style="color:var(--muted);">Quiet on the Highway...</span>';
   });
@@ -855,7 +893,7 @@ function toggleHuddle(){
   var b = document.getElementById("huddlebanner");
   if(b) b.style.display = huddleOn ? "block" : "none";
   if(huddleOn){
-    logActivity("started a huddle — focus mode");
+    if(window.HW) HW.log("started a huddle — focus mode");
   }
 }
 
