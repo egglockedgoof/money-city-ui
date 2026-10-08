@@ -1338,18 +1338,22 @@
   }
 
   // iOS audio unlock: init on first user gesture (touchstart is most reliable on iOS)
-  function unlock() {
-    if (started) return;
-    try {
+  function unlock(){
+    if(started)return;
+    try{
       initAudio();
       if(!ctx)return;
-      var go=function(){started=true;["touchstart","touchend","click"].forEach(function(e){window.removeEventListener(e,unlock)});var s=document.querySelector(".foot span");if(s)s.textContent+=" 🔊";try{var o=ctx.createOscillator(),gg=ctx.createGain();o.frequency.value=660;gg.gain.value=0.5;o.connect(gg);gg.connect(ctx.destination);o.start();o.stop(ctx.currentTime+0.4);}catch(e){}};
-      if(ctx.state==="suspended")ctx.resume().then(go,function(e){if(window.console)console.warn("ambient resume failed:",e);});
-      else go();
-    } catch (e) {
-      // Don't mark started — allow retry on next gesture
-      if (window.console) console.warn("HighwayAmbient unlock failed, will retry:", e);
-    }
+      var st=ctx.state,s=document.querySelector(".foot span");
+      if(s)s.textContent="v251007d 🔊("+st+")";
+      if(st==="running"){
+        started=true;
+        ["touchstart","touchend","click"].forEach(function(e){window.removeEventListener(e,unlock)});
+        var o=ctx.createOscillator(),g=ctx.createGain();
+        o.frequency.value=660;g.gain.value=0.5;
+        o.connect(g);g.connect(ctx.destination);
+        o.start();o.stop(ctx.currentTime+0.4);
+      }else{ ctx.resume(); }
+    }catch(e){ if(window.console)console.warn("unlock:",e); }
   }
   window.addEventListener("touchstart", unlock, {passive: true});
   window.addEventListener("touchend", unlock, false);
