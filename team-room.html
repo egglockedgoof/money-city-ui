@@ -278,6 +278,17 @@
     padding:2px 8px;cursor:pointer;color:var(--txt);}
   .rx.mine{border-color:rgba(193,18,31,.6);background:rgba(193,18,31,.15);}
   .rx-add{opacity:.5;}
+  /* ===== SMOOTH EMOJI PICKER ===== */
+  #emoji-picker{position:fixed;z-index:9999;background:rgba(12,3,6,.96);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,77,94,.3);border-radius:20px;padding:12px;display:none;
+    grid-template-columns:repeat(6,1fr);gap:6px;box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 30px rgba(193,18,31,.2);
+    animation:picker-pop .25s cubic-bezier(.2,.9,.3,1.4);max-width:280px;}
+  #emoji-picker.open{display:grid;}
+  @keyframes picker-pop{from{opacity:0;transform:scale(.7) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
+  #emoji-picker button{background:rgba(255,255,255,.05);border:none;border-radius:12px;font-size:22px;
+    width:40px;height:40px;cursor:pointer;transition:all .15s ease;}
+  #emoji-picker button:hover{background:rgba(193,18,31,.25);transform:scale(1.2);}
+  #emoji-picker button:active{transform:scale(.95);}
   .sys{align-self:center;font-size:11px;color:var(--muted);background:rgba(10,3,5,.85);border:1px solid var(--line);
     padding:4px 12px;border-radius:999px;margin:4px 0;}
   #typing{min-height:18px;font-size:11.5px;color:var(--muted);font-style:italic;padding:2px 14px 0;}
@@ -494,7 +505,7 @@
     var rx=m.reactions||{};
     Object.keys(rx).forEach(function(e){
       var users=rx[e]||[];
-      rxHtml+='<span class="rx'+(users.indexOf(MY_NAME)>=0?" mine":"")+'" data-id="'+doc.id+'" data-e="'+e+'">'+e+' '+(users.length||"")+'</span>';
+      rxHtml+='<span class="rx'+(users.indexOf(MY_NAME)>=0?" mine":"")+'" data-id="'+doc.id+'" data-e="'+esc(e)+'">'+esc(e)+' '+(users.length||"")+'</span>';
     });
     rxHtml+='<span class="rx rx-add" data-id="'+doc.id+'" data-e="__pick__">＋</span>';
     row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+
@@ -503,14 +514,15 @@
       '<div class="reacts">'+rxHtml+'</div></div>';
     chat.appendChild(row);
     row.querySelectorAll(".rx").forEach(function(el){
-      el.addEventListener("click", function(){ toggleReaction(el.getAttribute("data-id"), el.getAttribute("data-e")); });
+      el.addEventListener("click", function(ev){ ev.stopPropagation(); toggleReaction(el.getAttribute("data-id"), el.getAttribute("data-e")); });
     });
     scrollDown(chat);
   }
   function toggleReaction(id, emoji){
     if(emoji==="__pick__"){
-      var e=prompt("Pick an emoji reaction:\n"+EMOJIS.join(" "));
-      if(!e) return; emoji=e.trim().slice(0,4);
+      var els=document.querySelectorAll('.rx-add[data-id="'+id+'"]');
+      showPicker(id, els.length?els[0]:document.body);
+      return;
     }
     var ref=db.collection("highway_messages").doc(id);
     ref.get().then(function(snap){
@@ -521,6 +533,32 @@
       if(users.length) rx[emoji]=users; else delete rx[emoji];
       ref.update({reactions:rx});
     });
+  }
+  var _pickerFor=null;
+  function buildPicker(){
+    var p=document.getElementById("emoji-picker");
+    if(p.children.length) return;
+    EMOJIS.forEach(function(e){
+      var b=document.createElement("button");
+      b.textContent=e;
+      b.onclick=function(ev){ ev.stopPropagation(); pickEmoji(e); };
+      p.appendChild(b);
+    });
+    document.addEventListener("click", function(){ p.classList.remove("open"); });
+  }
+  function showPicker(id, anchorEl){
+    buildPicker();
+    _pickerFor=id;
+    var p=document.getElementById("emoji-picker");
+    var r=anchorEl.getBoundingClientRect();
+    p.style.left=Math.max(8, Math.min(window.innerWidth-290, r.left-100))+"px";
+    p.style.top=Math.max(8, r.top-220)+"px";
+    p.classList.remove("open"); void p.offsetWidth; p.classList.add("open");
+  }
+  function pickEmoji(e){
+    document.getElementById("emoji-picker").classList.remove("open");
+    if(_pickerFor&&e) toggleReaction(_pickerFor, e.trim().slice(0,4));
+    _pickerFor=null;
   }
   function sendMsg(){
     var t=msg.value.trim(); if(!t||!MY_NAME||!db) return;
@@ -891,5 +929,6 @@
   navigator.serviceWorker.register('sw.js').then(function(){ addBell(); }).catch(function(e){ console.warn('sw failed', e); });
 })();
 </script>
+  <div id="emoji-picker"></div>
 </body>
 </html>
