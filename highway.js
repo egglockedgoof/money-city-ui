@@ -39,6 +39,7 @@
       err=$("err"), sub=$("sub"), dot=$("livedot"), mebadge=$("mebadge"),
       presenceEl=$("presence"), typingEl=$("typing");
   var MY_NAME=null, db=null, seen={};
+  var VOICE_REG={}; /* docId -> {b64, type} : voice audio out of the DOM */
   var EMOJIS=["🔥","❤️","👍","😂","💯","👀"];
   var OWNERS=["sin","grim"]; // co-owners of the Highway — case-insensitive
   function isOwner(n){ return OWNERS.indexOf(String(n||"").toLowerCase())>=0; }
@@ -49,6 +50,47 @@
   function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
   function safeUrl(u){ try{ var p=new URL(u,location.href); return (p.protocol==="http:"||p.protocol==="https:")?p.href:"#"; }catch(e){ return "#"; } }
+
+/* ============ QUESTS / WINS / AMBIENT (inside IIFE - needs db/esc/fmtTime) ============ */
+function loadQuests(){
+  var el=document.getElementById("questlist"); if(!el||!db) return;
+  db.collection("highway_tasks").orderBy("tsNum","desc").limit(20).get().then(function(snap){
+    var h='<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">\u2694\uFE0F QUEST BOARD</h3>';
+    if(snap.empty){ h+='<p style="color:var(--muted);">No active quests. Add one from the Tasks tab.</p>'; }
+    else snap.forEach(function(doc){
+      var d=doc.data()||{}, done=d.done?'\u2705':'\u23F3';
+      h+='<div style="padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;">'
+        +'<div>'+done+' <b>'+esc(d.text||"Untitled")+'</b></div>'
+        +'<div style="font-size:12px;color:var(--muted);">by '+esc(d.createdBy||"unknown")+'</div></div>';
+    });
+    el.innerHTML=h+'</div>';
+  }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+}
+function loadWins(){
+  var el=document.getElementById("winlist"); if(!el||!db) return;
+  db.collection("highway_activity").orderBy("tsNum","desc").limit(30).get().then(function(snap){
+    var h='<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">\uD83C\uDFC6 WIN FEED</h3>', found=0;
+    snap.forEach(function(doc){
+      var d=doc.data()||{}, txt=(d.text||"").toLowerCase();
+      if(/win|completed|beat|crushed|done|success/.test(txt)){ found++;
+        h+='<div style="padding:8px;border-bottom:1px solid var(--line);"><div>'+esc(d.text||"")
+          +'</div><div style="font-size:11px;color:var(--muted);">'+esc(d.by||"")+' \u2022 '+fmtTime(d)+'</div></div>';
+      }
+    });
+    if(!found) h+='<p style="color:var(--muted);">No wins yet. Go get one.</p>';
+    el.innerHTML=h+'</div>';
+  }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+}
+function updateAmbientStatus(){
+  var el=document.getElementById("ambient"); if(!el||!db) return;
+  db.collection("highway_activity").orderBy("tsNum","desc").limit(5).get().then(function(snap){
+    var h="";
+    snap.forEach(function(doc){ var d=doc.data()||{};
+      h+='<span style="margin-right:12px;">'+esc(d.by||"")+': '+esc((d.text||"").slice(0,40))+'</span>'; });
+    el.innerHTML=h||'<span style="color:var(--muted);">Quiet on the Highway...</span>';
+  }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+}
+setInterval(function(){ try{ updateAmbientStatus(); }catch(e){} }, 60000);
   function scrollDown(el){ requestAnimationFrame(function(){ el.scrollTop = el.scrollHeight; }); }
   function sysLine(t){
     var d=document.createElement("div"); d.className="sys"; d.textContent=t;
@@ -68,6 +110,11 @@
   /* ================= CHAT ================= */
   function renderMsg(doc){
     var m=doc.data(); if(!m||seen[doc.id]) return; seen[doc.id]=1;
+    var _seenKeys=Object.keys(seen);
+    if(_seenKeys.length>500){
+      for(var _si=0;_si<200;_si++){ delete seen[_seenKeys[_si]]; var vid=_seenKeys[_si]; if(VOICE_REG[vid]) delete VOICE_REG[vid]; }
+    }
+    if(m.audio){ VOICE_REG[doc.id]={b64:m.audio, type:m.audioType||'audio/webm'}; }
     var mine=(m.deviceId===DEVICE_ID);
     var row=document.createElement("div");
     row.className="row "+(mine?"me-row":"them-row");
@@ -81,13 +128,16 @@
     row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+
       (mine?"":'<span class="ver">VERIFIED</span>')+crownHtml(m.name)+
       '<span class=ts>'+fmtTime(m)+'</span></div>'+
-      '<div class="bubble">'+(m.audio?'<button onclick="playVoice(\''+m.audio.replace(/'/g,"")+ '\',\''+(m.audioType||'audio/webm')+'\',this)" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+pingify(m.text||"")+'</div>'+
+      '<div class="bubble">'+(m.audio?'<button data-voice="'+doc.id+'" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+pingify(m.text||"")+'</div>'+
       '<div class="reacts">'+rxHtml+'</div></div>';
     chat.appendChild(row);
     /* Crimson pulse on new arrival: the room breathes */
     if(!mine){ row.classList.add("arrived"); setTimeout(function(){row.classList.remove("arrived");},1200); }
     row.querySelectorAll(".rx").forEach(function(el){
       el.addEventListener("click", function(ev){ ev.stopPropagation(); toggleReaction(el.getAttribute("data-id"), el.getAttribute("data-e")); });
+    });
+    row.querySelectorAll("[data-voice]").forEach(function(btn){
+      btn.addEventListener("click", function(){ window.playVoice(btn.getAttribute("data-voice"), btn); });
     });
     scrollDown(chat);
   }
@@ -133,7 +183,7 @@
         if(users.length) rx[emoji]=users; else delete rx[emoji];
         tx.update(ref,{reactions:rx});
       });
-    }).catch(function(){});
+    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
   function sendMsg(){
     var t=msg.value.trim(); if(!t||!MY_NAME||!db) return;
@@ -195,9 +245,10 @@
   if(voiceBtn) voiceBtn.addEventListener("click", toggleVoice);
 
   /* Play voice messages */
-  window.playVoice=function(b64,type,btn){
+  window.playVoice=function(id,btn){
+    var v=VOICE_REG[id]; if(!v){ sysLine("Voice data expired \u2014 reload to replay."); return; }
     try{
-      var audio=new Audio("data:"+(type||"audio/webm")+";base64,"+b64);
+      var audio=new Audio("data:"+(v.type||"audio/webm")+";base64,"+v.b64);
       btn.textContent="⏸";
       audio.onended=function(){ btn.textContent="▶"; };
       audio.play().catch(function(){ btn.textContent="▶"; });
@@ -212,21 +263,33 @@
   /* ================= PRESENCE (who's online) =================
      Each device heartbeats its doc every 20s. Anyone whose ts is fresher
      than 60s counts as online. Best-effort delete on tab close. */
-  var _yielded=false, _hbTimer=null;
-  function stopHeartbeat(){ if(_hbTimer){ clearInterval(_hbTimer); _hbTimer=null; } }
+  var _yielded=false, _hbTimer=null, _kickTimer=null;
+  var TAB_SESSION=Date.now();
+  try{
+    var _prevSess=parseInt(sessionStorage.getItem("hw_session")||"0",10)||0;
+    TAB_SESSION=Math.max(Date.now(),_prevSess+1);
+    sessionStorage.setItem("hw_session",String(TAB_SESSION));
+  }catch(e){}
+  function stopHeartbeat(){ if(_hbTimer){clearInterval(_hbTimer);_hbTimer=null;} if(_kickTimer){clearInterval(_kickTimer);_kickTimer=null;} }
   function startHeartbeat(){
-    setInterval(checkKicked, 5000); stopHeartbeat(); _yielded=false; doBeat(); _hbTimer=setInterval(doBeat, 20000); }
+    stopHeartbeat(); _yielded=false; doBeat();
+    _hbTimer=setInterval(doBeat,20000);
+    _kickTimer=setInterval(checkKicked,15000); }
   function kickDuplicates(){
     if(!db||!MY_NAME||_yielded) return;
     db.collection("highway_presence").where("name","==",MY_NAME).get().then(function(snap){
-      snap.forEach(function(d){ if(d.id!==DEVICE_ID) d.ref.delete().catch(function(){}); });
-    }).catch(function(){});
+      snap.forEach(function(d){
+        if(d.id===DEVICE_ID) return;
+        var s=d.data()||{};
+        if((s.session||0) < TAB_SESSION) d.ref.delete().catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+      });
+    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
   function doBeat(){
     if(!db||!MY_NAME||_yielded) return;
     var myRef=db.collection("highway_presence").doc(DEVICE_ID);
     // New session takes over: claim presence, old tabs will see their doc gone and go quiet
-    myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp(), session:Date.now()}, {merge:true}).catch(function(){});
+    myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp(), session:TAB_SESSION}, {merge:true}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
     kickDuplicates();
   }
   function checkKicked(){
@@ -237,11 +300,10 @@
         _yielded=true; stopHeartbeat();
         // Silent: no annoying message, just stop
       }
-    }).catch(function(){});
+    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
-  function heartbeat(){ doBeat(); }
   window.addEventListener("beforeunload", function(){
-    if(db) db.collection("highway_presence").doc(DEVICE_ID).delete().catch(function(){});
+    if(db) db.collection("highway_presence").doc(DEVICE_ID).delete().catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   });
 
   /* ================= TYPING INDICATORS ================= */
@@ -476,19 +538,6 @@
   window.addEventListener("resize", moveGlider);
   setTimeout(moveGlider, 300);
 
-  /* Ember particles: subtle life */
-  (function(){
-    var c=$("embers"); if(!c) return;
-    for(var i=0;i<14;i++){
-      var e=document.createElement("i");
-      e.style.left=(Math.random()*100)+"%";
-      e.style.animationDuration=(9+Math.random()*14)+"s";
-      e.style.animationDelay=(Math.random()*14)+"s";
-      var s=2+Math.random()*4; e.style.width=s+"px"; e.style.height=s+"px";
-      c.appendChild(e);
-    }
-  })();
-
   /* ============ NEWS FEED (money moves: crypto + stocks + macro) ============ */
   var NEWS_URL="https://highway-chat-mcp.onrender.com/news";
   var newsLoadedAt=0;
@@ -571,6 +620,10 @@
 
 
 
+
+
+
+
 )();
 
 
@@ -644,7 +697,7 @@
   }
 
   function addBell(){
-    var header = document.querySelector('header') || document.body;
+    var header = document.querySelector('.head-top') || document.body;
     var btn = document.createElement('button');
     btn.id = 'pushbell';
     btn.title = 'Enable live notifications';
@@ -854,65 +907,7 @@
 })();
 
 
-// ============ QUEST BOARD ============
-function loadQuests(){
-  var el = document.getElementById("questlist");
-  if(!el) return;
-  // Quests are tasks with "quest" in the title, or all tasks displayed as quests
-  db.collection("highway_tasks").orderBy("tsNum","desc").limit(20).get().then(function(snap){
-    var h = '<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">⚔️ QUEST BOARD</h3>';
-    if(snap.empty){
-      h += '<p style="color:var(--muted);">No active quests. Add one from the Tasks tab.</p>';
-    } else {
-      snap.forEach(function(doc){
-        var d = doc.data();
-        var done = d.done ? '✅' : '⏳';
-        h += '<div style="padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;">'
-           + '<div>' + done + ' <b>' + esc(d.title||"Untitled") + '</b></div>'
-           + '<div style="font-size:12px;color:var(--muted);">by ' + esc(d.by||"unknown") + '</div></div>';
-      });
-    }
-    el.innerHTML = h + '</div>';
-  });
-}
 
-// ============ WIN FEED ============
-function loadWins(){
-  var el = document.getElementById("winlist");
-  if(!el) return;
-  db.collection("highway_activity").orderBy("tsNum","desc").limit(30).get().then(function(snap){
-    var h = '<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">🏆 WIN FEED</h3>';
-    var found = 0;
-    snap.forEach(function(doc){
-      var d = doc.data();
-      var txt = (d.text||"").toLowerCase();
-      if(/win|completed|beat|crushed|done|success/.test(txt)){
-        h += '<div style="padding:8px;border-bottom:1px solid var(--line);">'
-           + '<div>' + esc(d.text||"") + '</div>'
-           + '<div style="font-size:11px;color:var(--muted);">' + esc(d.by||"") + ' • ' + fmtTime(d) + '</div></div>';
-        found++;
-      }
-    });
-    if(!found) h += '<p style="color:var(--muted);">No wins yet. Go get one.</p>';
-    el.innerHTML = h + '</div>';
-  });
-}
-
-// ============ AMBIENT STATUS ============
-// Shows what people are doing based on recent activity
-function updateAmbientStatus(){
-  var el = document.getElementById("ambient");
-  if(!el) return;
-  db.collection("highway_activity").orderBy("tsNum","desc").limit(5).get().then(function(snap){
-    var h = "";
-    snap.forEach(function(doc){
-      var d = doc.data();
-      h += '<span style="margin-right:12px;">' + esc(d.by||"") + ': ' + esc((d.text||"").slice(0,40)) + '</span>';
-    });
-    el.innerHTML = h || '<span style="color:var(--muted);">Quiet on the Highway...</span>';
-  });
-}
-setInterval(updateAmbientStatus, 60000);
 
 // ============ ROOM MOODS ============
 // Time-based atmosphere
@@ -928,31 +923,3 @@ function applyMood(){
 applyMood();
 setInterval(applyMood, 600000);
 
-// ============ ENTRANCE RITUAL ============
-// Cinematic entry when joining
-function entranceRitual(){
-  var g = document.getElementById("gate");
-  if(!g) return;
-  g.style.transition = "opacity 1.5s ease, transform 1.5s ease";
-  g.style.opacity = "0";
-  g.style.transform = "scale(1.05)";
-  setTimeout(function(){ g.style.display = "none"; }, 1500);
-}
-
-// ============ HUDDLE MODE ============
-var huddleOn = false;
-function toggleHuddle(){
-  huddleOn = !huddleOn;
-  document.body.classList.toggle("huddle-active", huddleOn);
-  var b = document.getElementById("huddlebanner");
-  if(b) b.style.display = huddleOn ? "block" : "none";
-  if(huddleOn){
-    logActivity("started a huddle — focus mode");
-  }
-}
-
-// ============ CITY BRIDGE TEASER ============
-function showCityTeaser(){
-  var el = document.getElementById("cityteaser");
-  if(el) el.style.display = "block";
-}
