@@ -1261,7 +1261,7 @@
     startPad();
     scheduleChords();
 
-    // Fade in over 3 seconds
+    // Fade in 3s
     master.gain.linearRampToValueAtTime(0.7, ctx.currentTime + 3);
   }
 
@@ -1297,12 +1297,12 @@
   }
 
   function startPad() {
-    // Warm mid-bass future pad: two detuned sines + slow filter sweep (phone-audible range)
+    // Mid-bass pad (phone-audible)
     var o1 = ctx.createOscillator(); o1.type = "sine"; o1.frequency.value = 110; // A2
     var o2 = ctx.createOscillator(); o2.type = "sine"; o2.frequency.value = 110.8;
     var f = ctx.createBiquadFilter();
     f.type = "lowpass"; f.frequency.value = 320; f.Q.value = 2;
-    // Slow sweep 120Hz-520Hz over 40s
+    // Sweep 120-520Hz/40s
     var lfo = ctx.createOscillator(); lfo.frequency.value = 0.025;
     var lfoG = ctx.createGain(); lfoG.gain.value = 200;
     lfo.connect(lfoG); lfoG.connect(f.frequency); lfo.start();
@@ -1343,7 +1343,7 @@
     try {
       initAudio();
       if(!ctx)return;
-      var go=function(){started=true;["touchstart","touchend","click"].forEach(function(e){window.removeEventListener(e,unlock)});var s=document.querySelector(".foot span");if(s)s.textContent+=" 🔊";};
+      var go=function(){started=true;["touchstart","touchend","click"].forEach(function(e){window.removeEventListener(e,unlock)});var s=document.querySelector(".foot span");if(s)s.textContent+=" 🔊";try{var o=ctx.createOscillator(),gg=ctx.createGain();o.frequency.value=660;gg.gain.value=0.5;o.connect(gg);gg.connect(ctx.destination);o.start();o.stop(ctx.currentTime+0.4);}catch(e){}};
       if(ctx.state==="suspended")ctx.resume().then(go,function(e){if(window.console)console.warn("ambient resume failed:",e);});
       else go();
     } catch (e) {
