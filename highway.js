@@ -369,6 +369,7 @@
     var pw=$("password").value;
     if(!email||!pw){ err.textContent="Enter your email and password."; return; }
     err.textContent="Verifying...";
+    try{ firebase.initializeApp(FIREBASE_CONFIG); }catch(e){}
     firebase.auth().signInWithEmailAndPassword(email,pw).then(function(cred){
       // Name must match the account's allowed name (enforced server-side too)
       completeJoin(n,true);
