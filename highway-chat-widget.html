@@ -1228,14 +1228,13 @@
 (function(){
   var ctx = null, master = null, started = false, msd = null;
 
-  // Jazz chord voicings (Rhodes-style, deep and spacious)
-  // Each chord: array of frequencies (Hz)
+  // Airy open voicings (add9 — consonant, no tension), higher register for clarity
   var CHORDS = [
-    [110.00, 130.81, 164.81, 196.00, 246.94],  // Am9 (A2 C3 E3 G3 B3)
-    [87.31, 110.00, 130.81, 164.81, 196.00],   // Fmaj7 (F2 A2 C3 E3 G3)
-    [98.00, 123.47, 146.83, 174.61, 220.00],   // Gm9 (G2 Bb2 D3 F3 A3)
-    [82.41, 103.83, 123.47, 146.83, 174.61],   // Em9 (E2 G2 B2 D3 F3)
-    [110.00, 138.59, 164.81, 196.00, 261.63],  // Amaj7 (A2 C#3 E3 G#3 C4)
+    [220.00, 246.94, 329.63],  // Am(add9)
+    [174.61, 220.00, 329.63],  // Fmaj9
+    [196.00, 246.94, 293.66],  // Gm(add9)
+    [164.81, 196.00, 293.66],  // Em(add9)
+    [220.00, 277.18, 329.63],  // A(add9)
   ];
   var chordIdx = 0;
 
@@ -1269,7 +1268,7 @@
     scheduleChords();
 
     // Fade in 3s
-    master.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 3);
+    master.gain.linearRampToValueAtTime(0.45, ctx.currentTime + 3);
   }
 
   function makeImpulse(dur, decay) {
@@ -1294,26 +1293,26 @@
     src.buffer = buf; src.loop = true;
     var bp = ctx.createBiquadFilter();
     bp.type = "bandpass"; bp.frequency.value = 1500; bp.Q.value = 0.5;
-    var g = ctx.createGain(); g.gain.value = 0.07;
+    var g = ctx.createGain(); g.gain.value = 0.03;
     // Slow rain swell LFO
     var lfo = ctx.createOscillator(); lfo.frequency.value = 0.07;
-    var lfoG = ctx.createGain(); lfoG.gain.value = 0.03;
+    var lfoG = ctx.createGain(); lfoG.gain.value = 0.015;
     lfo.connect(lfoG); lfoG.connect(g.gain); lfo.start();
     src.connect(bp); bp.connect(g); g.connect(master);
     src.start();
   }
 
   function startPad() {
-    // Mid-bass pad (phone-audible)
+    // Soft fifth drone (consonant, no beating)
     var o1 = ctx.createOscillator(); o1.type = "sine"; o1.frequency.value = 110; // A2
-    var o2 = ctx.createOscillator(); o2.type = "sine"; o2.frequency.value = 110.8;
+    var o2 = ctx.createOscillator(); o2.type = "sine"; o2.frequency.value = 165; // E3
     var f = ctx.createBiquadFilter();
     f.type = "lowpass"; f.frequency.value = 320; f.Q.value = 2;
     // Sweep 120-520Hz/40s
     var lfo = ctx.createOscillator(); lfo.frequency.value = 0.025;
     var lfoG = ctx.createGain(); lfoG.gain.value = 200;
     lfo.connect(lfoG); lfoG.connect(f.frequency); lfo.start();
-    var g = ctx.createGain(); g.gain.value = 0.10;
+    var g = ctx.createGain(); g.gain.value = 0.06;
     o1.connect(f); o2.connect(f); f.connect(g); g.connect(master);
     o1.start(); o2.start();
   }
@@ -1322,18 +1321,18 @@
     var t = ctx.currentTime;
     freqs.forEach(function(fr, i){
       var o = ctx.createOscillator();
-      o.type = "triangle"; o.frequency.value = fr;
-      // Rhodes-ish: fast attack, long release
+      o.type = "sine"; o.frequency.value = fr;
+      // Soft bell: slow attack, long release
       var g = ctx.createGain();
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.16, t + 0.08 + i*0.03);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 9);
+      g.gain.linearRampToValueAtTime(0.10, t + 0.6 + i*0.15);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 12);
       // Gentle tremolo for Rhodes wobble
-      var tr = ctx.createOscillator(); tr.frequency.value = 4.5;
-      var trG = ctx.createGain(); trG.gain.value = 0.015;
-      tr.connect(trG); trG.connect(g.gain); tr.start(t); tr.stop(t+9.5);
+      var tr = ctx.createOscillator(); tr.frequency.value = 3;
+      var trG = ctx.createGain(); trG.gain.value = 0.008;
+      tr.connect(trG); trG.connect(g.gain); tr.start(t); tr.stop(t+12.5);
       o.connect(g); g.connect(master);
-      o.start(t); o.stop(t + 9.5);
+      o.start(t); o.stop(t + 12.5);
     });
   }
 
