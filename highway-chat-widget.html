@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
 <title>Highway Chat — Real-Time Team Room</title>
-<!-- PWA / iOS web app -->
+
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#c1121f" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -731,7 +731,7 @@ body{background:radial-gradient(120% 90% at 50% 0%,rgba(193,18,31,.14),transpare
     if(window.HighwayAmbient)HighwayAmbient.sendChime();
     db.collection("highway_messages").add({
       name:MY_NAME, text:t.slice(0,2000), deviceId:DEVICE_ID, reactions:{},
-      ts:firebase.firestore.FieldValue.serverTimestamp()
+      ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
     });
   }
 
@@ -847,7 +847,7 @@ body{background:radial-gradient(120% 90% at 50% 0%,rgba(193,18,31,.14),transpare
     sysLine("Connected — chat, presence, tasks, notes & activity all sync live.");
 
     // chat listener
-    db.collection("highway_messages").orderBy("ts","asc").limitToLast(100)
+    db.collection("highway_messages").orderBy("tsNum","asc").limitToLast(100)
       .onSnapshot(function(s){ s.docChanges().forEach(function(c){
         if(c.type==="added") renderMsg(c.doc);
         if(c.type==="modified"){ // reactions changed -> re-render
@@ -1190,7 +1190,7 @@ body{background:radial-gradient(120% 90% at 50% 0%,rgba(193,18,31,.14),transpare
 })();
 </script>
 
-<!-- HIGHWAY AMBIENT SOUNDSCAPE -->
+
 <script>
 /* Highway ambient: procedural Web Audio (rain+pad+chords). */
 (function(){
