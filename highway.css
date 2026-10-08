@@ -516,3 +516,6 @@ body::after{
   border: 1px solid rgba(193,18,31,.3); text-align: center;
 }
 .city-teaser h4{ margin: 0 0 8px; color: var(--red); }
+
+#msg{ resize:none; overflow-y:auto; max-height:120px; line-height:1.4; font-family:inherit; }
+#msg::-webkit-scrollbar{ width:0; }
