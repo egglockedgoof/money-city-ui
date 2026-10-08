@@ -729,7 +729,7 @@
     /* Crimson pulse on new arrival: the room breathes */
     if(!mine){ row.classList.add("arrived"); setTimeout(function(){row.classList.remove("arrived");},1200); }
     row.querySelectorAll(".rx").forEach(function(el){
-      el.addEventListener("click", function(){ toggleReaction(el.getAttribute("data-id"), el.getAttribute("data-e")); });
+      el.addEventListener("click", function(ev){ ev.stopPropagation(); toggleReaction(el.getAttribute("data-id"), el.getAttribute("data-e")); });
     });
     scrollDown(chat);
   }
