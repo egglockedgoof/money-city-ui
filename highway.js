@@ -81,7 +81,7 @@
     row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+
       (mine?"":'<span class="ver">VERIFIED</span>')+crownHtml(m.name)+
       '<span class=ts>'+fmtTime(m)+'</span></div>'+
-      '<div class="bubble">'+pingify(m.text||"")+'</div>'+
+      '<div class="bubble">'+(m.audio?'<button onclick="playVoice(\''+m.audio.replace(/'/g,"")+ '\',\''+(m.audioType||'audio/webm')+'\',this)" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+pingify(m.text||"")+'</div>'+
       '<div class="reacts">'+rxHtml+'</div></div>';
     chat.appendChild(row);
     /* Crimson pulse on new arrival: the room breathes */
@@ -144,6 +144,67 @@
       ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
     });
   }
+
+  /* ================= VOICE MESSAGES ================= */
+  var _recorder=null, _chunks=[], _recording=false;
+  var voiceBtn=$("voiceBtn");
+  function toggleVoice(){
+    if(_recording){ stopVoice(); return; }
+    if(!MY_NAME||!db){ return; }
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+      sysLine("Voice not supported on this device."); return;
+    }
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+      _chunks=[];
+      _recorder=new MediaRecorder(stream,{mimeType:MediaRecorder.isTypeSupported("audio/webm")?"audio/webm":"audio/mp4"});
+      _recorder.ondataavailable=function(e){ if(e.data.size>0) _chunks.push(e.data); };
+      _recorder.onstop=function(){
+        stream.getTracks().forEach(function(t){ t.stop(); });
+        var blob=new Blob(_chunks,{type:_recorder.mimeType});
+        if(blob.size>800000){ sysLine("Voice message too long — keep it under 30 seconds."); return; }
+        var reader=new FileReader();
+        reader.onloadend=function(){
+          var b64=reader.result.split(",")[1];
+          db.collection("highway_messages").add({
+            name:MY_NAME, text:"🎤 voice message", deviceId:DEVICE_ID, reactions:{},
+            audio:b64, audioType:_recorder.mimeType,
+            ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
+          });
+          sysLine("Voice message sent.");
+        };
+        reader.readAsDataURL(blob);
+      };
+      _recorder.start();
+      _recording=true;
+      voiceBtn.textContent="⏹"; voiceBtn.style.background="#7f1d1d";
+      sysLine("Recording… tap ⏹ to send.");
+      // Auto-stop at 30s
+      setTimeout(function(){ if(_recording) stopVoice(); }, 30000);
+    }).catch(function(e){
+      sysLine("Mic access denied.");
+    });
+  }
+  function stopVoice(){
+    if(_recorder&&_recording){ _recorder.stop(); }
+    _recording=false;
+    voiceBtn.textContent="🎤"; voiceBtn.style.background="";
+  }
+  if(voiceBtn) voiceBtn.addEventListener("click", toggleVoice);
+
+  /* Play voice messages */
+  window.playVoice=function(b64,type,btn){
+    try{
+      var audio=new Audio("data:"+(type||"audio/webm")+";base64,"+b64);
+      btn.textContent="⏸";
+      audio.onended=function(){ btn.textContent="▶"; };
+      audio.play().catch(function(){ btn.textContent="▶"; });
+      // Toggle pause
+      btn.onclick=function(){
+        if(audio.paused){ audio.play(); btn.textContent="⏸"; }
+        else{ audio.pause(); btn.textContent="▶"; }
+      };
+    }catch(e){ sysLine("Could not play voice message."); }
+  };
 
   /* ================= PRESENCE (who's online) =================
      Each device heartbeats its doc every 20s. Anyone whose ts is fresher
