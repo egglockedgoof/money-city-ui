@@ -954,7 +954,12 @@
           +'<div style="font-size:13px;">Every message, quest, and moment<br>will be written here.</div></div>';
       });
 
-    startHeartbeat();
+    /* Create our presence doc FIRST, then clear stale same-name docs, then beat.
+       Otherwise the first beat races the cleanup, finds the old doc and wrongly goes idle. */
+    db.collection("highway_presence").doc(DEVICE_ID)
+      .set({name:MY_NAME, ts:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true})
+      .catch(function(){})
+      .then(function(){ kickDuplicates(); startHeartbeat(); });
   }
 
   /* ================= PASSWORD GATE ================= */
@@ -985,7 +990,6 @@
     var clr=$("clear"); if(clr) clr.style.display=isOwner(n)?"":"none";
     mebadge.textContent=n+" · verified";
     gate.style.display="none";
-    kickDuplicates();
     sysLine("You joined as "+n+" — verified on everything you do.");
     goLive(); msg.focus();
   }
@@ -1176,7 +1180,8 @@
     btn.id = 'pushbell';
     btn.title = 'Enable live notifications';
     btn.textContent = '\uD83D\uDD15';
-    btn.style.cssText = 'background:none;border:1px solid #c1121f;color:#c1121f;border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;margin-left:8px;';
+    btn.setAttribute('aria-label', 'Toggle live notifications');
+    btn.style.cssText = 'flex:none;width:36px;height:36px;min-width:0;padding:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid #c1121f;color:#c1121f;border-radius:10px;font-size:16px;cursor:pointer;margin-left:8px;';
     btn.onclick = enablePush;
     header.appendChild(btn);
     // Update bell state if already subscribed
