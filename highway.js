@@ -379,6 +379,9 @@
       moveGlider();
       if(window.HighwayAmbient)HighwayAmbient.shimmer();
       if(t.getAttribute("data-v")==="view-news" && Date.now()-newsLoadedAt>10*60*1000) loadNews();
+      var v=t.getAttribute("data-v");
+      if(v==="view-quests") loadQuests();
+      if(v==="view-wins") loadWins();
     });
   });
   window.addEventListener("resize", moveGlider);
@@ -472,7 +475,7 @@
 
   nameIn.focus();
 }
-);e.innerHTML=h;})}
+
 
 
 
@@ -758,3 +761,106 @@
   window.HighwayAmbient = { init: function(){ unlock(); }, thock:thock, shimmer:shimmer, sendChime:sendChime, tone:tone };
 })();
 
+
+// ============ QUEST BOARD ============
+function loadQuests(){
+  var el = document.getElementById("questlist");
+  if(!el) return;
+  // Quests are tasks with "quest" in the title, or all tasks displayed as quests
+  db.collection("highway_tasks").orderBy("tsNum","desc").limit(20).get().then(function(snap){
+    var h = '<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">⚔️ QUEST BOARD</h3>';
+    if(snap.empty){
+      h += '<p style="color:var(--muted);">No active quests. Add one from the Tasks tab.</p>';
+    } else {
+      snap.forEach(function(doc){
+        var d = doc.data();
+        var done = d.done ? '✅' : '⏳';
+        h += '<div style="padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;">'
+           + '<div>' + done + ' <b>' + esc(d.title||"Untitled") + '</b></div>'
+           + '<div style="font-size:12px;color:var(--muted);">by ' + esc(d.by||"unknown") + '</div></div>';
+      });
+    }
+    el.innerHTML = h + '</div>';
+  });
+}
+
+// ============ WIN FEED ============
+function loadWins(){
+  var el = document.getElementById("winlist");
+  if(!el) return;
+  db.collection("highway_activity").orderBy("tsNum","desc").limit(30).get().then(function(snap){
+    var h = '<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">🏆 WIN FEED</h3>';
+    var found = 0;
+    snap.forEach(function(doc){
+      var d = doc.data();
+      var txt = (d.text||"").toLowerCase();
+      if(/win|completed|beat|crushed|done|success/.test(txt)){
+        h += '<div style="padding:8px;border-bottom:1px solid var(--line);">'
+           + '<div>' + esc(d.text||"") + '</div>'
+           + '<div style="font-size:11px;color:var(--muted);">' + esc(d.by||"") + ' • ' + fmtTime(d) + '</div></div>';
+        found++;
+      }
+    });
+    if(!found) h += '<p style="color:var(--muted);">No wins yet. Go get one.</p>';
+    el.innerHTML = h + '</div>';
+  });
+}
+
+// ============ AMBIENT STATUS ============
+// Shows what people are doing based on recent activity
+function updateAmbientStatus(){
+  var el = document.getElementById("ambient");
+  if(!el) return;
+  db.collection("highway_activity").orderBy("tsNum","desc").limit(5).get().then(function(snap){
+    var h = "";
+    snap.forEach(function(doc){
+      var d = doc.data();
+      h += '<span style="margin-right:12px;">' + esc(d.by||"") + ': ' + esc((d.text||"").slice(0,40)) + '</span>';
+    });
+    el.innerHTML = h || '<span style="color:var(--muted);">Quiet on the Highway...</span>';
+  });
+}
+setInterval(updateAmbientStatus, 60000);
+
+// ============ ROOM MOODS ============
+// Time-based atmosphere
+function applyMood(){
+  var h = new Date().getHours();
+  var b = document.body;
+  b.classList.remove("mood-dawn","mood-day","mood-dusk","mood-night");
+  if(h>=5 && h<8) b.classList.add("mood-dawn");
+  else if(h>=8 && h<17) b.classList.add("mood-day");
+  else if(h>=17 && h<20) b.classList.add("mood-dusk");
+  else b.classList.add("mood-night");
+}
+applyMood();
+setInterval(applyMood, 600000);
+
+// ============ ENTRANCE RITUAL ============
+// Cinematic entry when joining
+function entranceRitual(){
+  var g = document.getElementById("gate");
+  if(!g) return;
+  g.style.transition = "opacity 1.5s ease, transform 1.5s ease";
+  g.style.opacity = "0";
+  g.style.transform = "scale(1.05)";
+  setTimeout(function(){ g.style.display = "none"; }, 1500);
+}
+
+// ============ HUDDLE MODE ============
+var huddleOn = false;
+function toggleHuddle(){
+  huddleOn = !huddleOn;
+  document.body.classList.toggle("huddle-active", huddleOn);
+  var b = document.getElementById("huddlebanner");
+  if(b) b.style.display = huddleOn ? "block" : "none";
+  if(huddleOn){
+    logActivity("started a huddle — focus mode");
+  }
+}
+
+// ============ CITY BRIDGE TEASER ============
+function showCityTeaser(){
+  var el = document.getElementById("cityteaser");
+  if(el) el.style.display = "block";
+}
