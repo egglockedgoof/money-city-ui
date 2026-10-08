@@ -251,9 +251,6 @@
     try{
       firebase.initializeApp(FIREBASE_CONFIG);
       // Sign in anonymously for authenticated Firestore access
-      firebase.auth().signInAnonymously().catch(function(e){
-        sub.textContent="auth error";
-      });
       db=firebase.firestore();
     }
     catch(e){ sub.textContent="config error"; return; }
@@ -356,12 +353,32 @@
   $("pw").addEventListener("keydown", function(e){ if(e.key==="Enter") tryPw(); });
 
   /* ================= UI EVENTS ================= */
+  var RESERVED=["sin","grim","whisper","hollow","rook","ember","gemini","grok","deepseek","onebot"];
   function join(){
     var n=nameIn.value.trim().slice(0,24);
     if(!n){ err.textContent="Pick a name first."; return; }
+    // Reserved names require verified sign-in
+    if(RESERVED.indexOf(n.toLowerCase())>=0){
+      // Show email/password prompt for verified names
+      var email=prompt("This name is reserved. Enter your verified email:");
+      if(!email){ err.textContent="Reserved name requires verification."; return; }
+      var pw=prompt("Password:");
+      if(!pw){ err.textContent="Reserved name requires verification."; return; }
+      firebase.auth().signInWithEmailAndPassword(email,pw).then(function(){
+        completeJoin(n,true);
+      }).catch(function(e){
+        err.textContent="Verification failed.";
+      });
+      return;
+    }
+    // Regular names use anonymous auth
+    firebase.auth().signInAnonymously().catch(function(){});
+    completeJoin(n,false);
+  }
+  function completeJoin(n,verified){
     MY_NAME=n;
     try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); }catch(e){}
-    mebadge.textContent=n+" · verified";
+    mebadge.textContent=n+(verified?" · verified ✓":" · verified");
     gate.style.display="none";
     kickDuplicates();
     sysLine("You joined as "+n+" — verified on everything you do.");
