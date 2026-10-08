@@ -882,12 +882,20 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
   }
 
   function scheduleChords() {
-    playChord(CHORDS[chordIdx]);
-    chordIdx = (chordIdx + 1) % CHORDS.length;
+    // Skip when tab hidden or ctx suspended — prevents pileup glitch on resume
+    if(!document.hidden && ctx && ctx.state==="running"){
+      playChord(CHORDS[chordIdx]);
+      chordIdx = (chordIdx + 1) % CHORDS.length;
+    }
     setTimeout(scheduleChords, 9000 + Math.random()*3000);
   }
 
   function dove(){
+    // Skip when tab hidden or ctx suspended — prevents pileup glitch on resume
+    if(document.hidden || !ctx || ctx.state!=="running"){
+      setTimeout(dove,15000+Math.random()*20000);
+      return;
+    }
     var t=ctx.currentTime;
     [520,640,540].forEach(function(f,i){
       var o=ctx.createOscillator(),g=ctx.createGain(),tt=t+i*0.55;
