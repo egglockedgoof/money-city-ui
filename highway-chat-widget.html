@@ -1213,7 +1213,7 @@ filter .25s ease, background .3s ease;
     startRain();
     startPad();
     scheduleChords();
-    setTimeout(dove, 8000); // first dove after 8s
+    setTimeout(dove, 5000);
 
     // Fade in 3s
     master.gain.linearRampToValueAtTime(0.45, ctx.currentTime + 3);
@@ -1288,7 +1288,7 @@ filter .25s ease, background .3s ease;
     playChord(CHORDS[chordIdx]);
     chordIdx = (chordIdx + 1) % CHORDS.length;
     // Next chord in 7-10 seconds (sparse, breathing)
-    setTimeout(scheduleChords, 7000 + Math.random()*3000);
+    setTimeout(scheduleChords, 6000 + Math.random()*3000);
   }
 
   // Mourning dove: soft sad coos, distant
@@ -1298,11 +1298,11 @@ filter .25s ease, background .3s ease;
       var o=ctx.createOscillator(),g=ctx.createGain(),tt=t+i*0.55;
       o.frequency.value=f;
       g.gain.setValueAtTime(0,tt);
-      g.gain.linearRampToValueAtTime(0.055,tt+0.1);
+      g.gain.linearRampToValueAtTime(0.07,tt+0.1);
       g.gain.exponentialRampToValueAtTime(0.0001,tt+0.5);
       o.connect(g);g.connect(master);o.start(tt);o.stop(tt+0.55);
     });
-    setTimeout(dove,25000+Math.random()*30000);
+    setTimeout(dove,15000+Math.random()*20000);
   }
 
   // iOS unlock on first gesture
