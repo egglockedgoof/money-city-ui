@@ -512,6 +512,14 @@ filter .25s ease, background .3s ease;
 #presence{opacity:.8;}
 .scanlines{position:fixed;inset:0;pointer-events:none;z-index:9999;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.06) 2px 3px);}
 .head{margin-bottom:10px;}.tabs{margin-bottom:10px;}
+#chat{border:1px solid rgba(255,60,70,.28);border-radius:14px;box-shadow:0 0 28px rgba(255,30,40,.12),inset 0 0 90px rgba(0,0,0,.55);}
+.shell{position:relative;}
+.shell::before,.shell::after{content:"";position:absolute;width:22px;height:22px;pointer-events:none;z-index:5;}
+.shell::before{top:6px;left:6px;border-top:2px solid rgba(255,80,90,.6);border-left:2px solid rgba(255,80,90,.6);}
+.shell::after{bottom:6px;right:6px;border-bottom:2px solid rgba(255,80,90,.6);border-right:2px solid rgba(255,80,90,.6);}
+.tab{filter:saturate(.65);}
+.tab.active{filter:none;text-shadow:0 0 12px rgba(255,60,70,.8);}
+#pushbell{box-shadow:0 0 16px rgba(255,200,60,.35);}
 </style>
 </head>
 <body>
