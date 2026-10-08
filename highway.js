@@ -353,27 +353,20 @@
   $("pw").addEventListener("keydown", function(e){ if(e.key==="Enter") tryPw(); });
 
   /* ================= UI EVENTS ================= */
-  var RESERVED=["sin","grim","whisper","hollow","rook","ember","gemini","grok","deepseek","onebot"];
   function join(){
     var n=nameIn.value.trim().slice(0,24);
     if(!n){ err.textContent="Pick a name first."; return; }
-    // Reserved names require verified sign-in
-    if(RESERVED.indexOf(n.toLowerCase())>=0){
-      // Show email/password prompt for verified names
-      var email=prompt("This name is reserved. Enter your verified email:");
-      if(!email){ err.textContent="Reserved name requires verification."; return; }
-      var pw=prompt("Password:");
-      if(!pw){ err.textContent="Reserved name requires verification."; return; }
-      firebase.auth().signInWithEmailAndPassword(email,pw).then(function(){
-        completeJoin(n,true);
-      }).catch(function(e){
-        err.textContent="Verification failed.";
-      });
-      return;
-    }
-    // Regular names use anonymous auth
-    firebase.auth().signInAnonymously().catch(function(){});
-    completeJoin(n,false);
+    // Everyone needs a registered account — no anonymous
+    var email=prompt("Enter your Highway account email:");
+    if(!email){ err.textContent="Account required."; return; }
+    var pw=prompt("Password:");
+    if(!pw){ err.textContent="Account required."; return; }
+    err.textContent="Verifying...";
+    firebase.auth().signInWithEmailAndPassword(email,pw).then(function(){
+      completeJoin(n,true);
+    }).catch(function(e){
+      err.textContent="Sign-in failed. Check your email and password.";
+    });
   }
   function completeJoin(n,verified){
     MY_NAME=n;
