@@ -142,6 +142,9 @@
     db.collection("highway_messages").add({
       name:MY_NAME, text:t.slice(0,2000), deviceId:DEVICE_ID, reactions:{},
       ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
+    }).catch(function(e){
+      sysLine("Send failed: "+(e.message||"permission denied")+" — try rejoining.");
+      msg.value=t;
     });
   }
 
