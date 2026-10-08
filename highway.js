@@ -776,7 +776,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
 
 /* Highway ambient: procedural Web Audio (rain+pad+chords). */
 (function(){
-  var ctx = null, master = null, started = false, _activeChord = null;
+  var ctx = null, master = null, started = false, _activeChord = null, mediaEl = null, msd = null;
 
   var CHORDS = [
     [220.00, 246.94, 329.63],  // Am(add9)
@@ -799,7 +799,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     // Limiter: prevent clipping when rain+pad+chords+dove stack
     var comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -18; comp.ratio.value = 8;
-    master.connect(comp); comp.connect(ctx.destination);
+    master.connect(comp); /* iOS silent-switch bypass: Web Audio runs on the "ambient" session, which the hardware silent switch mutes. Route the final mix through a MediaStreamDestination into a hidden <audio> element instead — media elements use the "media" session and keep playing with the switch on. */ try{ msd = ctx.createMediaStreamDestination(); comp.connect(msd); mediaEl = document.createElement("audio"); mediaEl.setAttribute("playsinline",""); mediaEl.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;"; mediaEl.srcObject = msd.stream; (document.body||document.documentElement).appendChild(mediaEl); }catch(e){ comp.connect(ctx.destination); warn(e); }
 
     var verb = ctx.createConvolver();
     verb.buffer = makeImpulse(3.5, 2.5);
@@ -865,7 +865,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     var chordGain = ctx.createGain();
     chordGain.gain.value = 1;
     chordGain.connect(master);
-    _activeChord = { gain: chordGain };
+    _activeChord = { gain: chordGain }; /* Leak guard: once the chord has fully rung out, detach its gain node so no dead nodes accumulate on the master bus over long sessions. */ setTimeout(()=>{ try{ chordGain.disconnect(); }catch(e){} }, 9000);
     freqs.forEach(function(fr, i){
       var o = ctx.createOscillator();
       o.type = "sine"; o.frequency.value = fr;
@@ -908,12 +908,12 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     setTimeout(dove,15000+Math.random()*20000);
   }
 
-  function unlock(){
-    if(started)return;
+  function kickMedia(){ if(!mediaEl) return; try{ var p=mediaEl.play(); if(p&&p.catch) p.catch(function(){}); }catch(e){} }  function unlock(){
+    }catch(e){} }  function unlock(){ if(started)return;
     try{
       initAudio();
       if(!ctx)return;
-      var st=ctx.state;
+      kickMedia(); var st=ctx.state;
       if(st==="running"){
         started=true;
         ["touchstart","touchend","click"].forEach(function(e){window.removeEventListener(e,unlock)});
@@ -922,7 +922,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
   }
   window.addEventListener("touchstart", unlock, {passive: true});
   window.addEventListener("touchend", unlock, false);
-  window.addEventListener("click", unlock, false);
+  window.addEventListener("click", unlock, false); /* Persistent re-kick: iOS may pause the media element on tab hide or after interruptions; every user gesture re-arms it (cheap, idempotent). */ window.addEventListener("touchstart", kickMedia, {passive: true}); window.addEventListener("click", kickMedia, false);
 
   function tone(f,d,v){
     if(!ctx||!started)return;
@@ -960,7 +960,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
 
   document.addEventListener("visibilitychange", function(){
     if(!ctx) return;
-    try{ if(document.hidden){ ctx.suspend(); } else if(started){ ctx.resume(); } }catch(e){ warn(e); }
+    try{ if(document.hidden){ ctx.suspend(); } else if(started){ ctx.resume(); kickMedia(); } }catch(e){ warn(e); }
   });
   window.HighwayAmbient = { init: function(){ unlock(); }, thock:thock, shimmer:shimmer, sendChime:sendChime, tone:tone };
 })();
