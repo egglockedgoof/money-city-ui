@@ -254,6 +254,7 @@ box-shadow:0 4px 14px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);}
 .nbody{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
 .ndesc{font-size:12px;line-height:1.45;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .nsrc{flex:none;font-size:9px;font-weight:700;letter-spacing:.6px;color:#ff8a94;border:1px solid rgba(255,77,94,.4);border-radius:999px;padding:2px 6px;}
+.nsec{color:#c1121f;font-size:11px;font-weight:700;letter-spacing:2px;text-align:center;margin:8px 0 2px;}
 .ntitle{font-size:13px;line-height:1.4;}
 .ping{color:#ff8a94;font-weight:700;background:rgba(193,18,31,.22);border-radius:10px;padding:1px 8px;}
 .reacts{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;}
@@ -498,6 +499,13 @@ filter .25s ease, background .3s ease;
 #pushbell{box-shadow:0 0 16px rgba(255,200,60,.35);}
 #chat{clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))}
 
+
+/*E*/
+body{background:radial-gradient(120% 90% at 50% 0%,rgba(193,18,31,.14),transparent 60%),#0a0608;}
+.shell{background:rgba(20,10,12,.72);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)box-shadow:0 24px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);}
+.msg{background:rgba(30,18,20,.65);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 4px 16px rgba(0,0,0,.35);}
+.msg.me{background:rgba(160,15,25,.55);box-shadow:0 4px 20px rgba(193,18,31,.25);}
+.foot{background:rgba(25,12,14,.7);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);}
 </style>
 </head>
 <body>
@@ -984,19 +992,21 @@ filter .25s ease, background .3s ease;
     }
   })();
 
-  /* ================= NEWS FEED (trending overall) ================= */
+  /* ============ NEWS FEED (money moves: crypto + stocks + macro) ============ */
   var NEWS_URL="https://highway-chat-mcp.onrender.com/news";
   var newsLoadedAt=0;
   function loadNews(){
     var list=$("newslist"); if(!list) return;
-    list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Pulling what is trending…</div>';
+    list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Pulling the money moves…</div>';
     fetch(NEWS_URL).then(function(r){ return r.json(); }).then(function(d){
       newsLoadedAt=Date.now();
       var items=(d&&d.items)||[];
-      if(!items.length){ list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Nothing trending right now.</div>'; return; }
-      var html='<div style="color:var(--muted);font-size:11px;text-align:center;letter-spacing:.4px;">TRENDING OVERALL · UPDATED '+esc(new Date(d.updated||Date.now()).toLocaleTimeString())+'</div>';
+      if(!items.length){ list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Markets are quiet right now.</div>'; return; }
+      var html='<div style="color:var(--muted);font-size:11px;text-align:center;letter-spacing:.4px;">MONEY MOVES · RANKED BY WALLET IMPACT · UPDATED '+esc(new Date(d.updated||Date.now()).toLocaleTimeString())+'</div>';
+      var lastSec="";
       items.forEach(function(n){
         var src=(n.source||"?").trim();
+        if(src&&src!==lastSec){ lastSec=src; html+='<div class="nsec">'+esc(src)+'</div>'; }
         var initial=esc(src.charAt(0).toUpperCase());
         var img=n.image?'<img class="nthumb" src="'+esc(n.image)+'" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">':'';
         var ph='<span class="nthumb nph" style="'+(n.image?'display:none;':'display:flex;')+'">'+initial+'</span>';
