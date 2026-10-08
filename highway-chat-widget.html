@@ -718,7 +718,7 @@
     var rx=m.reactions||{};
     Object.keys(rx).forEach(function(e){
       var users=rx[e]||[];
-      rxHtml+='<span class="rx'+(users.indexOf(MY_NAME)>=0?" mine":"")+'" data-id="'+doc.id+'" data-e="'+e+'">'+e+' '+(users.length||"")+'</span>';
+      rxHtml+='<span class="rx'+(users.indexOf(MY_NAME)>=0?" mine":"")+'" data-id="'+doc.id+'" data-e="'+esc(e)+'">'+esc(e)+' '+(users.length||"")+'</span>';
     });
     rxHtml+='<span class="rx rx-add" data-id="'+doc.id+'" data-e="__pick__">＋</span>';
     row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+
