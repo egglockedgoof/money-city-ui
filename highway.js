@@ -137,7 +137,7 @@
   }
   function sendMsg(){
     var t=msg.value.trim(); if(!t||!MY_NAME||!db) return;
-    msg.value=""; setTyping(false); msg.focus();
+    msg.value=""; msg.style.height="auto"; setTyping(false); msg.focus();
     if(window.HighwayAmbient)HighwayAmbient.sendChime();
     db.collection("highway_messages").add({
       name:MY_NAME, text:t.slice(0,2000), deviceId:DEVICE_ID, reactions:{},
@@ -538,6 +538,9 @@
     if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMsg(); }
   });
   msg.addEventListener("input", function(){
+    // Auto-expand textarea as you type
+    msg.style.height="auto";
+    msg.style.height=Math.min(msg.scrollHeight,120)+"px";
     setTyping(true);
     clearTimeout(typingTimer);
     typingTimer=setTimeout(function(){ setTyping(false); }, 2000);
