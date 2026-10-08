@@ -316,6 +316,7 @@
   .ndesc{font-size:12px;line-height:1.45;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
   .nsrc{flex:none;font-size:9px;font-weight:700;letter-spacing:.6px;color:#ff8a94;border:1px solid rgba(255,77,94,.4);border-radius:999px;padding:2px 6px;}
   .ntitle{font-size:13px;line-height:1.4;}
+  .ping{color:#ff8a94;font-weight:700;background:rgba(193,18,31,.22);border-radius:4px;padding:0 3px;}
   .reacts{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;}
   .rx{font-size:12px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;
     padding:2px 8px;cursor:pointer;color:var(--txt);}
@@ -367,9 +368,7 @@
   .tdel{background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;opacity:.5;border-radius:50%;width:28px;height:28px;transition:all .2s ease;}
   .tdel:hover{opacity:1;background:rgba(193,18,31,.15);transform:rotate(90deg);}
   /* ===== NOTES AS JOURNAL ===== */
-  /* No display here: an ID selector would beat .view{display:none} and leak the
-     Grimoire onto every tab. .view / .view.active own visibility. */
-  #view-notes{padding:16px;flex-direction:column;}
+  #view-notes{padding:16px;display:flex;flex-direction:column;}
   #view-notes.active::before{content:"📖 The Grimoire";display:block;text-align:center;font-size:13px;font-weight:700;
     letter-spacing:2px;color:rgba(255,138,148,.7);margin-bottom:12px;text-transform:uppercase;}
   #notes{flex:1;background:linear-gradient(180deg,rgba(20,5,8,.95),rgba(8,2,4,.95));
@@ -675,6 +674,7 @@
   var OWNERS=["sin","grim"]; // co-owners of the Highway — case-insensitive
   function isOwner(n){ return OWNERS.indexOf(String(n||"").toLowerCase())>=0; }
   function crownHtml(n){ return isOwner(n)?'<span class="crown" title="Owner">👑</span>':""; }
+  function pingify(s){ return esc(s).replace(/@([a-z0-9_]+)/gi,'<span class="ping">@$1</span>'); }
 
   function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
@@ -695,10 +695,8 @@
   }
 
   /* ================= CHAT ================= */
-  function renderMsg(doc, opts){
-    var m=doc.data(); if(!m) return;
-    if(!(opts && opts.replace)){ if(seen[doc.id]) return; }
-    seen[doc.id]=1;
+  function renderMsg(doc){
+    var m=doc.data(); if(!m||seen[doc.id]) return; seen[doc.id]=1;
     var mine=(m.deviceId===DEVICE_ID);
     var row=document.createElement("div");
     row.className="row "+(mine?"me-row":"them-row");
@@ -706,27 +704,20 @@
     var rx=m.reactions||{};
     Object.keys(rx).forEach(function(e){
       var users=rx[e]||[];
-      rxHtml+='<span class="rx'+(users.indexOf(MY_NAME)>=0?" mine":"")+'" data-id="'+esc(doc.id)+'" data-e="'+esc(e)+'">'+esc(e)+' '+(users.length||"")+'</span>';
+      rxHtml+='<span class="rx'+(users.indexOf(MY_NAME)>=0?" mine":"")+'" data-id="'+doc.id+'" data-e="'+e+'">'+e+' '+(users.length||"")+'</span>';
     });
-    rxHtml+='<span class="rx rx-add" data-id="'+esc(doc.id)+'" data-e="__pick__">＋</span>';
-    row.setAttribute("data-mid", doc.id);
+    rxHtml+='<span class="rx rx-add" data-id="'+doc.id+'" data-e="__pick__">＋</span>';
     row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+
       (mine?"":'<span class="ver">VERIFIED</span>')+crownHtml(m.name)+'</div>'+
-      '<div class="bubble">'+esc(m.text||"")+'</div>'+
+      '<div class="bubble">'+pingify(m.text||"")+'</div>'+
       '<div class="reacts">'+rxHtml+'</div></div>';
-    if(opts && opts.replace && opts.replace.parentNode){ opts.replace.parentNode.replaceChild(row, opts.replace); }
-    else { chat.appendChild(row); }
+    chat.appendChild(row);
     /* Crimson pulse on new arrival: the room breathes */
     if(!mine){ row.classList.add("arrived"); setTimeout(function(){row.classList.remove("arrived");},1200); }
     row.querySelectorAll(".rx").forEach(function(el){
       el.addEventListener("click", function(){ toggleReaction(el.getAttribute("data-id"), el.getAttribute("data-e")); });
     });
-    if(!(opts && opts.replace)) scrollDown(chat);
-  }
-  function findRow(id){
-    var rows=chat.querySelectorAll(".row");
-    for(var i=0;i<rows.length;i++){ if(rows[i].getAttribute("data-mid")===id) return rows[i]; }
-    return null;
+    scrollDown(chat);
   }
   function toggleReaction(id, emoji){
     if(emoji==="__pick__"){
@@ -734,18 +725,14 @@
       if(!e) return; emoji=e.trim().slice(0,4);
     }
     var ref=db.collection("highway_messages").doc(id);
-    /* Transaction: two people reacting at once no longer overwrite each other */
-    db.runTransaction(function(tx){
-      return tx.get(ref).then(function(snap){
-        if(!snap.exists) return;
-        var rx=(snap.data()&&snap.data().reactions)||{};
-        var users=(rx[emoji]||[]).slice();
-        var i=users.indexOf(MY_NAME);
-        if(i>=0) users.splice(i,1); else users.push(MY_NAME);
-        if(users.length) rx[emoji]=users; else delete rx[emoji];
-        tx.update(ref,{reactions:rx});
-      });
-    }).catch(function(e){ console.warn("reaction failed", e); });
+    ref.get().then(function(snap){
+      var rx=(snap.data()&&snap.data().reactions)||{};
+      var users=rx[emoji]||[];
+      var i=users.indexOf(MY_NAME);
+      if(i>=0) users.splice(i,1); else users.push(MY_NAME);
+      if(users.length) rx[emoji]=users; else delete rx[emoji];
+      ref.update({reactions:rx});
+    });
   }
   function sendMsg(){
     var t=msg.value.trim(); if(!t||!MY_NAME||!db) return;
@@ -798,14 +785,9 @@
   });
 
   /* ================= TYPING INDICATORS ================= */
-  var typingTimer=null, _typingOn=false, _typingSentAt=0;
+  var typingTimer=null;
   function setTyping(on){
     if(!db||!MY_NAME) return;
-    /* Throttle: write at most once per 3s while typing, always write on stop */
-    var now=Date.now();
-    if(on && _typingOn && now-_typingSentAt<3000) return;
-    if(!on && !_typingOn) return;
-    _typingOn=!!on; _typingSentAt=now;
     db.collection("highway_typing").doc(DEVICE_ID).set({
       name:MY_NAME, typing:!!on, ts:firebase.firestore.FieldValue.serverTimestamp()
     }, {merge:true});
@@ -866,7 +848,7 @@
 
   /* ================= GO LIVE ================= */
   function goLive(){
-    try{ firebase.initializeApp(FIREBASE_CONFIG); db=firebase.firestore(); window.__hwDb=db; }
+    try{ firebase.initializeApp(FIREBASE_CONFIG); db=firebase.firestore(); }
     catch(e){ sub.textContent="config error"; return; }
 
     dot.classList.remove("off"); sub.textContent="live · all systems synced";
@@ -876,45 +858,35 @@
     db.collection("highway_messages").orderBy("ts","asc").limitToLast(100)
       .onSnapshot(function(s){ s.docChanges().forEach(function(c){
         if(c.type==="added") renderMsg(c.doc);
-        if(c.type==="modified"){ // reactions changed -> replace in place (keeps position)
-          var old=findRow(c.doc.id);
-          if(old) renderMsg(c.doc, {replace:old});
-        }
-        if(c.type==="removed"){ // deleted (e.g. chat cleared) -> drop from screen
-          var gone=findRow(c.doc.id);
-          if(gone) gone.remove();
-          delete seen[c.doc.id];
+        if(c.type==="modified"){ // reactions changed -> re-render
+          var old=document.querySelector('[data-id="'+c.doc.id+'"]');
+          if(old){ delete seen[c.doc.id]; var rows=chat.querySelectorAll(".row");
+            for(var i=0;i<rows.length;i++){ if(rows[i].innerHTML.indexOf('data-id="'+c.doc.id+'"')>=0){ rows[i].remove(); break; } }
+            renderMsg(c.doc); }
         }
       }); });
 
-    // presence listener (cached + re-rendered on a timer so stale chips expire)
-    var presDocs=[], typDocs=[];
-    function renderPresence(){
-      if(_yielded) return;
+    // presence listener
+    db.collection("highway_presence").onSnapshot(function(s){
       var now=Date.now(), html="";
-      presDocs.forEach(function(p){
-        try{ if(p.ts && now-p.ts.toDate().getTime()<60000) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+'</span>'; }catch(e){}
+      s.forEach(function(d){
+        var p=d.data(); if(!p||!p.ts) return;
+        try{ if(now-p.ts.toDate().getTime()<60000) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+'</span>'; }catch(e){}
       });
       presenceEl.innerHTML=html||'<span style="font-size:11px;color:var(--muted)">no one else here</span>';
-    }
-    function renderTyping(){
-      var names=[], now=Date.now();
-      typDocs.forEach(function(t){
-        if(t.typing && t.id!==DEVICE_ID){
-          try{ if(now-t.ts.toDate().getTime()<8000) names.push(t.name); }catch(e){}
+    });
+
+    // typing listener
+    db.collection("highway_typing").onSnapshot(function(s){
+      var names=[];
+      s.forEach(function(d){
+        var t=d.data();
+        if(t&&t.typing&&d.id!==DEVICE_ID){
+          try{ if(Date.now()-t.ts.toDate().getTime()<8000) names.push(t.name); }catch(e){}
         }
       });
       typingEl.textContent=names.length?names.join(", ")+(names.length>1?" are":" is")+" typing…":"";
-    }
-    db.collection("highway_presence").onSnapshot(function(s){
-      presDocs=[]; s.forEach(function(d){ var p=d.data(); if(p) presDocs.push(p); });
-      renderPresence();
     });
-    db.collection("highway_typing").onSnapshot(function(s){
-      typDocs=[]; s.forEach(function(d){ var t=d.data(); if(t){ t.id=d.id; typDocs.push(t); } });
-      renderTyping();
-    });
-    setInterval(function(){ renderPresence(); renderTyping(); }, 5000);
 
     // tasks listener
     db.collection("highway_tasks").orderBy("ts","asc")
@@ -954,12 +926,7 @@
           +'<div style="font-size:13px;">Every message, quest, and moment<br>will be written here.</div></div>';
       });
 
-    /* Create our presence doc FIRST, then clear stale same-name docs, then beat.
-       Otherwise the first beat races the cleanup, finds the old doc and wrongly goes idle. */
-    db.collection("highway_presence").doc(DEVICE_ID)
-      .set({name:MY_NAME, ts:firebase.firestore.FieldValue.serverTimestamp()}, {merge:true})
-      .catch(function(){})
-      .then(function(){ kickDuplicates(); startHeartbeat(); });
+    startHeartbeat();
   }
 
   /* ================= PASSWORD GATE ================= */
@@ -984,12 +951,9 @@
     var n=nameIn.value.trim().slice(0,24);
     if(!n){ err.textContent="Pick a name first."; return; }
     MY_NAME=n;
-    window.__hwName=n;
-    try{ sessionStorage.setItem("hw_name", n); }catch(e){}
-    /* Clear-chat is owner-only (UI guard; enforce with Firestore rules too) */
-    var clr=$("clear"); if(clr) clr.style.display=isOwner(n)?"":"none";
     mebadge.textContent=n+" · verified";
     gate.style.display="none";
+    kickDuplicates();
     sysLine("You joined as "+n+" — verified on everything you do.");
     goLive(); msg.focus();
   }
@@ -1016,7 +980,18 @@
   window.addEventListener("resize", moveGlider);
   setTimeout(moveGlider, 300);
 
-  /* (Duplicate ember spawner removed — the liquid-glass script below owns embers.) */
+  /* Ember particles: subtle life */
+  (function(){
+    var c=$("embers"); if(!c) return;
+    for(var i=0;i<14;i++){
+      var e=document.createElement("i");
+      e.style.left=(Math.random()*100)+"%";
+      e.style.animationDuration=(9+Math.random()*14)+"s";
+      e.style.animationDelay=(Math.random()*14)+"s";
+      var s=2+Math.random()*4; e.style.width=s+"px"; e.style.height=s+"px";
+      c.appendChild(e);
+    }
+  })();
 
   /* ================= NEWS FEED (trending overall) ================= */
   var NEWS_URL="https://highway-chat-mcp.onrender.com/news";
@@ -1032,8 +1007,6 @@
       items.forEach(function(n){
         var src=(n.source||"?").trim();
         var initial=esc(src.charAt(0).toUpperCase());
-        var safeUrl=function(u){ return /^https?:\/\//i.test(String(u||""))?u:""; };
-        n.url=safeUrl(n.url); n.image=safeUrl(n.image);
         var img=n.image?'<img class="nthumb" src="'+esc(n.image)+'" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">':'';
         var ph='<span class="nthumb nph" style="'+(n.image?'display:none;':'display:flex;')+'">'+initial+'</span>';
         var desc=n.description?'<span class="ndesc">'+esc(n.description)+'</span>':'';
@@ -1050,22 +1023,11 @@
 
   sendBtn.addEventListener("click", sendMsg);
   $("clear").addEventListener("click", function(){
-    if(!db||!isOwner(MY_NAME)) return;
-    if(!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
+    if(!db||!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
     db.collection("highway_messages").get().then(function(s){
-      /* Firestore batches cap at 500 writes: delete in chunks of 400 */
-      var refs=[]; s.forEach(function(d){ refs.push(d.ref); });
-      var chain=Promise.resolve();
-      for(var i=0;i<refs.length;i+=400){
-        (function(slice){
-          chain=chain.then(function(){
-            var batch=db.batch();
-            slice.forEach(function(r){ batch.delete(r); });
-            return batch.commit();
-          });
-        })(refs.slice(i,i+400));
-      }
-      return chain;
+      var batch=db.batch();
+      s.forEach(function(d){ batch.delete(d.ref); });
+      return batch.commit();
     }).then(function(){ sysLine("Chat cleared — fresh highway."); })
     .catch(function(e){ sysLine("Clear failed: "+(e.message||e)); });
   });
@@ -1175,13 +1137,12 @@
 
   // Add a bell toggle button to the header
   function addBell(){
-    var header = document.querySelector('.head-top') || document.body;
+    var header = document.querySelector('header') || document.body;
     var btn = document.createElement('button');
     btn.id = 'pushbell';
     btn.title = 'Enable live notifications';
     btn.textContent = '\uD83D\uDD15';
-    btn.setAttribute('aria-label', 'Toggle live notifications');
-    btn.style.cssText = 'flex:none;width:36px;height:36px;min-width:0;padding:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;background:none;border:1px solid #c1121f;color:#c1121f;border-radius:10px;font-size:16px;cursor:pointer;margin-left:8px;';
+    btn.style.cssText = 'background:none;border:1px solid #c1121f;color:#c1121f;border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;margin-left:8px;';
     btn.onclick = enablePush;
     header.appendChild(btn);
     // Update bell state if already subscribed
@@ -1201,10 +1162,10 @@
       if (btn) { btn.textContent = '\uD83D\uDD14'; btn.title = 'Notifications on'; }
       // Save subscription to Firestore
       var subJson = sub.toJSON();
-      var hwdb = window.__hwDb;
-      if (hwdb) {
-        var myName = window.__hwName || 'anon';
-        hwdb.collection('highway_push_subs').doc(btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').substring(0,60)).set({
+      if (typeof db !== 'undefined' && db) {
+        var myName = 'anon';
+        try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
+        db.collection('highway_push_subs').doc(btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').substring(0,60)).set({
           endpoint: sub.endpoint,
           keys: subJson.keys,
           name: myName,
@@ -1359,12 +1320,6 @@
   window.addEventListener("touchstart", unlock, {passive: true});
   window.addEventListener("touchend", unlock, false);
   window.addEventListener("click", unlock, false);
-
-  // Pause the soundscape while the tab is hidden, resume when it returns
-  document.addEventListener("visibilitychange", function(){
-    if (!ctx) return;
-    if (document.hidden) { ctx.suspend(); } else { ctx.resume(); }
-  });
 
   // Expose for debugging
   window.HighwayAmbient = { init: function(){ unlock(); } };
