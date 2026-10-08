@@ -1343,9 +1343,9 @@ filter .25s ease, background .3s ease;
       for(var i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);
       var s=ctx.createBufferSource();s.buffer=b,
           f=ctx.createBiquadFilter();f.type="lowpass";f.frequency.value=850,
-          g=ctx.createGain();g.gain.value=0.10;
+          g=ctx.createGain();g.gain.value=0.16;
       s.connect(f);f.connect(g);g.connect(master);s.start(t);
-      tone(175+Math.random()*45,0.09,0.07);
+      tone(175+Math.random()*45,0.09,0.12);
     }catch(e){}
   }
   function shimmer(){
