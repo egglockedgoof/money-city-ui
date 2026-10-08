@@ -1344,7 +1344,7 @@
       initAudio();
       if(!ctx)return;
       var st=ctx.state,s=document.querySelector(".foot span");
-      if(s)s.textContent="v251007d 🔊("+st+")";
+      if(s)s.textContent="🔊"+st;
       if(st==="running"){
         started=true;
         ["touchstart","touchend","click"].forEach(function(e){window.removeEventListener(e,unlock)});
