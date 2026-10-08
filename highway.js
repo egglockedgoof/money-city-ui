@@ -776,7 +776,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
 
 /* Highway ambient: procedural Web Audio (rain+pad+chords). */
 (function(){
-  var ctx = null, master = null, started = false;
+  var ctx = null, master = null, started = false, _activeChord = null;
 
   var CHORDS = [
     [220.00, 246.94, 329.63],  // Am(add9)
@@ -796,12 +796,17 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     master = ctx.createGain();
     master.gain.value = 0.0; // start silent, fade in
 
+    // Limiter: prevent clipping when rain+pad+chords+dove stack
+    var comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 8;
+    master.connect(comp); comp.connect(ctx.destination);
+
     var verb = ctx.createConvolver();
     verb.buffer = makeImpulse(3.5, 2.5);
     var wet = ctx.createGain(); wet.gain.value = 0.35;
     var dry = ctx.createGain(); dry.gain.value = 0.7;
-    master.connect(dry); dry.connect(ctx.destination);
-    master.connect(verb); verb.connect(wet); wet.connect(ctx.destination);
+    master.connect(dry); dry.connect(comp);
+    master.connect(verb); verb.connect(wet); wet.connect(comp);
 
     startRain();
     startPad();
@@ -855,25 +860,31 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
 
   function playChord(freqs) {
     var t = ctx.currentTime;
+    // Fade out any still-ringing chord before starting the new one (no overlap glitch)
+    if (_activeChord) { try { _activeChord.gain.gain.cancelScheduledValues(t); _activeChord.gain.gain.setValueAtTime(_activeChord.gain.gain.value, t); _activeChord.gain.gain.linearRampToValueAtTime(0.0001, t + 0.8); } catch(e){ warn(e); } }
+    var chordGain = ctx.createGain();
+    chordGain.gain.value = 1;
+    chordGain.connect(master);
+    _activeChord = { gain: chordGain };
     freqs.forEach(function(fr, i){
       var o = ctx.createOscillator();
       o.type = "sine"; o.frequency.value = fr;
       var g = ctx.createGain();
       g.gain.setValueAtTime(0, t);
       g.gain.linearRampToValueAtTime(0.10, t + 0.6 + i*0.15);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 12);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 8);
       var tr = ctx.createOscillator(); tr.frequency.value = 3;
       var trG = ctx.createGain(); trG.gain.value = 0.008;
-      tr.connect(trG); trG.connect(g.gain); tr.start(t); tr.stop(t+12.5);
-      o.connect(g); g.connect(master);
-      o.start(t); o.stop(t + 12.5);
+      tr.connect(trG); trG.connect(g.gain); tr.start(t); tr.stop(t+8.5);
+      o.connect(g); g.connect(chordGain);
+      o.start(t); o.stop(t + 8.5);
     });
   }
 
   function scheduleChords() {
     playChord(CHORDS[chordIdx]);
     chordIdx = (chordIdx + 1) % CHORDS.length;
-    setTimeout(scheduleChords, 6000 + Math.random()*3000);
+    setTimeout(scheduleChords, 9000 + Math.random()*3000);
   }
 
   function dove(){
