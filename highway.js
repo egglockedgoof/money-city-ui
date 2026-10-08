@@ -353,19 +353,31 @@
   $("pw").addEventListener("keydown", function(e){ if(e.key==="Enter") tryPw(); });
 
   /* ================= UI EVENTS ================= */
+  var authShown=false;
   function join(){
     var n=nameIn.value.trim().slice(0,24);
     if(!n){ err.textContent="Pick a name first."; return; }
-    // Everyone needs a registered account — no anonymous
-    var email=prompt("Enter your Highway account email:");
-    if(!email){ err.textContent="Account required."; return; }
-    var pw=prompt("Password:");
-    if(!pw){ err.textContent="Account required."; return; }
+    // First click: reveal the account fields. Second click: sign in.
+    if(!authShown){
+      authShown=true;
+      $("authfields").style.display="block";
+      $("email").focus();
+      err.textContent="Sign in with your Highway account.";
+      return;
+    }
+    var email=$("email").value.trim();
+    var pw=$("password").value;
+    if(!email||!pw){ err.textContent="Enter your email and password."; return; }
     err.textContent="Verifying...";
-    firebase.auth().signInWithEmailAndPassword(email,pw).then(function(){
+    firebase.auth().signInWithEmailAndPassword(email,pw).then(function(cred){
+      // Name must match the account's allowed name (enforced server-side too)
       completeJoin(n,true);
     }).catch(function(e){
-      err.textContent="Sign-in failed. Check your email and password.";
+      var msg="Sign-in failed.";
+      if(e&&e.code==="auth/user-not-found") msg="No account for that email.";
+      else if(e&&e.code==="auth/wrong-password") msg="Wrong password.";
+      else if(e&&e.code==="auth/invalid-email") msg="That email looks invalid.";
+      err.textContent=msg+" Try again.";
     });
   }
   function completeJoin(n,verified){
