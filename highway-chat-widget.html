@@ -629,7 +629,6 @@
       <input id="msg" placeholder="Type a message…" autocomplete="off" maxlength="2000" />
       <button id="clear" title="Clear all chat messages" style="background:#1a1214;border:1px solid rgba(248,113,113,.4);color:var(--red);font-weight:700;border-radius:12px;padding:0 14px;font-size:14px;cursor:pointer;">🗑</button>
       <button id="send">Send</button>
-      <span style="font-size:9px;opacity:.5">v251007d</span>
     </div>
   </div>
 
@@ -1227,7 +1226,7 @@
 <script>
 /* Highway ambient: procedural Web Audio (rain+pad+chords). */
 (function(){
-  var ctx = null, master = null, started = false;
+  var ctx = null, master = null, started = false, msd = null;
 
   // Jazz chord voicings (Rhodes-style, deep and spacious)
   // Each chord: array of frequencies (Hz)
@@ -1252,17 +1251,25 @@
     // Simple reverb via convolver with generated impulse
     var verb = ctx.createConvolver();
     verb.buffer = makeImpulse(3.5, 2.5);
-    var wet = ctx.createGain(); wet.gain.value = 0.6;
+    var wet = ctx.createGain(); wet.gain.value = 0.35;
     var dry = ctx.createGain(); dry.gain.value = 0.7;
     master.connect(dry); dry.connect(ctx.destination);
     master.connect(verb); verb.connect(wet); wet.connect(ctx.destination);
+    // iOS: route through a media element so the silent switch doesn't mute Web Audio
+    try{
+      msd=ctx.createMediaStreamDestination();
+      master.connect(msd);
+      var ael=new Audio();
+      ael.srcObject=msd.stream;
+      ael.play();
+    }catch(e){}
 
     startRain();
     startPad();
     scheduleChords();
 
     // Fade in 3s
-    master.gain.linearRampToValueAtTime(0.7, ctx.currentTime + 3);
+    master.gain.linearRampToValueAtTime(0.55, ctx.currentTime + 3);
   }
 
   function makeImpulse(dur, decay) {
@@ -1286,11 +1293,11 @@
     var src = ctx.createBufferSource();
     src.buffer = buf; src.loop = true;
     var bp = ctx.createBiquadFilter();
-    bp.type = "bandpass"; bp.frequency.value = 3200; bp.Q.value = 0.6;
-    var g = ctx.createGain(); g.gain.value = 0.22;
+    bp.type = "bandpass"; bp.frequency.value = 1500; bp.Q.value = 0.5;
+    var g = ctx.createGain(); g.gain.value = 0.07;
     // Slow rain swell LFO
     var lfo = ctx.createOscillator(); lfo.frequency.value = 0.07;
-    var lfoG = ctx.createGain(); lfoG.gain.value = 0.06;
+    var lfoG = ctx.createGain(); lfoG.gain.value = 0.03;
     lfo.connect(lfoG); lfoG.connect(g.gain); lfo.start();
     src.connect(bp); bp.connect(g); g.connect(master);
     src.start();
@@ -1306,7 +1313,7 @@
     var lfo = ctx.createOscillator(); lfo.frequency.value = 0.025;
     var lfoG = ctx.createGain(); lfoG.gain.value = 200;
     lfo.connect(lfoG); lfoG.connect(f.frequency); lfo.start();
-    var g = ctx.createGain(); g.gain.value = 0.18;
+    var g = ctx.createGain(); g.gain.value = 0.10;
     o1.connect(f); o2.connect(f); f.connect(g); g.connect(master);
     o1.start(); o2.start();
   }
@@ -1319,7 +1326,7 @@
       // Rhodes-ish: fast attack, long release
       var g = ctx.createGain();
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.28, t + 0.08 + i*0.03);
+      g.gain.linearRampToValueAtTime(0.16, t + 0.08 + i*0.03);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 9);
       // Gentle tremolo for Rhodes wobble
       var tr = ctx.createOscillator(); tr.frequency.value = 4.5;
@@ -1343,14 +1350,13 @@
     try{
       initAudio();
       if(!ctx)return;
-      var st=ctx.state,s=document.querySelector(".foot span");
-      if(s)s.textContent="🔊"+st;
+      var st=ctx.state;
       if(st==="running"){
         started=true;
         ["touchstart","touchend","click"].forEach(function(e){window.removeEventListener(e,unlock)});
         var o=ctx.createOscillator(),g=ctx.createGain();
         o.frequency.value=660;g.gain.value=0.5;
-        o.connect(g);g.connect(ctx.destination);
+        o.connect(g);g.connect(msd||ctx.destination);
         o.start();o.stop(ctx.currentTime+0.4);
       }else{ ctx.resume(); }
     }catch(e){ if(window.console)console.warn("unlock:",e); }
