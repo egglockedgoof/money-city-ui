@@ -437,6 +437,7 @@
     });
   }
   function completeJoin(n,verified){
+    try{ firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(e){}
     MY_NAME=n;
     try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); }catch(e){}
     mebadge.textContent=n+(verified?" ✓":"");
