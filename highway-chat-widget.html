@@ -1225,11 +1225,7 @@
 
 <!-- HIGHWAY AMBIENT SOUNDSCAPE -->
 <script>
-/* Highway Chat Ambient Soundscape
- * Deep jazz + rain + future. Procedural Web Audio, no files.
- * Rhodes-style chords (maj7/min9 voicings), filtered rain noise, sub-bass pad.
- * Designed to be injected AFTER the liquid redesign deploys.
- */
+/* Highway ambient: procedural Web Audio (rain+pad+chords). */
 (function(){
   var ctx = null, master = null, started = false;
 
@@ -1347,7 +1343,7 @@
     try {
       initAudio();
       if(!ctx)return;
-      var go=function(){started=true;["touchstart","touchend","click"].forEach(function(e){window.removeEventListener(e,unlock)});};
+      var go=function(){started=true;["touchstart","touchend","click"].forEach(function(e){window.removeEventListener(e,unlock)});var s=document.querySelector(".foot span");if(s)s.textContent+=" 🔊";};
       if(ctx.state==="suspended")ctx.resume().then(go,function(e){if(window.console)console.warn("ambient resume failed:",e);});
       else go();
     } catch (e) {
