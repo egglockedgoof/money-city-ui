@@ -1265,8 +1265,8 @@
     startPad();
     scheduleChords();
 
-    // Fade in over 8 seconds
-    master.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 8);
+    // Fade in over 3 seconds
+    master.gain.linearRampToValueAtTime(0.7, ctx.currentTime + 3);
   }
 
   function makeImpulse(dur, decay) {
@@ -1291,26 +1291,26 @@
     src.buffer = buf; src.loop = true;
     var bp = ctx.createBiquadFilter();
     bp.type = "bandpass"; bp.frequency.value = 3200; bp.Q.value = 0.6;
-    var g = ctx.createGain(); g.gain.value = 0.08;
+    var g = ctx.createGain(); g.gain.value = 0.22;
     // Slow rain swell LFO
     var lfo = ctx.createOscillator(); lfo.frequency.value = 0.07;
-    var lfoG = ctx.createGain(); lfoG.gain.value = 0.02;
+    var lfoG = ctx.createGain(); lfoG.gain.value = 0.06;
     lfo.connect(lfoG); lfoG.connect(g.gain); lfo.start();
     src.connect(bp); bp.connect(g); g.connect(master);
     src.start();
   }
 
   function startPad() {
-    // Deep sub-bass future pad: two detuned sines + slow filter sweep
-    var o1 = ctx.createOscillator(); o1.type = "sine"; o1.frequency.value = 55; // A1
-    var o2 = ctx.createOscillator(); o2.type = "sine"; o2.frequency.value = 55.4;
+    // Warm mid-bass future pad: two detuned sines + slow filter sweep (phone-audible range)
+    var o1 = ctx.createOscillator(); o1.type = "sine"; o1.frequency.value = 110; // A2
+    var o2 = ctx.createOscillator(); o2.type = "sine"; o2.frequency.value = 110.8;
     var f = ctx.createBiquadFilter();
-    f.type = "lowpass"; f.frequency.value = 220; f.Q.value = 2;
-    // Slow sweep 80Hz-400Hz over 40s
+    f.type = "lowpass"; f.frequency.value = 320; f.Q.value = 2;
+    // Slow sweep 120Hz-520Hz over 40s
     var lfo = ctx.createOscillator(); lfo.frequency.value = 0.025;
-    var lfoG = ctx.createGain(); lfoG.gain.value = 160;
+    var lfoG = ctx.createGain(); lfoG.gain.value = 200;
     lfo.connect(lfoG); lfoG.connect(f.frequency); lfo.start();
-    var g = ctx.createGain(); g.gain.value = 0.1;
+    var g = ctx.createGain(); g.gain.value = 0.18;
     o1.connect(f); o2.connect(f); f.connect(g); g.connect(master);
     o1.start(); o2.start();
   }
@@ -1323,7 +1323,7 @@
       // Rhodes-ish: fast attack, long release
       var g = ctx.createGain();
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.12, t + 0.08 + i*0.03);
+      g.gain.linearRampToValueAtTime(0.28, t + 0.08 + i*0.03);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 9);
       // Gentle tremolo for Rhodes wobble
       var tr = ctx.createOscillator(); tr.frequency.value = 4.5;
@@ -1337,8 +1337,8 @@
   function scheduleChords() {
     playChord(CHORDS[chordIdx]);
     chordIdx = (chordIdx + 1) % CHORDS.length;
-    // Next chord in 10-14 seconds (sparse, breathing)
-    setTimeout(scheduleChords, 10000 + Math.random()*4000);
+    // Next chord in 7-10 seconds (sparse, breathing)
+    setTimeout(scheduleChords, 7000 + Math.random()*3000);
   }
 
   // iOS audio unlock: init on first user gesture (touchstart is most reliable on iOS)
@@ -1346,14 +1346,10 @@
     if (started) return;
     try {
       initAudio();
-      if (ctx && ctx.state === "suspended") ctx.resume();
-      // Only mark started if we actually got a context
-      if (ctx) {
-        started = true;
-        window.removeEventListener("touchstart", unlock);
-        window.removeEventListener("touchend", unlock);
-        window.removeEventListener("click", unlock);
-      }
+      if(!ctx)return;
+      var go=function(){started=true;["touchstart","touchend","click"].forEach(function(e){window.removeEventListener(e,unlock)});};
+      if(ctx.state==="suspended")ctx.resume().then(go,function(e){if(window.console)console.warn("ambient resume failed:",e);});
+      else go();
     } catch (e) {
       // Don't mark started — allow retry on next gesture
       if (window.console) console.warn("HighwayAmbient unlock failed, will retry:", e);
