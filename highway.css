@@ -613,3 +613,30 @@ input, textarea, select, button{
 @media (max-width:640px){
   .shell{ height:var(--viewport-height, 100dvh); }
 }
+
+/* === FLEX-LOCK CHAT LAYOUT (iOS native-grade) === */
+.shell{
+  display:flex; flex-direction:column;
+  height:var(--viewport-height, 100dvh);
+  overflow:hidden;
+}
+.head{
+  flex-shrink:0;
+  position:sticky; top:0; z-index:10;
+  background-color:rgba(13,17,23,.8);
+  -webkit-backdrop-filter:blur(20px);
+  backdrop-filter:blur(20px);
+}
+#chat{
+  flex-grow:1; flex-shrink:1; flex-basis:0;
+  min-height:0;
+  overflow-y:auto; overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+}
+.foot{
+  flex-shrink:0;
+}
+.bubble{
+  -webkit-user-select:none; user-select:none;
+}
