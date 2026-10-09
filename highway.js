@@ -1031,3 +1031,27 @@ setInterval(applyMood, 600000);
     });
   }
 })();
+
+// ============ iOS PREMIUM: Visual Viewport + Haptics ============
+(function(){
+  // Keyboard-aware viewport
+  if (window.visualViewport) {
+    function updateViewport(){
+      document.documentElement.style.setProperty('--viewport-height', window.visualViewport.height + 'px');
+    }
+    window.visualViewport.addEventListener('resize', updateViewport);
+    updateViewport();
+  }
+  // Haptic feedback
+  window.hapticClick = function(){
+    try { if ('vibrate' in navigator) navigator.vibrate(15); } catch(e){}
+  };
+  // Attach to send button and tabs
+  document.addEventListener('DOMContentLoaded', function(){
+    var send = document.getElementById('send');
+    if (send) send.addEventListener('click', window.hapticClick);
+    document.querySelectorAll('.tab').forEach(function(t){
+      t.addEventListener('click', window.hapticClick);
+    });
+  });
+})();
