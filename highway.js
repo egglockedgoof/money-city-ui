@@ -1055,3 +1055,26 @@ setInterval(applyMood, 600000);
     });
   });
 })();
+
+// ============ FLEX-LOCK: auto-scroll + rubber-band guard ============
+(function(){
+  function scrollChatToBottom(){
+    var chat = document.getElementById('chat');
+    if (chat) chat.scrollTop = chat.scrollHeight;
+  }
+  // Snap to bottom when keyboard opens
+  var msgInput = document.getElementById('msg');
+  if (msgInput) {
+    msgInput.addEventListener('focus', function(){
+      setTimeout(scrollChatToBottom, 150);
+    });
+  }
+  // Kill global rubber-banding, preserve chat scroll
+  document.body.addEventListener('touchmove', function(e){
+    if (!e.target.closest('#chat')) {
+      e.preventDefault();
+    }
+  }, { passive:false });
+  // Expose for new message arrivals
+  window.scrollChatToBottom = scrollChatToBottom;
+})();
