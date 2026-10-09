@@ -558,6 +558,44 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
       if(v==="view-wins") loadWins();
     });
   });
+  /* Nexus DM — private MarrowSystemZ channel (Evolution 1). Self-contained:
+     own listener, renderer, and sender on the sin-only highway_dm collection.
+     The tab hides itself if the Firestore rules deny access. */
+  var nexusInit=false, nexusSeen={};
+  function nexusProbe(){
+    if(typeof db==="undefined"||!db){ setTimeout(nexusProbe,1000); return; }
+    db.collection("highway_dm").limit(1).get().then(function(){ attachNexus(); })
+    .catch(function(){ var b=document.querySelector('.tab[data-v="view-nexus"]'); if(b) b.style.display="none"; });
+  }
+  function renderNexusMsg(doc){
+    if(!doc||nexusSeen[doc.id]) return; nexusSeen[doc.id]=1;
+    var m=doc.data(); if(!m||!m.text) return;
+    var list=document.getElementById("nexuslist"); if(!list) return;
+    var mine=(m.name||"").toLowerCase()===String(MY_NAME||"").toLowerCase();
+    var row=document.createElement("div");
+    row.className="row "+(mine?"me-row":"them-row");
+    row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+'<span class=ts>'+fmtTime(m)+'</span></div><div class="bubble">'+pingify(m.text||"")+'</div></div>';
+    list.appendChild(row); scrollDown(list);
+  }
+  function attachNexus(){
+    if(nexusInit) return; nexusInit=true;
+    db.collection("highway_dm").orderBy("ts","desc").limit(100).onSnapshot(function(s){
+      s.docChanges().forEach(function(c){ if(c.type==="added") renderNexusMsg(c.doc); });
+    }, function(){ var b=document.querySelector('.tab[data-v="view-nexus"]'); if(b) b.style.display="none"; });
+    var btn=document.getElementById("nexussend"), box=document.getElementById("nexusmsg");
+    if(btn) btn.addEventListener("click", sendNexus);
+    if(box) box.addEventListener("keydown", function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendNexus(); } });
+  }
+  function sendNexus(){
+    var box=document.getElementById("nexusmsg"); if(!box) return;
+    var t=box.value.trim(); if(!t||!MY_NAME||!db) return;
+    box.value="";
+    db.collection("highway_dm").add({
+      name:MY_NAME, text:t.slice(0,2000), deviceId:DEVICE_ID,
+      ts:firebase.firestore.FieldValue.serverTimestamp(), tsNum:Date.now()
+    }).catch(function(e){ sysLine("Nexus send failed: "+(e.message||"permission denied")); box.value=t; });
+  }
+  nexusProbe();
   window.addEventListener("resize", moveGlider);
   setTimeout(moveGlider, 300);
 
