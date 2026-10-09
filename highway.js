@@ -558,10 +558,10 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
       if(v==="view-wins") loadWins();
     });
   });
-  /* Nexus DM — private MarrowSystemZ channel (Evolution 1). Self-contained:
+/* Nexus DM — private MarrowSystemZ channel (Evolution 1). Self-contained:
      own listener, renderer, and sender on the sin-only highway_dm collection.
      The tab hides itself if the Firestore rules deny access. */
-  var nexusInit=false, nexusSeen={};
+  var nexusInit=false, nexusSeen={}, nexusFirstSnap=true;
   function nexusProbe(){
     if(typeof db==="undefined"||!db){ setTimeout(nexusProbe,1000); return; }
     db.collection("highway_dm").limit(1).get().then(function(){ attachNexus(); })
@@ -580,7 +580,9 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
   function attachNexus(){
     if(nexusInit) return; nexusInit=true;
     db.collection("highway_dm").orderBy("ts","desc").limit(100).onSnapshot(function(s){
-      s.docChanges().forEach(function(c){ if(c.type==="added") renderNexusMsg(c.doc); });
+        var docs=[]; s.docChanges().forEach(function(c){ if(c.type==="added") docs.push(c.doc); });
+  if(nexusFirstSnap){ nexusFirstSnap=false; docs.reverse(); }
+  docs.forEach(renderNexusMsg);
     }, function(){ var b=document.querySelector('.tab[data-v="view-nexus"]'); if(b) b.style.display="none"; });
     var btn=document.getElementById("nexussend"), box=document.getElementById("nexusmsg");
     if(btn) btn.addEventListener("click", sendNexus);
