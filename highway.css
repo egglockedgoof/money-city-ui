@@ -573,3 +573,43 @@ body::after{
     flex:none !important;
   }
 }
+
+/* === iOS PREMIUM POLISH === */
+html, body{
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  background-color:#07090d;
+  overscroll-behavior-y:contain;
+}
+button, nav, .icon, .tab, .tab-bar{
+  -webkit-user-select:none; user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+button:active, a:active{ opacity:.7; transition:opacity .1s; }
+input, textarea, select, button{
+  -webkit-appearance:none; appearance:none;
+}
+/* Safe area for sticky footer */
+.foot{
+  padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px));
+  padding-left:calc(8px + env(safe-area-inset-left, 0px));
+  padding-right:calc(8px + env(safe-area-inset-right, 0px));
+}
+/* Isolate chat scroll */
+#chat{
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+}
+/* GPU acceleration for bubbles */
+.bubble, .row{
+  will-change:transform, opacity;
+  transform:translateZ(0);
+}
+/* Dynamic viewport for keyboard */
+.shell{
+  height:var(--viewport-height, 100dvh);
+}
+@media (max-width:640px){
+  .shell{ height:var(--viewport-height, 100dvh); }
+}
