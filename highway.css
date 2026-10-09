@@ -26,7 +26,8 @@ background:radial-gradient(circle, rgba(255,100,110,.14), rgba(193,18,31,.05) 40
 transition:opacity .6s var(--soft);
 opacity:0;
 }
-#msg, #name, #notes, #actin, #msgin{ font-size:16px !important; }
+#msg, #name, #notes, #actin, #msgin, #pw, #email, #password, #taskin{ font-size:16px !important; }
+input, textarea, select{ font-size:16px !important; }
 button, .tab, .tcheck{ touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
 .view, #chat{ -webkit-overflow-scrolling:touch; overscroll-behavior-y:contain; }
 .tab, #send, .msg, .trow, .arow{ transform:translateZ(0); }
