@@ -646,3 +646,10 @@ input, textarea, select, button{
 .shell{
   transition:height .1s ease-out;
 }
+
+/* === Streaming text hardening (iOS WebKit) === */
+.bubble{
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  white-space:pre-wrap;
+}
