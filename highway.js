@@ -39,7 +39,6 @@
       err=$("err"), sub=$("sub"), dot=$("livedot"), mebadge=$("mebadge"),
       presenceEl=$("presence"), typingEl=$("typing");
   var MY_NAME=null, db=null, seen={};
-  window.HighwayDB=function(){ return db; }; /* push IIFE reads db through this */
   var VOICE_REG={}; /* docId -> {b64, type} : voice audio out of the DOM */
   var EMOJIS=["🔥","❤️","👍","😂","💯","👀"];
   var OWNERS=["sin","grim"]; // co-owners of the Highway — case-insensitive
@@ -47,16 +46,15 @@
   function crownHtml(n){ return isOwner(n)?'<span class="crown" title="Owner">👑</span>':""; }
   function pingify(s){ return esc(s).replace(/@([a-z0-9_]+)/gi,'<span class="ping">@$1</span>'); }
 
-  function fmtTime(m){var n=m.tsNum||0;if(!n&&m.ts&&m.ts.toDate){try{n=m.ts.toDate().getTime();}catch(e){ warn(e); }}if(!n)return"";var d=new Date(n),h=d.getHours(),a=h>=12?"PM":"AM";return(h%12||12)+":"+("0"+d.getMinutes()).slice(-2)+" "+a;}
+  function fmtTime(m){var n=m.tsNum||0;if(!n)return"";var d=new Date(n),h=d.getHours(),a=h>=12?"PM":"AM";return(h%12||12)+":"+("0"+d.getMinutes()).slice(-2)+" "+a;}
   function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
-  function warn(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); }
   function safeUrl(u){ try{ var p=new URL(u,location.href); return (p.protocol==="http:"||p.protocol==="https:")?p.href:"#"; }catch(e){ return "#"; } }
 
 /* ============ QUESTS / WINS / AMBIENT (inside IIFE - needs db/esc/fmtTime) ============ */
 function loadQuests(){
   var el=document.getElementById("questlist"); if(!el||!db) return;
-  db.collection("highway_tasks").orderBy("ts","desc").limit(20).get().then(function(snap){
+  db.collection("highway_tasks").orderBy("tsNum","desc").limit(20).get().then(function(snap){
     var h='<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">\u2694\uFE0F QUEST BOARD</h3>';
     if(snap.empty){ h+='<p style="color:var(--muted);">No active quests. Add one from the Tasks tab.</p>'; }
     else snap.forEach(function(doc){
@@ -66,11 +64,11 @@ function loadQuests(){
         +'<div style="font-size:12px;color:var(--muted);">by '+esc(d.createdBy||"unknown")+'</div></div>';
     });
     el.innerHTML=h+'</div>';
-  }).catch(warn);
+  }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
 }
 function loadWins(){
   var el=document.getElementById("winlist"); if(!el||!db) return;
-  db.collection("highway_activity").orderBy("ts","desc").limit(30).get().then(function(snap){
+  db.collection("highway_activity").orderBy("tsNum","desc").limit(30).get().then(function(snap){
     var h='<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">\uD83C\uDFC6 WIN FEED</h3>', found=0;
     snap.forEach(function(doc){
       var d=doc.data()||{}, txt=(d.text||"").toLowerCase();
@@ -81,20 +79,18 @@ function loadWins(){
     });
     if(!found) h+='<p style="color:var(--muted);">No wins yet. Go get one.</p>';
     el.innerHTML=h+'</div>';
-  }).catch(warn);
+  }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
 }
 function updateAmbientStatus(){
   var el=document.getElementById("ambient"); if(!el||!db) return;
-  db.collection("highway_activity").orderBy("ts","desc").limit(5).get().then(function(snap){
+  db.collection("highway_activity").orderBy("tsNum","desc").limit(5).get().then(function(snap){
     var h="";
     snap.forEach(function(doc){ var d=doc.data()||{};
       h+='<span style="margin-right:12px;">'+esc(d.by||"")+': '+esc((d.text||"").slice(0,40))+'</span>'; });
     el.innerHTML=h||'<span style="color:var(--muted);">Quiet on the Highway...</span>';
-  }).catch(warn);
+  }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
 }
-var _ambientTimer=null;
-updateAmbientStatus();
-_ambientTimer=setInterval(updateAmbientStatus, 60000);
+setInterval(function(){ try{ updateAmbientStatus(); }catch(e){} }, 60000);
   function scrollDown(el){ requestAnimationFrame(function(){ el.scrollTop = el.scrollHeight; }); }
   function sysLine(t){
     var d=document.createElement("div"); d.className="sys"; d.textContent=t;
@@ -112,11 +108,20 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
   }
 
   /* ================= CHAT ================= */
-  function buildMsgRow(doc){
-    var m=doc.data(); if(!m) return null;
+  function renderMsg(doc){
+    var m=doc.data(); if(!m||seen[doc.id]) return; seen[doc.id]=1;
+    var _seenKeys=Object.keys(seen);
+    if(_seenKeys.length>500){
+      for(var _si=0;_si<200;_si++){ delete seen[_seenKeys[_si]]; var vid=_seenKeys[_si]; if(VOICE_REG[vid]) delete VOICE_REG[vid]; }
+    }
+    if(m.audio){ VOICE_REG[doc.id]={b64:m.audio, type:m.audioType||'audio/webm'}; }
     var mine=(m.deviceId===DEVICE_ID);
     var row=document.createElement("div");
     row.className="row "+(mine?"me-row":"them-row");
+    // Canonical sort key: numeric tsNum, doc ID as tie-breaker. Fixes voice/text ordering.
+    var _tsn = Number(m.tsNum) || 0;
+    row.setAttribute("data-ts", String(_tsn));
+    row.setAttribute("data-id", doc.id);
     var rxHtml="";
     var rx=m.reactions||{};
     Object.keys(rx).forEach(function(e){
@@ -129,7 +134,22 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
       '<span class=ts>'+fmtTime(m)+'</span></div>'+
       '<div class="bubble">'+(m.audio?'<button data-voice="'+doc.id+'" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+pingify(m.text||"")+'</div>'+
       '<div class="reacts">'+rxHtml+'</div></div>';
-    chat.appendChild(row);
+    // Sorted insertion: oldest at top, newest at bottom. Numeric tsNum, doc ID tie-breaker.
+    // This fixes out-of-order rendering when Firestore returns mixed-type or unsorted docs.
+    (function(){
+      var rows = chat.querySelectorAll(".row");
+      var inserted = false;
+      for(var i=0; i<rows.length; i++){
+        var rts = parseFloat(rows[i].getAttribute("data-ts") || "0");
+        var rid = rows[i].getAttribute("data-id") || "";
+        if(_tsn < rts || (_tsn === rts && doc.id < rid)){
+          chat.insertBefore(row, rows[i]);
+          inserted = true;
+          break;
+        }
+      }
+      if(!inserted) chat.appendChild(row);
+    })();
     /* Crimson pulse on new arrival: the room breathes */
     if(!mine){ row.classList.add("arrived"); setTimeout(function(){row.classList.remove("arrived");},1200); }
     row.querySelectorAll(".rx").forEach(function(el){
@@ -138,18 +158,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     row.querySelectorAll("[data-voice]").forEach(function(btn){
       btn.addEventListener("click", function(){ window.playVoice(btn.getAttribute("data-voice"), btn); });
     });
-    return row;
-  }
-  function renderMsg(doc){
-    if(!doc||seen[doc.id]) return; seen[doc.id]=1;
-    var _seenKeys=Object.keys(seen);
-    if(_seenKeys.length>500){
-      for(var _si=0;_si<200;_si++){ delete seen[_seenKeys[_si]]; var vid=_seenKeys[_si]; if(VOICE_REG[vid]) delete VOICE_REG[vid]; }
-    }
-    var m=doc.data(); if(!m) return;
-    if(m.audio){ VOICE_REG[doc.id]={b64:m.audio, type:m.audioType||'audio/webm'}; }
-    var row=buildMsgRow(doc);
-    if(row){ chat.appendChild(row); scrollDown(chat); }
+    scrollDown(chat);
   }
   var _pickerFor=null;
   function buildPicker(){
@@ -193,7 +202,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
         if(users.length) rx[emoji]=users; else delete rx[emoji];
         tx.update(ref,{reactions:rx});
       });
-    }).catch(warn);
+    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
   function sendMsg(){
     var t=msg.value.trim(); if(!t||!MY_NAME||!db) return;
@@ -209,7 +218,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
   }
 
   /* ================= VOICE MESSAGES ================= */
-  var _recorder=null, _chunks=[], _recording=false, _voiceTimer=null;
+  var _recorder=null, _chunks=[], _recording=false;
   var voiceBtn=$("voiceBtn");
   function toggleVoice(){
     if(_recording){ stopVoice(); return; }
@@ -232,8 +241,8 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
             name:MY_NAME, text:"🎤 voice message", deviceId:DEVICE_ID, reactions:{},
             audio:b64, audioType:_recorder.mimeType,
             ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
-          }).then(function(){ sysLine("Voice message sent."); })
-          .catch(function(e){ warn(e); sysLine("Voice send failed — try again."); });
+          });
+          sysLine("Voice message sent.");
         };
         reader.readAsDataURL(blob);
       };
@@ -242,39 +251,31 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
       voiceBtn.textContent="⏹"; voiceBtn.style.background="#7f1d1d";
       sysLine("Recording… tap ⏹ to send.");
       // Auto-stop at 30s
-      if(_voiceTimer) clearTimeout(_voiceTimer);
-      _voiceTimer=setTimeout(function(){ _voiceTimer=null; if(_recording) stopVoice(); }, 30000);
+      setTimeout(function(){ if(_recording) stopVoice(); }, 30000);
     }).catch(function(e){
       sysLine("Mic access denied.");
     });
   }
   function stopVoice(){
-    if(_voiceTimer){ clearTimeout(_voiceTimer); _voiceTimer=null; }
-    if(_recorder&&_recording){ try{ _recorder.stop(); }catch(e){ warn(e); } }
+    if(_recorder&&_recording){ _recorder.stop(); }
     _recording=false;
     voiceBtn.textContent="🎤"; voiceBtn.style.background="";
   }
   if(voiceBtn) voiceBtn.addEventListener("click", toggleVoice);
 
-  /* Play voice messages — one cached Audio per message id, no double-play */
-  var VOICE_AUDIO={};
+  /* Play voice messages */
   window.playVoice=function(id,btn){
-    var v=VOICE_REG[id]; if(!v){ sysLine("Voice data expired — reload to replay."); return; }
-    var audio=VOICE_AUDIO[id];
-    if(audio){
-      try{
-        if(audio.paused){ audio.play().catch(warn); btn.textContent="⏸"; }
-        else { audio.pause(); btn.textContent="▶ voice"; }
-      }catch(e){ warn(e); }
-      return;
-    }
+    var v=VOICE_REG[id]; if(!v){ sysLine("Voice data expired \u2014 reload to replay."); return; }
     try{
-      audio=new Audio("data:"+(v.type||"audio/webm")+";base64,"+v.b64);
-      VOICE_AUDIO[id]=audio;
+      var audio=new Audio("data:"+(v.type||"audio/webm")+";base64,"+v.b64);
       btn.textContent="⏸";
-      audio.onended=function(){ btn.textContent="▶ voice"; delete VOICE_AUDIO[id]; };
-      audio.onerror=function(){ btn.textContent="▶ voice"; delete VOICE_AUDIO[id]; };
-      audio.play().catch(function(){ btn.textContent="▶ voice"; delete VOICE_AUDIO[id]; });
+      audio.onended=function(){ btn.textContent="▶"; };
+      audio.play().catch(function(){ btn.textContent="▶"; });
+      // Toggle pause
+      btn.onclick=function(){
+        if(audio.paused){ audio.play(); btn.textContent="⏸"; }
+        else{ audio.pause(); btn.textContent="▶"; }
+      };
     }catch(e){ sysLine("Could not play voice message."); }
   };
 
@@ -287,47 +288,50 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     var _prevSess=parseInt(sessionStorage.getItem("hw_session")||"0",10)||0;
     TAB_SESSION=Math.max(Date.now(),_prevSess+1);
     sessionStorage.setItem("hw_session",String(TAB_SESSION));
-  }catch(e){ warn(e); }
-  function stopHeartbeat(){ if(_hbTimer){clearInterval(_hbTimer);_hbTimer=null;} if(_kickUnsub){_kickUnsub();_kickUnsub=null;} }
+  }catch(e){}
+  function stopHeartbeat(){ if(_hbTimer){clearInterval(_hbTimer);_hbTimer=null;} if(_kickTimer){clearInterval(_kickTimer);_kickTimer=null;} }
   function startHeartbeat(){
     stopHeartbeat(); _yielded=false; doBeat();
-    _hbTimer=setInterval(doBeat,60000);
-    _startKickListener(); }
+    _hbTimer=setInterval(doBeat,20000);
+    _kickTimer=setInterval(checkKicked,15000); }
   function kickDuplicates(){
     if(!db||!MY_NAME||_yielded) return;
     db.collection("highway_presence").where("name","==",MY_NAME).get().then(function(snap){
       snap.forEach(function(d){
         if(d.id===DEVICE_ID) return;
         var s=d.data()||{};
-        if((s.session||0) < TAB_SESSION) d.ref.delete().catch(warn);
+        if((s.session||0) < TAB_SESSION) d.ref.delete().catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
       });
-    }).catch(warn);
+    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
   function doBeat(){
     if(!db||!MY_NAME||_yielded) return;
     var myRef=db.collection("highway_presence").doc(DEVICE_ID);
     // New session takes over: claim presence, old tabs will see their doc gone and go quiet
-    myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp(), session:TAB_SESSION}, {merge:true}).catch(warn);
+    myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp(), session:TAB_SESSION}, {merge:true}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
     kickDuplicates();
   }
-  
-    var _kickUnsub=null; function _startKickListener(){ if(!db||!MY_NAME||_yielded||_kickUnsub) return; _kickUnsub=db.collection("highway_presence").doc(DEVICE_ID).onSnapshot(function(doc){ if(!doc.exists && !_yielded){ _yielded=true; stopHeartbeat(); } }, warn); } function _presenceCleanup(){
-    if(db){ try{ db.collection("highway_presence").doc(DEVICE_ID).delete().catch(warn); }catch(e){ warn(e); } }
+  function checkKicked(){
+    if(!db||!MY_NAME||_yielded) return;
+    // If our presence doc was deleted by a newer session, go idle silently
+    db.collection("highway_presence").doc(DEVICE_ID).get().then(function(doc){
+      if(!doc.exists && !_yielded){
+        _yielded=true; stopHeartbeat();
+        // Silent: no annoying message, just stop
+      }
+    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
-  window.addEventListener("beforeunload", _presenceCleanup);
-  window.addEventListener("pagehide", _presenceCleanup);
+  window.addEventListener("beforeunload", function(){
+    if(db) db.collection("highway_presence").doc(DEVICE_ID).delete().catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+  });
 
   /* ================= TYPING INDICATORS ================= */
-  var typingTimer=null, _typingState=false, _typingAt=0;
+  var typingTimer=null;
   function setTyping(on){
     if(!db||!MY_NAME) return;
-    on=!!on;
-    var now=Date.now();
-    if(on===_typingState && now-_typingAt<2000) return; /* throttle: state change or 2s */
-    _typingState=on; _typingAt=now;
     db.collection("highway_typing").doc(DEVICE_ID).set({
-      name:MY_NAME, typing:on, ts:firebase.firestore.FieldValue.serverTimestamp()
-    }, {merge:true}).catch(warn);
+      name:MY_NAME, typing:!!on, ts:firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
   }
 
   /* ================= TASKS ================= */
@@ -341,20 +345,20 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
       '<button class="tdel">×</button>';
     el.querySelector(".tcheck").addEventListener("change", function(e){
       if(e.target.checked){ el.classList.add("completing"); setTimeout(function(){el.classList.remove("completing");},650); }
-      db.collection("highway_tasks").doc(doc.id).update({done:e.target.checked}).catch(warn);
+      db.collection("highway_tasks").doc(doc.id).update({done:e.target.checked});
       if(db && MY_NAME){
         var action = e.target.checked ? "completed quest" : "reopened quest";
         db.collection("highway_activity").add({text:action+": "+(t.text||"").slice(0,200), by:MY_NAME,
-          ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(warn);
+          ts:firebase.firestore.FieldValue.serverTimestamp()});
       }
     });
     el.querySelector(".tdel").addEventListener("click", function(){
       if(confirm("Abandon this quest?")){
         var taskText = (t.text||"").slice(0,200);
-        db.collection("highway_tasks").doc(doc.id).delete().catch(warn);
+        db.collection("highway_tasks").doc(doc.id).delete();
         if(db && MY_NAME){
           db.collection("highway_activity").add({text:"abandoned quest: "+taskText, by:MY_NAME,
-            ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(warn);
+            ts:firebase.firestore.FieldValue.serverTimestamp()});
         }
       }
     });
@@ -368,7 +372,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     db.collection("highway_notes").doc("shared").set({
       content:$("notes").value.slice(0,20000),
       updatedBy:MY_NAME, ts:firebase.firestore.FieldValue.serverTimestamp()
-    }, {merge:true}).catch(warn);
+    }, {merge:true});
   }
 
   /* ================= ACTIVITY FEED ================= */
@@ -378,7 +382,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     db.collection("highway_activity").add({
       text:t.slice(0,300), by:MY_NAME,
       ts:firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(warn);
+    });
   }
 
   /* ================= GO LIVE ================= */
@@ -393,22 +397,16 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     dot.classList.remove("off"); sub.textContent="live";
     sysLine("Connected — chat, presence, tasks, notes & activity all sync live.");
 
-    db.collection("highway_messages").orderBy("ts","desc").limit(100)
+    db.collection("highway_messages").orderBy("tsNum","asc").limitToLast(100)
       .onSnapshot(function(s){ s.docChanges().forEach(function(c){
         if(c.type==="added") renderMsg(c.doc);
-        if(c.type==="modified"){ // reactions changed -> replace row in place
-          delete seen[c.doc.id];
-          var rows=chat.querySelectorAll(".row");
-          for(var i=0;i<rows.length;i++){
-            if(rows[i].innerHTML.indexOf('data-id="'+c.doc.id+'"')>=0){
-              var nr=buildMsgRow(c.doc);
-              if(nr){ rows[i].parentNode.replaceChild(nr, rows[i]); }
-              else { delete seen[c.doc.id]; }
-              break;
-            }
-          }
+        if(c.type==="modified"){ // reactions changed -> re-render
+          var old=document.querySelector('[data-id="'+c.doc.id+'"]');
+          if(old){ delete seen[c.doc.id]; var rows=chat.querySelectorAll(".row");
+            for(var i=0;i<rows.length;i++){ if(rows[i].innerHTML.indexOf('data-id="'+c.doc.id+'"')>=0){ rows[i].remove(); break; } }
+            renderMsg(c.doc); }
         }
-      }); }, function(e){ warn(e); dot.classList.add("off"); sub.textContent="reconnecting\u2026"; });
+      }); });
 
     var _presSnap=null;
     function renderPresence(){
@@ -416,12 +414,11 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
       var now=Date.now(), html="";
       _presSnap.forEach(function(d){
         var p=d.data(); if(!p||!p.ts) return;
-        try{ if(now-p.ts.toDate().getTime()<60000) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+(p.platform?' <span style="font-size:9px;opacity:.55">'+esc(p.platform)+'</span>':'')+'</span>'; }catch(e){ warn(e); }
+        try{ if(now-p.ts.toDate().getTime()<60000) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+(p.platform?' <span style="font-size:9px;opacity:.55">'+esc(p.platform)+'</span>':'')+'</span>'; }catch(e){}
       });
       presenceEl.innerHTML=html||'<span style="font-size:11px;color:var(--muted)">no one else here</span>';
     }
-    db.collection("highway_presence").onSnapshot(function(s){ _presSnap=s; renderPresence(); },
-      function(e){ warn(e); dot.classList.add("off"); });
+    db.collection("highway_presence").onSnapshot(function(s){ _presSnap=s; renderPresence(); });
     setInterval(renderPresence,15000);
 
     var _typeSnap=null;
@@ -431,13 +428,12 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
       _typeSnap.forEach(function(d){
         var t=d.data();
         if(t&&t.typing&&d.id!==DEVICE_ID){
-          try{ if(Date.now()-t.ts.toDate().getTime()<8000) names.push(t.name); }catch(e){ warn(e); }
+          try{ if(Date.now()-t.ts.toDate().getTime()<8000) names.push(t.name); }catch(e){}
         }
       });
       typingEl.textContent=names.length?names.join(", ")+(names.length>1?" are":" is")+" typing…":"";
     }
-    db.collection("highway_typing").onSnapshot(function(s){ _typeSnap=s; renderTyping(); },
-      function(e){ warn(e); });
+    db.collection("highway_typing").onSnapshot(function(s){ _typeSnap=s; renderTyping(); });
     setInterval(renderTyping,5000);
 
     db.collection("highway_tasks").orderBy("ts","asc")
@@ -448,7 +444,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
           +'<div style="font-size:32px;margin-bottom:12px;">⚔️</div>'
           +'<div style="font-size:15px;font-weight:600;color:var(--txt);margin-bottom:6px;">No quests on the board</div>'
           +'<div style="font-size:13px;">Every legend starts with a single step.<br>Set your first quest above.</div></div>';
-      }, function(e){ warn(e); });
+      });
 
     db.collection("highway_notes").doc("shared")
       .onSnapshot(function(s){
@@ -458,7 +454,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
           $("notes").value=d.content||"";
         }
         $("notes-meta").textContent=d.updatedBy?("last edited by "+d.updatedBy):"";
-      }, function(e){ warn(e); });
+      });
 
     db.collection("highway_activity").orderBy("ts","desc").limit(30)
       .onSnapshot(function(s){
@@ -473,17 +469,17 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
           +'<div style="font-size:32px;margin-bottom:12px;">📜</div>'
           +'<div style="font-size:15px;font-weight:600;color:var(--txt);margin-bottom:6px;">The story hasn\'t begun</div>'
           +'<div style="font-size:13px;">Every message, quest, and moment<br>will be written here.</div></div>';
-      }, function(e){ warn(e); });
+      });
 
     startHeartbeat();
   }
 
   /* ================= PASSWORD GATE ================= */
   var _PW="TheEnd";
-  try{ if(sessionStorage.getItem("hw_pw")==="1"){ $("pwgate").style.display="none"; $("gate").style.display="flex"; } }catch(e){ warn(e); }
+  try{ if(sessionStorage.getItem("hw_pw")==="1"){ $("pwgate").style.display="none"; $("gate").style.display="flex"; } }catch(e){}
   function tryPw(){
     if($("pw").value===_PW){
-      try{ sessionStorage.setItem("hw_pw","1"); }catch(e){ warn(e); }
+      try{ sessionStorage.setItem("hw_pw","1"); }catch(e){}
       $("pwgate").style.display="none";
       $("gate").style.display="flex";
       $("name").focus();
@@ -512,7 +508,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     var pw=$("password").value;
     if(!email||!pw){ err.textContent="Enter your email and password."; return; }
     err.textContent="Verifying...";
-    try{ firebase.initializeApp(FIREBASE_CONFIG); }catch(e){ warn(e); }
+    try{ firebase.initializeApp(FIREBASE_CONFIG); }catch(e){}
     firebase.auth().signInWithEmailAndPassword(email,pw).then(function(cred){
       // Name must match the account's allowed name (enforced server-side too)
       completeJoin(n,true);
@@ -525,9 +521,9 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     });
   }
   function completeJoin(n,verified){
-    try{ firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(e){ warn(e); }
+    try{ firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(e){}
     MY_NAME=n;
-    try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); }catch(e){ warn(e); }
+    try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); }catch(e){}
     mebadge.textContent=n+(verified?" ✓":"");
     gate.style.display="none";
     kickDuplicates();
@@ -558,46 +554,6 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
       if(v==="view-wins") loadWins();
     });
   });
-/* Nexus DM — private MarrowSystemZ channel (Evolution 1). Self-contained:
-     own listener, renderer, and sender on the sin-only highway_dm collection.
-     The tab hides itself if the Firestore rules deny access. */
-  var nexusInit=false, nexusSeen={}, nexusFirstSnap=true;
-  function nexusProbe(){
-    if(typeof db==="undefined"||!db){ setTimeout(nexusProbe,1000); return; }
-    db.collection("highway_dm").limit(1).get().then(function(){ attachNexus(); })
-    .catch(function(){ var b=document.querySelector('.tab[data-v="view-nexus"]'); if(b) b.style.display="none"; });
-  }
-  function renderNexusMsg(doc){
-    if(!doc||nexusSeen[doc.id]) return; nexusSeen[doc.id]=1;
-    var m=doc.data(); if(!m||!m.text) return;
-    var list=document.getElementById("nexuslist"); if(!list) return;
-    var mine=(m.name||"").toLowerCase()===String(MY_NAME||"").toLowerCase();
-    var row=document.createElement("div");
-    row.className="row "+(mine?"me-row":"them-row");
-    row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+'<span class=ts>'+fmtTime(m)+'</span></div><div class="bubble">'+pingify(m.text||"")+'</div></div>';
-    list.appendChild(row); scrollDown(list);
-  }
-  function attachNexus(){
-    if(nexusInit) return; nexusInit=true;
-    db.collection("highway_dm").orderBy("ts","desc").limit(100).onSnapshot(function(s){
-        var docs=[]; s.docChanges().forEach(function(c){ if(c.type==="added") docs.push(c.doc); });
-  if(nexusFirstSnap){ nexusFirstSnap=false; docs.reverse(); }
-  docs.forEach(renderNexusMsg);
-    }, function(){ var b=document.querySelector('.tab[data-v="view-nexus"]'); if(b) b.style.display="none"; });
-    var btn=document.getElementById("nexussend"), box=document.getElementById("nexusmsg");
-    if(btn) btn.addEventListener("click", sendNexus);
-    if(box) box.addEventListener("keydown", function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendNexus(); } });
-  }
-  function sendNexus(){
-    var box=document.getElementById("nexusmsg"); if(!box) return;
-    var t=box.value.trim(); if(!t||!MY_NAME||!db) return;
-    box.value="";
-    db.collection("highway_dm").add({
-      name:MY_NAME, text:t.slice(0,2000), deviceId:DEVICE_ID,
-      ts:firebase.firestore.FieldValue.serverTimestamp(), tsNum:Date.now()
-    }).catch(function(e){ sysLine("Nexus send failed: "+(e.message||"permission denied")); box.value=t; });
-  }
-  nexusProbe();
   window.addEventListener("resize", moveGlider);
   setTimeout(moveGlider, 300);
 
@@ -607,13 +563,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
   function loadNews(){
     var list=$("newslist"); if(!list) return;
     list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Pulling the money moves…</div>';
-    var ctl=null, to=null;
-    try{ if(window.AbortController){ ctl=new AbortController(); to=setTimeout(function(){ try{ctl.abort();}catch(e){ warn(e); } },10000); } }catch(e){ warn(e); }
-    fetch(NEWS_URL, ctl?{signal:ctl.signal}:{}).then(function(r){
-      if(to) clearTimeout(to);
-      if(!r.ok) throw new Error("news HTTP "+r.status);
-      return r.json();
-    }).then(function(d){
+    fetch(NEWS_URL).then(function(r){ return r.json(); }).then(function(d){
       newsLoadedAt=Date.now();
       var items=(d&&d.items)||[];
       if(!items.length){ list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Markets are quiet right now.</div>'; return; }
@@ -632,8 +582,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
           +'<span class="ntitle">'+esc(n.title||"")+'</span>'+desc+'</span></a>';
       });
       list.innerHTML=html;
-    }).catch(function(e){
-      if(e&&e.name!=="AbortError") warn(e);
+    }).catch(function(){
       list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Feed is warming up — open the tab again in a minute.</div>';
     });
   }
@@ -669,9 +618,9 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     var t=$("taskin").value.trim(); if(!t||!db||!MY_NAME) return;
     $("taskin").value="";
     db.collection("highway_tasks").add({text:t.slice(0,300),done:false,createdBy:MY_NAME,
-      ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(warn);
+      ts:firebase.firestore.FieldValue.serverTimestamp()});
     db.collection("highway_activity").add({text:"started quest: "+t.slice(0,200), by:MY_NAME,
-      ts:firebase.firestore.FieldValue.serverTimestamp()}).catch(warn);
+      ts:firebase.firestore.FieldValue.serverTimestamp()});
   });
   $("taskin").addEventListener("keydown", function(e){ if(e.key==="Enter") $("taskadd").click(); });
 
@@ -686,6 +635,13 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
 
   nameIn.focus();
 }
+
+
+
+
+
+
+
 
 )();
 
@@ -739,10 +695,8 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
   document.addEventListener('touchstart', function(e){
     if (e.touches.length > 0) showGlow(e.touches[0].clientX, e.touches[0].clientY);
   }, { passive:true });
-  var _glowRaf=false, _glowX=0, _glowY=0;
   document.addEventListener('mousemove', function(e){
-    _glowX=e.clientX; _glowY=e.clientY;
-    if(!_glowRaf){ _glowRaf=true; requestAnimationFrame(function(){ _glowRaf=false; showGlow(_glowX,_glowY); }); }
+    showGlow(e.clientX, e.clientY);
   }, { passive:true });
 })();
 
@@ -752,7 +706,6 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
   var VAPID_PUBLIC = "BEm8B9zNCKOVR7_nvgrVOrBiVUJTnWTdLkn23Wk---Y03oqTXMDjXwvTliytNJBN412Z8gU7O29YGPpTke0Papk";
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
-  function hashStr(s){ var h=5381; for(var i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))|0; } return (h>>>0).toString(36); }
   function urlB64ToUint8(base64String) {
     var padding = '='.repeat((4 - base64String.length % 4) % 4);
     var base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
@@ -786,17 +739,16 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
       var btn = document.getElementById('pushbell');
       if (btn) { btn.textContent = '\uD83D\uDD14'; btn.title = 'Notifications on'; }
       var subJson = sub.toJSON();
-      var pdb = (typeof window.HighwayDB === 'function') ? window.HighwayDB() : null;
-      if (pdb) {
+      if (typeof db !== 'undefined' && db) {
         var myName = 'anon';
-        try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){ warn(e); }
-        pdb.collection('highway_push_subs').doc('push_' + hashStr(sub.endpoint)).set({
+        try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
+        db.collection('highway_push_subs').doc(btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').substring(0,60)).set({
           endpoint: sub.endpoint,
           keys: subJson.keys,
           name: myName,
           platform: navigator.platform || 'unknown',
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true }).catch(function(e){ warn('push save failed', e); });
+        }, { merge: true });
       }
     }).catch(function(err){ console.warn('push subscribe failed', err); });
   }
@@ -807,7 +759,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
 
 /* Highway ambient: procedural Web Audio (rain+pad+chords). */
 (function(){
-  var ctx = null, master = null, started = false, _activeChord = null, mediaEl = null, msd = null;
+  var ctx = null, master = null, started = false;
 
   var CHORDS = [
     [220.00, 246.94, 329.63],  // Am(add9)
@@ -827,17 +779,12 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     master = ctx.createGain();
     master.gain.value = 0.0; // start silent, fade in
 
-    // Limiter: prevent clipping when rain+pad+chords+dove stack
-    var comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -18; comp.ratio.value = 8;
-    master.connect(comp); try{msd=ctx.createMediaStreamDestination();comp.connect(msd);mediaEl=document.createElement("audio");mediaEl.setAttribute("playsinline","");mediaEl.style.cssText="position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;";mediaEl.srcObject=msd.stream;(document.body||document.documentElement).appendChild(mediaEl);}catch(e){comp.connect(ctx.destination);warn(e);}
-
     var verb = ctx.createConvolver();
     verb.buffer = makeImpulse(3.5, 2.5);
     var wet = ctx.createGain(); wet.gain.value = 0.35;
     var dry = ctx.createGain(); dry.gain.value = 0.7;
-    master.connect(dry); dry.connect(comp);
-    master.connect(verb); verb.connect(wet); wet.connect(comp);
+    master.connect(dry); dry.connect(ctx.destination);
+    master.connect(verb); verb.connect(wet); wet.connect(ctx.destination);
 
     startRain();
     startPad();
@@ -891,42 +838,28 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
 
   function playChord(freqs) {
     var t = ctx.currentTime;
-    // Fade out any still-ringing chord before starting the new one (no overlap glitch)
-    if (_activeChord) { try { _activeChord.gain.gain.cancelScheduledValues(t); _activeChord.gain.gain.setValueAtTime(_activeChord.gain.gain.value, t); _activeChord.gain.gain.linearRampToValueAtTime(0.0001, t + 0.8); } catch(e){ warn(e); } }
-    var chordGain = ctx.createGain();
-    chordGain.gain.value = 1;
-    chordGain.connect(master);
-    _activeChord = { gain: chordGain }; setTimeout(function(){try{chordGain.disconnect();}catch(e){}},9000);
     freqs.forEach(function(fr, i){
       var o = ctx.createOscillator();
       o.type = "sine"; o.frequency.value = fr;
       var g = ctx.createGain();
       g.gain.setValueAtTime(0, t);
       g.gain.linearRampToValueAtTime(0.10, t + 0.6 + i*0.15);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 8);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 12);
       var tr = ctx.createOscillator(); tr.frequency.value = 3;
       var trG = ctx.createGain(); trG.gain.value = 0.008;
-      tr.connect(trG); trG.connect(g.gain); tr.start(t); tr.stop(t+8.5);
-      o.connect(g); g.connect(chordGain);
-      o.start(t); o.stop(t + 8.5);
+      tr.connect(trG); trG.connect(g.gain); tr.start(t); tr.stop(t+12.5);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + 12.5);
     });
   }
 
   function scheduleChords() {
-    // Skip when tab hidden or ctx suspended — prevents pileup glitch on resume
-    if(!document.hidden && ctx && ctx.state==="running"){
-      playChord(CHORDS[chordIdx]);
-      chordIdx = (chordIdx + 1) % CHORDS.length;
-    }
-    setTimeout(scheduleChords, 9000 + Math.random()*3000);
+    playChord(CHORDS[chordIdx]);
+    chordIdx = (chordIdx + 1) % CHORDS.length;
+    setTimeout(scheduleChords, 6000 + Math.random()*3000);
   }
 
   function dove(){
-    // Skip when tab hidden or ctx suspended — prevents pileup glitch on resume
-    if(document.hidden || !ctx || ctx.state!=="running"){
-      setTimeout(dove,15000+Math.random()*20000);
-      return;
-    }
     var t=ctx.currentTime;
     [520,640,540].forEach(function(f,i){
       var o=ctx.createOscillator(),g=ctx.createGain(),tt=t+i*0.55;
@@ -939,11 +872,11 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     setTimeout(dove,15000+Math.random()*20000);
   }
 
-  function kickMedia(){if(!mediaEl)return;try{var p=mediaEl.play();if(p&&p.catch)p.catch(function(){});}catch(e){}} function unlock(){
-     if(started)return;
+  function unlock(){
+    if(started)return;
     try{
       initAudio();
-      if(!ctx)return; kickMedia();
+      if(!ctx)return;
       var st=ctx.state;
       if(st==="running"){
         started=true;
@@ -953,7 +886,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
   }
   window.addEventListener("touchstart", unlock, {passive: true});
   window.addEventListener("touchend", unlock, false);
-  window.addEventListener("click", unlock, false); window.addEventListener("touchstart", kickMedia, {passive: true}); window.addEventListener("click", kickMedia, false);
+  window.addEventListener("click", unlock, false);
 
   function tone(f,d,v){
     if(!ctx||!started)return;
@@ -964,7 +897,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
       g.gain.exponentialRampToValueAtTime(v,t+0.015);
       g.gain.exponentialRampToValueAtTime(0.0001,t+d);
       o.connect(g);g.connect(master);o.start(t);o.stop(t+d+0.05);
-    }catch(e){ warn(e); }
+    }catch(e){}
   }
   function thock(){
     if(!ctx||!started)return;
@@ -977,7 +910,7 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
           g=ctx.createGain();g.gain.value=0.16;
       s.connect(f);f.connect(g);g.connect(master);s.start(t);
       tone(175+Math.random()*45,0.09,0.12);
-    }catch(e){ warn(e); }
+    }catch(e){}
   }
   function shimmer(){
     tone(523.25,1.4,0.045);
@@ -989,12 +922,10 @@ _ambientTimer=setInterval(updateAmbientStatus, 60000);
     if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA")&&t.type!=="password"&&t.type!=="checkbox")thock();
   });
 
-  document.addEventListener("visibilitychange", function(){
-    if(!ctx) return;
-    try{ if(document.hidden){ ctx.suspend(); } else if(started){ ctx.resume(); kickMedia(); } }catch(e){ warn(e); }
-  });
   window.HighwayAmbient = { init: function(){ unlock(); }, thock:thock, shimmer:shimmer, sendChime:sendChime, tone:tone };
 })();
+
+
 
 
 // ============ ROOM MOODS ============

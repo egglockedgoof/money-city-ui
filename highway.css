@@ -494,3 +494,34 @@ body::after{
 
 #msg{ resize:none; overflow-y:auto; max-height:120px; line-height:1.4; font-family:inherit; }
 #msg::-webkit-scrollbar{ width:0; }
+
+/* ============ MOBILE LAYOUT HARDENING (2026-10-08) ============ */
+/* Fixes intermittent collapse where .shell squeezes to a narrow strip.
+   The base .shell{width:min(600px,100%)} rule (line ~143) overrides the
+   @media(max-width:640px) .shell{width:100%} because it appears later
+   in the file at equal specificity. This block comes last and wins. */
+@media (max-width:640px){
+  .shell{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    flex:none !important;
+    margin:0 !important;
+  }
+  body{
+    padding:0 !important;
+    width:100% !important;
+  }
+  html, body{
+    width:100% !important;
+    overflow-x:hidden !important;
+  }
+  /* Prevent flex children from forcing overflow */
+  .head, .tabs, .view, #chat, .foot{
+    min-width:0 !important;
+    max-width:100% !important;
+  }
+  .bwrap{
+    min-width:0 !important;
+  }
+}
