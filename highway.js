@@ -1078,3 +1078,32 @@ setInterval(applyMood, 600000);
   // Expose for new message arrivals
   window.scrollChatToBottom = scrollChatToBottom;
 })();
+
+// ============ Streaming render buffer (rAF) ============
+// Prevents iOS frame drops when models dump tokens fast.
+// Queue chunks, render synced to display refresh rate.
+(function(){
+  var tokenQueue = [];
+  var isRendering = false;
+  function renderLoop(){
+    if (tokenQueue.length > 0) {
+      var chunk = tokenQueue.shift();
+      var bubble = document.querySelector('.bubble.streaming:last-child');
+      if (bubble) {
+        bubble.textContent += chunk;
+        var chat = document.getElementById('chat');
+        if (chat) chat.scrollTop = chat.scrollHeight;
+      }
+      requestAnimationFrame(renderLoop);
+    } else {
+      isRendering = false;
+    }
+  }
+  window.streamToken = function(textChunk){
+    tokenQueue.push(textChunk);
+    if (!isRendering) {
+      isRendering = true;
+      requestAnimationFrame(renderLoop);
+    }
+  };
+})();
