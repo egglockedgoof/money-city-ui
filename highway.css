@@ -525,3 +525,46 @@ body::after{
     min-width:0 !important;
   }
 }
+
+/* ============ MOBILE NAVIGATION + HEADER + COMPOSER (2026-10-08) ============ */
+/* 7 tabs with icon+text don't fit 390px: switch to icon-only on mobile.
+   Preserves the pill aesthetic; text hidden via font-size:0 (SVGs keep explicit size).
+   Buttons already have accessible names via their text content. */
+@media (max-width:640px){
+  .tab{
+    font-size:0 !important;
+    padding:10px 2px !important;
+    min-width:0 !important;
+  }
+  .tab svg{
+    width:20px !important;
+    height:20px !important;
+  }
+  /* Header: let the title shrink instead of pushing siblings off-screen */
+  .head h1{
+    min-width:0 !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    white-space:nowrap !important;
+  }
+  .head-top{
+    gap:8px !important;
+  }
+  /* Composer: reclaim space for the text input */
+  .foot{
+    gap:6px !important;
+    padding:6px !important;
+  }
+  #msg{
+    min-width:0 !important;
+    padding:10px 14px !important;
+  }
+  #clear, #voiceBtn{
+    padding:0 10px !important;
+    flex:none !important;
+  }
+  #send{
+    padding:10px 14px !important;
+    flex:none !important;
+  }
+}
