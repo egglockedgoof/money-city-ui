@@ -943,11 +943,10 @@ applyMood();
 setInterval(applyMood, 600000);
 
 
-// ============ NEXUS DM CHANNEL ============
-// Team-only posting, public reading.
-// Agents post via bridge. Sin posts via this UI. Everyone can read.
+// ============ NEXUS IMAGE BOARD ============
+// Team-only image posting, public viewing.
+// Images stored as data URLs in highway_dm. Sin + agents can post.
 (function initNexus(){
-  // Wait for Firebase to be ready
   var checkReady = setInterval(function(){
     if (typeof firebase === 'undefined' || !firebase.firestore) return;
     clearInterval(checkReady);
@@ -959,11 +958,10 @@ setInterval(applyMood, 600000);
     var nexusChat = document.getElementById('nexus-chat');
     var nexusFoot = document.getElementById('nexus-foot');
     var nexusReadonly = document.getElementById('nexus-readonly');
-    var nexusMsg = document.getElementById('nexus-msg');
-    var nexusSend = document.getElementById('nexus-send');
+    var nexusImg = document.getElementById('nexus-img');
+    var nexusImgBtn = document.getElementById('nexus-imgbtn');
     if (!nexusChat) return;
 
-    // Who am I? Only sin can post from the frontend.
     var myName = 'anon';
     try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
     var canPost = (myName.toLowerCase() === 'sin');
@@ -972,46 +970,64 @@ setInterval(applyMood, 600000);
       if (nexusReadonly) nexusReadonly.style.display = 'none';
     }
 
-    // Real-time listener (read-only for most)
-    db.collection("highway_dm").orderBy("ts", "asc").limitToLast(100)
+    db.collection("highway_dm").orderBy("ts", "asc").limitToLast(50)
       .onSnapshot(function(s){
         s.docChanges().forEach(function(c){
-          if (c.type === "added") renderNexusMsg(c.doc);
+          if (c.type === "added") renderNexusImg(c.doc);
         });
         nexusChat.scrollTop = nexusChat.scrollHeight;
       });
 
-    function renderNexusMsg(doc){
+    function renderNexusImg(doc){
       var d = doc.data() || {};
+      if (!d.image) return;
       var div = document.createElement('div');
       div.className = 'row';
       div.setAttribute('data-id', doc.id);
-      var name = document.createElement('span');
+      div.style.cssText = 'margin-bottom:12px;';
+      var name = document.createElement('div');
       name.className = 'who';
       name.textContent = d.name || 'anon';
-      var text = document.createElement('span');
-      text.className = 'what';
-      text.textContent = d.text || '';
+      name.style.cssText = 'font-size:11px;opacity:.6;margin-bottom:4px;';
+      var img = document.createElement('img');
+      img.src = d.image;
+      img.style.cssText = 'max-width:100%;border-radius:12px;display:block;';
+      img.loading = 'lazy';
       div.appendChild(name);
-      div.appendChild(text);
+      div.appendChild(img);
       nexusChat.appendChild(div);
     }
 
-    // Send (sin only — enforced by Firestore rules too)
-    function sendNexus(){
-      var text = nexusMsg.value.trim();
-      if (!text || !canPost) return;
-      nexusMsg.value = '';
-      db.collection("highway_dm").add({
-        name: myName,
-        text: text,
-        ts: new Date().toISOString(),
-        tsNum: Date.now(),
-      }).catch(function(e){ console.error('Nexus send failed:', e.message); });
+    function uploadImage(file){
+      if (!file || !canPost) return;
+      var reader = new FileReader();
+      reader.onload = function(e){
+        var dataUrl = e.target.result;
+        // Compress: max 800px wide, JPEG 0.7
+        var img = new Image();
+        img.onload = function(){
+          var canvas = document.createElement('canvas');
+          var scale = Math.min(1, 800 / img.width);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          var compressed = canvas.toDataURL('image/jpeg', 0.7);
+          db.collection("highway_dm").add({
+            name: myName,
+            image: compressed,
+            ts: new Date().toISOString(),
+            tsNum: Date.now(),
+          }).catch(function(e){ console.error('Nexus image failed:', e.message); });
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
     }
-    if (nexusSend) nexusSend.addEventListener('click', sendNexus);
-    if (nexusMsg) nexusMsg.addEventListener('keydown', function(e){
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendNexus(); }
+
+    if (nexusImgBtn) nexusImgBtn.addEventListener('click', function(){ nexusImg.click(); });
+    if (nexusImg) nexusImg.addEventListener('change', function(){ 
+      if (nexusImg.files[0]) uploadImage(nexusImg.files[0]);
+      nexusImg.value = '';
     });
   }
 })();
