@@ -129,10 +129,36 @@ setInterval(function(){ try{ updateAmbientStatus(); }catch(e){} }, 60000);
       rxHtml+='<span class="rx'+(users.indexOf(MY_NAME)>=0?" mine":"")+'" data-id="'+doc.id+'" data-e="'+esc(e)+'">'+esc(e)+' '+(users.length||"")+'</span>';
     });
     rxHtml+='<span class="rx rx-add" data-id="'+doc.id+'" data-e="__pick__">＋</span>';
+    // Long messages: the doc carries the FULL text (no split, no attachment).
+    // Collapse beyond 1000 chars for readability — tap-to-expand reveals the
+    // rest inline from already-loaded data, no fetch needed.
+    var _msgText=m.text||"";
+    var _COLLAPSE_AT=1000;
+    var _isLong=_msgText.length>_COLLAPSE_AT;
+    var _shownText=_isLong?_msgText.slice(0,_COLLAPSE_AT):_msgText;
+    var attHtml="";
+    // File attachments (Cloudinary CDN): render inline by type.
+    var _atts=(m.attachments&&m.attachments.length)?m.attachments:[];
+    _atts.forEach(function(a){
+      var _u=esc(a.download_url||""), _fn=esc(a.filename||"file"), _mt=String(a.mime_type||"");
+      if(!_u) return;
+      if(_mt.indexOf("image/")===0||a.is_image){
+        attHtml+='<a href="'+_u+'" target="_blank" rel="noopener"><img src="'+_u+'" alt="'+_fn+'" loading="lazy" style="max-width:100%;max-height:320px;border-radius:10px;margin-top:6px;display:block;" /></a>';
+      } else if(_mt.indexOf("audio/")===0){
+        attHtml+='<audio controls preload="metadata" src="'+_u+'" style="width:100%;margin-top:6px;display:block;min-height:44px;"></audio><div style="font-size:11px;color:var(--muted);margin-top:2px;">🎵 '+_fn+'</div>';
+      } else if(_mt.indexOf("video/")===0){
+        attHtml+='<video controls preload="metadata" src="'+_u+'" style="max-width:100%;max-height:320px;border-radius:10px;margin-top:6px;display:block;"></video>';
+      } else {
+        attHtml+='<a href="'+_u+'" target="_blank" rel="noopener" download="'+_fn+'" style="display:block;margin-top:6px;padding:10px 14px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.35);border-radius:10px;color:#fff;text-decoration:none;font-size:14px;">📎 '+_fn+'</a>';
+      }
+    });
+    if(_isLong){
+      attHtml+='<button class="fulltext-btn" style="background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:15px;cursor:pointer;margin-top:6px;display:block;">📄 long message — tap to expand</button>';
+    }
     row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+
       (mine?"":'<span class="ver">VERIFIED</span>')+crownHtml(m.name)+
       '<span class=ts>'+fmtTime(m)+'</span></div>'+
-      '<div class="bubble">'+(m.audio?'<button data-voice="'+doc.id+'" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+pingify(m.text||"")+'</div>'+
+      '<div class="bubble">'+(m.audio?'<button data-voice="'+doc.id+'" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+'<span class="msg-text">'+pingify(_shownText)+'</span>'+attHtml+'</div>'+
       '<div class="reacts">'+rxHtml+'</div></div>';
     // Sorted insertion: oldest at top, newest at bottom. Numeric tsNum, doc ID tie-breaker.
     // This fixes out-of-order rendering when Firestore returns mixed-type or unsorted docs.
@@ -157,6 +183,21 @@ setInterval(function(){ try{ updateAmbientStatus(); }catch(e){} }, 60000);
     });
     row.querySelectorAll("[data-voice]").forEach(function(btn){
       btn.addEventListener("click", function(){ window.playVoice(btn.getAttribute("data-voice"), btn); });
+    });
+    row.querySelectorAll(".fulltext-btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var txtSpan=btn.parentNode.querySelector(".msg-text");
+        var expanded=btn.getAttribute("data-expanded")==="1";
+        if(expanded){
+          btn.setAttribute("data-expanded","0");
+          btn.textContent="📄 long message — tap to expand";
+          if(txtSpan) txtSpan.innerHTML=pingify(_shownText);
+        } else {
+          btn.setAttribute("data-expanded","1");
+          btn.textContent="📄 tap to collapse";
+          if(txtSpan) txtSpan.innerHTML=pingify(_msgText);
+        }
+      });
     });
     scrollDown(chat);
   }
@@ -205,11 +246,19 @@ setInterval(function(){ try{ updateAmbientStatus(); }catch(e){} }, 60000);
     }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
   function sendMsg(){
-    var t=msg.value.trim(); if(!t||!MY_NAME||!db) return;
+    var t=msg.value.trim();
+    // Attachment flow: staged file uploads to Cloudinary first, then the
+    // message posts with the attachment metadata. Handled by the attach module.
+    if(window.HW_hasPendingFile&&window.HW_hasPendingFile()&&!window.HW_uploading){
+      if(!MY_NAME||!db) return;
+      window.HW_uploadAndSend(t);
+      return;
+    }
+    if(!t||!MY_NAME||!db) return;
     msg.value=""; msg.style.height="auto"; setTyping(false); msg.focus();
     if(window.HighwayAmbient)HighwayAmbient.sendChime();
     db.collection("highway_messages").add({
-      name:MY_NAME, text:t.slice(0,2000), deviceId:DEVICE_ID, reactions:{},
+      name:MY_NAME, text:t, deviceId:DEVICE_ID, reactions:{},
       ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
     }).catch(function(e){
       sysLine("Send failed: "+(e.message||"permission denied")+" — try rejoining.");
@@ -278,6 +327,144 @@ setInterval(function(){ try{ updateAmbientStatus(); }catch(e){} }, 60000);
       };
     }catch(e){ sysLine("Could not play voice message."); }
   };
+
+  /* ================= FILE ATTACHMENTS (Cloudinary via bridge) =================
+     📎 button → native file picker → preview bar → upload with progress →
+     Firestore message with attachments[] → inline render.
+     Uploads go through the bridge POST /upload (Firebase ID token auth);
+     the Cloudinary API secret never touches the browser. No dashboard
+     upload preset needed. */
+  window.HW_uploading=false;
+  (function(){
+    var BRIDGE_URL="https://highway-chat-mcp.onrender.com";
+    var MAX_BYTES=10*1024*1024; // 10 MB cap — bridge enforces per-type limits
+    var pendingFile=null, objectUrl=null;
+
+    var attachBtn=$("attachBtn"), attachInput=$("attachInput"),
+        attachBar=$("attachBar"), attachThumb=$("attachThumb"),
+        attachName=$("attachName"), attachMeta=$("attachMeta"),
+        attachProgWrap=$("attachProgWrap"), attachProg=$("attachProg"),
+        attachCancel=$("attachCancel");
+
+    function fmtSize(b){
+      if(b<1024) return b+" B";
+      if(b<1048576) return (b/1024).toFixed(1)+" KB";
+      return (b/1048576).toFixed(1)+" MB";
+    }
+    function clearPending(){
+      pendingFile=null;
+      if(objectUrl){ try{ URL.revokeObjectURL(objectUrl); }catch(e){} objectUrl=null; }
+      if(attachInput) attachInput.value="";
+      if(attachBar) attachBar.style.display="none";
+      if(attachProgWrap) attachProgWrap.style.display="none";
+      if(attachProg) attachProg.style.width="0%";
+      window.HW_uploading=false;
+    }
+    window.HW_hasPendingFile=function(){ return !!pendingFile; };
+    window.HW_cancelAttachment=clearPending;
+
+    if(attachBtn&&attachInput){
+      attachBtn.addEventListener("click", function(){ attachInput.click(); });
+      attachInput.addEventListener("change", function(){
+        var f=attachInput.files&&attachInput.files[0];
+        if(!f) return;
+        if(f.size>MAX_BYTES){ sysLine("File too large — 10 MB max."); attachInput.value=""; return; }
+        clearPending();
+        pendingFile=f;
+        attachName.textContent=f.name;
+        attachMeta.textContent=fmtSize(f.size)+(f.type?" · "+f.type:"");
+        if(f.type&&f.type.indexOf("image/")===0){
+          objectUrl=URL.createObjectURL(f);
+          attachThumb.src=objectUrl; attachThumb.style.display="block";
+        } else {
+          attachThumb.style.display="none";
+        }
+        attachBar.style.display="flex";
+        if(msg) msg.focus();
+      });
+    }
+    if(attachCancel) attachCancel.addEventListener("click", function(){ clearPending(); sysLine("Attachment removed."); });
+
+    // Upload through the bridge: file → base64 → POST /upload (Firebase ID
+    // token auth) → bridge uploads to Cloudinary server-side, returns the
+    // public CDN URL as download_url. XHR (not fetch) keeps upload progress.
+    function uploadViaBridge(file, onProgress){
+      return new Promise(function(resolve, reject){
+        var reader=new FileReader();
+        reader.onerror=function(){ reject(new Error("Could not read file.")); };
+        reader.onload=function(){
+          var b64=String(reader.result||"").split(",")[1]||"";
+          if(!b64){ reject(new Error("Could not read file.")); return; }
+          var user=firebase.auth().currentUser;
+          if(!user){ reject(new Error("Sign in again to upload.")); return; }
+          user.getIdToken().then(function(token){
+            var xhr=new XMLHttpRequest();
+            xhr.open("POST", BRIDGE_URL+"/upload", true);
+            xhr.setRequestHeader("Content-Type","application/json");
+            xhr.setRequestHeader("Authorization","Bearer "+token);
+            xhr.upload.onprogress=function(e){
+              if(e.lengthComputable&&onProgress) onProgress(Math.round(e.loaded/e.total*100));
+            };
+            xhr.onload=function(){
+              var res=null;
+              try{ res=JSON.parse(xhr.responseText); }catch(e){}
+              if(xhr.status>=200&&xhr.status<300&&res&&res.ok&&res.download_url){
+                resolve(res);
+              } else {
+                reject(new Error((res&&res.error)||("Upload failed ("+xhr.status+")")));
+              }
+            };
+            xhr.onerror=function(){ reject(new Error("Upload network error.")); };
+            xhr.ontimeout=function(){ reject(new Error("Upload timed out.")); };
+            xhr.timeout=120000;
+            xhr.send(JSON.stringify({
+              filename:file.name,
+              mime_type:file.type||"application/octet-stream",
+              data_base64:b64
+            }));
+          }).catch(function(){ reject(new Error("Sign in again to upload.")); });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    window.HW_uploadAndSend=function(caption){
+      var f=pendingFile;
+      if(!f) return;
+      window.HW_uploading=true;
+      attachProgWrap.style.display="block";
+      attachProg.style.width="0%";
+      sysLine("Uploading "+f.name+"…");
+      uploadViaBridge(f, function(pct){ attachProg.style.width=pct+"%"; }).then(function(res){
+        // res is the bridge's attachment metadata (Cloudinary CDN URL).
+        var att={
+          id:res.id||("att_"+Date.now().toString(36)),
+          filename:res.filename||f.name,
+          mime_type:res.mime_type||f.type||"application/octet-stream",
+          size_bytes:res.size_bytes||f.size,
+          storage_path:res.storage_path||"",
+          download_url:res.download_url,
+          is_image:!!res.is_image,
+          uploaded_by:MY_NAME, uploaded_at:Date.now()
+        };
+        var text=(caption&&caption.trim())?caption.trim():("📎 "+f.name);
+        return db.collection("highway_messages").add({
+          name:MY_NAME, text:text, deviceId:DEVICE_ID, reactions:{},
+          attachments:[att],
+          ts:firebase.firestore.FieldValue.serverTimestamp(), tsNum:Date.now()
+        });
+      }).then(function(){
+        clearPending();
+        if(msg){ msg.value=""; msg.style.height="auto"; setTyping(false); msg.focus(); }
+        if(window.HighwayAmbient)HighwayAmbient.sendChime();
+        sysLine("File sent.");
+      }).catch(function(e){
+        window.HW_uploading=false;
+        attachProgWrap.style.display="none";
+        sysLine("Upload failed: "+(e.message||"unknown error")+" — file kept, tap Send to retry.");
+      });
+    };
+  })();
 
   /* ================= PRESENCE (who's online) =================
      Each device heartbeats its doc every 20s. Anyone whose ts is fresher

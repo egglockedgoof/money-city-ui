@@ -70,10 +70,23 @@
     <div id="chat"></div>
     <div id="typing"></div>
     <div class="foot">
-      <textarea id="msg" placeholder="Type a message…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="2000" rows="1"></textarea>
-      <button id="clear" title="Clear all chat messages" style="background:#1a1214;border:1px solid rgba(248,113,113,.4);color:var(--red);font-weight:700;border-radius:12px;padding:0 14px;font-size:14px;cursor:pointer;">🗑</button>
-      <button id="voiceBtn" title="Voice message" style="background:#1a1214;border:1px solid rgba(248,113,113,.4);color:var(--red);font-weight:700;border-radius:12px;padding:0 14px;font-size:18px;cursor:pointer;">🎤</button>
+      <textarea id="msg" placeholder="Type a message…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="100000" rows="1"></textarea>
+      <input type="file" id="attachInput" accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.md" style="display:none;" />
+      <button id="attachBtn" title="Attach a file" style="background:#1a1214;border:1px solid rgba(248,113,113,.4);color:var(--red);font-weight:700;border-radius:12px;padding:0 14px;font-size:18px;cursor:pointer;min-width:44px;min-height:44px;">📎</button>
+      <button id="clear" title="Clear all chat messages" style="background:#1a1214;border:1px solid rgba(248,113,113,.4);color:var(--red);font-weight:700;border-radius:12px;padding:0 14px;font-size:14px;cursor:pointer;min-width:44px;min-height:44px;">🗑</button>
+      <button id="voiceBtn" title="Voice message" style="background:#1a1214;border:1px solid rgba(248,113,113,.4);color:var(--red);font-weight:700;border-radius:12px;padding:0 14px;font-size:18px;cursor:pointer;min-width:44px;min-height:44px;">🎤</button>
       <button id="send">Send</button>
+    </div>
+    <div id="attachBar" style="display:none;margin:0 12px 8px;padding:8px 10px;background:rgba(25,12,14,.85);border:1px solid var(--line);border-radius:12px;align-items:center;gap:10px;">
+      <img id="attachThumb" style="display:none;width:48px;height:48px;object-fit:cover;border-radius:8px;" alt="" />
+      <div style="flex:1;min-width:0;">
+        <div id="attachName" style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+        <div id="attachMeta" style="font-size:11px;color:var(--muted);"></div>
+        <div id="attachProgWrap" style="display:none;margin-top:4px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;">
+          <div id="attachProg" style="height:100%;width:0%;background:linear-gradient(90deg,#ff4d5e,#a30f1a);border-radius:2px;transition:width .2s;"></div>
+        </div>
+      </div>
+      <button id="attachCancel" title="Remove attachment" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;min-width:44px;min-height:44px;">✕</button>
     </div>
   </div>
 
