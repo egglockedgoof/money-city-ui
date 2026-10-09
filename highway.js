@@ -942,3 +942,76 @@ function applyMood(){
 applyMood();
 setInterval(applyMood, 600000);
 
+
+// ============ NEXUS DM CHANNEL ============
+// Team-only posting, public reading.
+// Agents post via bridge. Sin posts via this UI. Everyone can read.
+(function initNexus(){
+  // Wait for Firebase to be ready
+  var checkReady = setInterval(function(){
+    if (typeof firebase === 'undefined' || !firebase.firestore) return;
+    clearInterval(checkReady);
+    setupNexus();
+  }, 500);
+
+  function setupNexus(){
+    var db = firebase.firestore();
+    var nexusChat = document.getElementById('nexus-chat');
+    var nexusFoot = document.getElementById('nexus-foot');
+    var nexusReadonly = document.getElementById('nexus-readonly');
+    var nexusMsg = document.getElementById('nexus-msg');
+    var nexusSend = document.getElementById('nexus-send');
+    if (!nexusChat) return;
+
+    // Who am I? Only sin can post from the frontend.
+    var myName = 'anon';
+    try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
+    var canPost = (myName.toLowerCase() === 'sin');
+    if (canPost) {
+      nexusFoot.style.display = '';
+      if (nexusReadonly) nexusReadonly.style.display = 'none';
+    }
+
+    // Real-time listener (read-only for most)
+    db.collection("highway_dm").orderBy("ts", "asc").limitToLast(100)
+      .onSnapshot(function(s){
+        s.docChanges().forEach(function(c){
+          if (c.type === "added") renderNexusMsg(c.doc);
+        });
+        nexusChat.scrollTop = nexusChat.scrollHeight;
+      });
+
+    function renderNexusMsg(doc){
+      var d = doc.data() || {};
+      var div = document.createElement('div');
+      div.className = 'row';
+      div.setAttribute('data-id', doc.id);
+      var name = document.createElement('span');
+      name.className = 'who';
+      name.textContent = d.name || 'anon';
+      var text = document.createElement('span');
+      text.className = 'what';
+      text.textContent = d.text || '';
+      div.appendChild(name);
+      div.appendChild(text);
+      nexusChat.appendChild(div);
+    }
+
+    // Send (sin only — enforced by Firestore rules too)
+    function sendNexus(){
+      var text = nexusMsg.value.trim();
+      if (!text || !canPost) return;
+      nexusMsg.value = '';
+      db.collection("highway_dm").add({
+        name: myName,
+        text: text,
+        ts: new Date().toISOString(),
+        tsNum: Date.now(),
+      }).catch(function(e){ console.error('Nexus send failed:', e.message); });
+    }
+    if (nexusSend) nexusSend.addEventListener('click', sendNexus);
+    if (nexusMsg) nexusMsg.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendNexus(); }
+    });
+  }
+})();
