@@ -1,5 +1,6 @@
 
 :root{
+color-scheme:dark;
 --bg:#07090d; --panel:#0d1117; --panel2:#11161d;
 --line:rgba(255,255,255,.08);
 --txt:#e8edf3; --muted:#8b94a3;
@@ -639,4 +640,9 @@ input, textarea, select, button{
 }
 .bubble{
   -webkit-user-select:none; user-select:none;
+}
+
+/* === Keyboard dismissal smoothing === */
+.shell{
+  transition:height .1s ease-out;
 }
