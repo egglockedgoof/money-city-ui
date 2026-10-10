@@ -81,16 +81,14 @@ function loadWins(){
     el.innerHTML=h+'</div>';
   }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
 }
-function updateAmbientStatus(){
-  var el=document.getElementById("ambient"); if(!el||!db) return;
-  db.collection("highway_activity").orderBy("tsNum","desc").limit(5).get().then(function(snap){
-    var h="";
-    snap.forEach(function(doc){ var d=doc.data()||{};
-      h+='<span style="margin-right:12px;">'+esc(d.by||"")+': '+esc((d.text||"").slice(0,40))+'</span>'; });
-    el.innerHTML=h||'<span style="color:var(--muted);">Quiet on the Highway...</span>';
-  }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+// Fed by the activity onSnapshot in goLive — no polling, no extra reads.
+function updateAmbientStatus(snap){
+  var el=document.getElementById("ambient"); if(!el||!snap) return;
+  var h="";
+  snap.docs.slice(0,5).forEach(function(doc){ var d=doc.data()||{};
+    h+='<span style="margin-right:12px;">'+esc(d.by||"")+': '+esc((d.text||"").slice(0,40))+'</span>'; });
+  el.innerHTML=h||'<span style="color:var(--muted);">Quiet on the Highway...</span>';
 }
-setInterval(function(){ try{ updateAmbientStatus(); }catch(e){} }, 60000);
   function scrollDown(el){ requestAnimationFrame(function(){ el.scrollTop = el.scrollHeight; }); }
   function sysLine(t){
     var d=document.createElement("div"); d.className="sys"; d.textContent=t;
@@ -467,20 +465,25 @@ setInterval(function(){ try{ updateAmbientStatus(); }catch(e){} }, 60000);
   })();
 
   /* ================= PRESENCE (who's online) =================
-     Each device heartbeats its doc every 20s. Anyone whose ts is fresher
-     than 60s counts as online. Best-effort delete on tab close. */
-  var _yielded=false, _hbTimer=null, _kickTimer=null;
+     Each visible device heartbeats its doc every 45s. Anyone whose ts is fresher
+     than 120s counts as online. Every heartbeat costs one read per open listener,
+     so hidden tabs stop beating. Best-effort delete on tab close. */
+  var HB_MS=45000, ONLINE_MS=120000;
+  var _yielded=false, _hbTimer=null;
   var TAB_SESSION=Date.now();
   try{
     var _prevSess=parseInt(sessionStorage.getItem("hw_session")||"0",10)||0;
     TAB_SESSION=Math.max(Date.now(),_prevSess+1);
     sessionStorage.setItem("hw_session",String(TAB_SESSION));
   }catch(e){}
-  function stopHeartbeat(){ if(_hbTimer){clearInterval(_hbTimer);_hbTimer=null;} if(_kickTimer){clearInterval(_kickTimer);_kickTimer=null;} }
+  function stopHeartbeat(){ if(_hbTimer){clearInterval(_hbTimer);_hbTimer=null;} }
   function startHeartbeat(){
-    stopHeartbeat(); _yielded=false; doBeat();
-    _hbTimer=setInterval(doBeat,20000);
-    _kickTimer=setInterval(checkKicked,15000); }
+    stopHeartbeat(); _yielded=false; doBeat(); kickDuplicates();
+    _hbTimer=setInterval(doBeat,HB_MS); }
+  document.addEventListener("visibilitychange", function(){
+    if(!db||!MY_NAME||_yielded) return;
+    if(document.hidden) stopHeartbeat(); else if(!_hbTimer){ doBeat(); _hbTimer=setInterval(doBeat,HB_MS); }
+  });
   function kickDuplicates(){
     if(!db||!MY_NAME||_yielded) return;
     db.collection("highway_presence").where("name","==",MY_NAME).get().then(function(snap){
@@ -496,17 +499,13 @@ setInterval(function(){ try{ updateAmbientStatus(); }catch(e){} }, 60000);
     var myRef=db.collection("highway_presence").doc(DEVICE_ID);
     // New session takes over: claim presence, old tabs will see their doc gone and go quiet
     myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp(), session:TAB_SESSION}, {merge:true}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
-    kickDuplicates();
   }
-  function checkKicked(){
-    if(!db||!MY_NAME||_yielded) return;
-    // If our presence doc was deleted by a newer session, go idle silently
-    db.collection("highway_presence").doc(DEVICE_ID).get().then(function(doc){
-      if(!doc.exists && !_yielded){
-        _yielded=true; stopHeartbeat();
-        // Silent: no annoying message, just stop
-      }
-    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+  // A newer session deleted our presence doc (seen via the presence snapshot): go idle silently.
+  function onPresenceChanges(s){
+    if(_yielded) return;
+    s.docChanges().forEach(function(c){
+      if(c.type==="removed" && c.doc.id===DEVICE_ID && !c.doc.metadata.hasPendingWrites){ _yielded=true; stopHeartbeat(); }
+    });
   }
   window.addEventListener("beforeunload", function(){
     if(db) db.collection("highway_presence").doc(DEVICE_ID).delete().catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
@@ -601,11 +600,11 @@ setInterval(function(){ try{ updateAmbientStatus(); }catch(e){} }, 60000);
       var now=Date.now(), html="";
       _presSnap.forEach(function(d){
         var p=d.data(); if(!p||!p.ts) return;
-        try{ if(now-p.ts.toDate().getTime()<60000) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+(p.platform?' <span style="font-size:9px;opacity:.55">'+esc(p.platform)+'</span>':'')+'</span>'; }catch(e){}
+        try{ if(now-p.ts.toDate().getTime()<ONLINE_MS) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+(p.platform?' <span style="font-size:9px;opacity:.55">'+esc(p.platform)+'</span>':'')+'</span>'; }catch(e){}
       });
       presenceEl.innerHTML=html||'<span style="font-size:11px;color:var(--muted)">no one else here</span>';
     }
-    db.collection("highway_presence").onSnapshot(function(s){ _presSnap=s; renderPresence(); });
+    db.collection("highway_presence").onSnapshot(function(s){ _presSnap=s; onPresenceChanges(s); renderPresence(); });
     setInterval(renderPresence,15000);
 
     var _typeSnap=null;
@@ -645,6 +644,7 @@ setInterval(function(){ try{ updateAmbientStatus(); }catch(e){} }, 60000);
 
     db.collection("highway_activity").orderBy("ts","desc").limit(30)
       .onSnapshot(function(s){
+        updateAmbientStatus(s);
         var list=$("actlist"); list.innerHTML="";
         s.forEach(function(d){
           var a=d.data(); if(!a) return;
