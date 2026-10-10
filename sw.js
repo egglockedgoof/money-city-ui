@@ -12,7 +12,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  let data = { title: 'Highway Chat', body: 'New message', url: './highway-chat-widget.html' };
+  let data = { title: 'Highway Chat', body: 'New message', url: './' };
   try { if (event.data) data = Object.assign(data, event.data.json()); } catch(e) {}
   event.waitUntil(
     self.registration.showNotification(data.title, {
@@ -28,7 +28,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || './highway-chat-widget.html';
+  const url = (event.notification.data && event.notification.data.url) || './';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const c of list) { if ('focus' in c) return c.focus(); }

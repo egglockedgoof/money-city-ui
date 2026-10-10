@@ -2,7 +2,7 @@
   "name": "Highway Chat",
   "short_name": "Highway",
   "description": "Real-time team room for sin's crew",
-  "start_url": "./highway-chat-widget.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
