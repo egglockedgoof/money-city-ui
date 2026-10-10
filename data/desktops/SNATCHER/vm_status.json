@@ -1,9 +1,0 @@
-{
-  "agent": "SNATCHER",
-  "updated_pt": "2026-10-02T14:35:54-07:00",
-  "vm": "host_fallback",
-  "docker": "missing",
-  "label": "RAN host fallback hello",
-  "stdout": "MONEY CITY \u00b7 SNATCHER host-fallback hello \u2014 Gate E \u00b7 JOB_HALT ON",
-  "ok": true
-}

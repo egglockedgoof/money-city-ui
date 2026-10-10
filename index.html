@@ -1,334 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MONEY CITY</title>
-  <meta name="description" content="MONEY CITY" />
-  <link rel="stylesheet" href="css/city.css?v=20261004city" />
-  <link rel="stylesheet" href="css/city-perf.css?v=20261004city" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+<meta name="format-detection" content="telephone=no" />
+<title>Highway Chat — Real-Time Team Room</title>
+
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#c1121f" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Highway Chat" />
+<link rel="apple-touch-icon" sizes="180x180" href="highway-icons/icon-180.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="highway-icons/icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="highway-icons/icon-512.png" />
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<link rel="stylesheet" href="highway.css">
 </head>
 <body>
-  <div id="app" hidden>
-    <header class="topbar">
-      <div class="brand">MONEY CITY<span>Year 0</span></div>
-      <div class="badges">
-        <span class="badge badge-halt">HALT</span>
-        <span class="badge badge-gate">Gate E</span>
-        <span class="badge badge-year">Y0</span>
-        <span class="badge badge-live" id="live-tick-badge">●</span>
-        <span class="badge badge-mode" id="brains-mode-badge">Brains …</span>
-      </div>
-    </header>
+<div class="scanlines" aria-hidden="true"></div>
 
-    <div class="ticker" id="activity-ticker" aria-live="polite">
-      <span class="ticker-label">FEED</span>
-      <div class="ticker-track"><div class="ticker-inner" id="ticker-inner"><span class="ticker-text" id="ticker-text">—</span></div></div>
-    </div>
-
-    <nav class="nav">
-      <button class="active" data-panel="panel-map">Map</button>
-      <button data-panel="panel-agents">Agents</button>
-      <button data-panel="panel-desktops">Desks</button>
-      <button data-panel="panel-war">War</button>
-      <button data-panel="panel-brains">Brains</button>
-      <button data-panel="panel-law">Law</button>
-      <button data-panel="panel-station">Station</button>
-    </nav>
-
-    <!-- MAP -->
-    <section id="panel-map" class="panel active">
-      <div class="skyline-wrap">
-        <div id="agent-pins" class="agent-pins" aria-label="Crew pins"></div>
-        <svg viewBox="0 0 960 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MONEY CITY skyline">
-          <defs>
-            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#140608"/>
-              <stop offset="100%" stop-color="#050203"/>
-            </linearGradient>
-            <linearGradient id="towerGold" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#e8c96a"/>
-              <stop offset="100%" stop-color="#7a5a10"/>
-            </linearGradient>
-            <filter id="softGlow">
-              <feGaussianBlur stdDeviation="2" result="b"/>
-              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-            </filter>
-          </defs>
-          <rect width="960" height="220" fill="url(#sky)"/>
-          <circle cx="880" cy="36" r="14" fill="#e8c96a" opacity="0.55" filter="url(#softGlow)"/>
-          <g class="district-hit" data-district="alpha" style="cursor:pointer">
-            <rect x="48" y="110" width="44" height="110" fill="#120608" stroke="#5c1016" stroke-width="1"/>
-            <rect x="100" y="82" width="38" height="138" fill="#120608" stroke="#5c1016" stroke-width="1"/>
-            <rect x="148" y="100" width="48" height="120" fill="#120608" stroke="#5c1016" stroke-width="1"/>
-            <rect x="48" y="82" width="148" height="138" fill="transparent"/>
-          </g>
-          <g class="district-hit" data-district="beta" style="cursor:pointer">
-            <path d="M220 220 V95 H255 V78 H272 V95 H300 V220 Z" fill="#1a0a0e" stroke="#7a141c" stroke-width="1"/>
-            <rect x="220" y="78" width="80" height="142" fill="transparent"/>
-          </g>
-          <rect x="320" y="88" width="58" height="132" fill="#14080a" stroke="#5c1016" stroke-width="1"/>
-          <rect x="390" y="68" width="40" height="152" fill="#14080a" stroke="#5c1016" stroke-width="1"/>
-          <g class="district-hit supreme-hit" data-district="supreme" style="cursor:pointer" filter="url(#softGlow)">
-            <path d="M455 220 V58 L480 32 L505 58 V220 Z" fill="url(#towerGold)" stroke="#e8c96a" stroke-width="1.2"/>
-            <rect x="470" y="22" width="20" height="12" rx="1" fill="#e8c96a"/>
-            <g fill="#e8c96a" opacity="0.75" class="window-blink">
-              <rect x="466" y="72" width="5" height="6"/><rect x="478" y="72" width="5" height="6"/><rect x="490" y="72" width="5" height="6"/>
-              <rect x="466" y="96" width="5" height="6"/><rect x="478" y="96" width="5" height="6"/><rect x="490" y="96" width="5" height="6"/>
-              <rect x="466" y="120" width="5" height="6"/><rect x="478" y="120" width="5" height="6"/><rect x="490" y="120" width="5" height="6"/>
-              <rect x="466" y="144" width="5" height="6"/><rect x="478" y="144" width="5" height="6"/><rect x="490" y="144" width="5" height="6"/>
-            </g>
-          </g>
-          <g class="district-hit" data-district="gamma" style="cursor:pointer">
-            <path d="M560 220 V105 H590 L608 78 H628 L646 105 H676 V220 Z" fill="#1a0a0e" stroke="#7a141c" stroke-width="1"/>
-            <rect x="560" y="78" width="116" height="142" fill="transparent"/>
-          </g>
-          <g class="district-hit" data-district="delta" style="cursor:pointer">
-            <rect x="720" y="98" width="42" height="122" fill="#120608" stroke="#5c1016" stroke-width="1"/>
-            <rect x="774" y="74" width="48" height="146" fill="#120608" stroke="#5c1016" stroke-width="1"/>
-            <rect x="836" y="108" width="52" height="112" fill="#120608" stroke="#5c1016" stroke-width="1"/>
-            <rect x="720" y="74" width="168" height="146" fill="transparent"/>
-          </g>
-          <g fill="#c9a227" opacity="0.4" class="window-blink">
-            <rect x="110" y="100" width="4" height="5"/><rect x="120" y="120" width="4" height="5"/>
-            <rect x="335" y="105" width="4" height="5"/><rect x="400" y="90" width="4" height="5"/>
-            <rect x="580" y="125" width="4" height="5"/><rect x="790" y="95" width="4" height="5"/>
-          </g>
-          <g font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#c9a227" letter-spacing="1.5" opacity="0.85">
-            <text x="120" y="212" text-anchor="middle">ALPHA</text>
-            <text x="260" y="212" text-anchor="middle">BETA</text>
-            <text x="480" y="212" text-anchor="middle">SUPREME</text>
-            <text x="618" y="212" text-anchor="middle">GAMMA</text>
-            <text x="808" y="212" text-anchor="middle">DELTA</text>
-          </g>
-        </svg>
-      </div>
-
-      <div id="map-grid" class="map-grid"></div>
-      <div id="room-panel" class="room-panel" hidden>
-        <div class="room-head">
-          <h3 id="room-title">District</h3>
-          <button type="button" id="room-close" class="btn ghost">Close</button>
-        </div>
-        <p id="room-lore" class="meta"></p>
-        <div id="room-agents" class="room-agents"></div>
-        <div id="room-actions" class="room-actions"></div>
-        <pre id="room-output" class="out" hidden></pre>
-      </div>
-    </section>
-
-    <!-- AGENTS -->
-    <section id="panel-agents" class="panel">
-      <div class="card spawn-card" id="spawn-card">
-        <div class="card-head">
-          <h4>Add Agent</h4>
-          <span class="meta">Worker that MOVES + WORKS · DualCortex = speech only</span>
-        </div>
-        <form id="spawn-form" class="spawn-form" autocomplete="off">
-          <input type="text" id="spawn-name" placeholder="Name (e.g. MONEY FORGE)" required maxlength="40" />
-          <select id="spawn-district" required>
-            <option value="alpha">Alpha</option>
-            <option value="gamma">Gamma</option>
-            <option value="beta">Beta</option>
-            <option value="delta">Delta</option>
-            <option value="supreme">Supreme</option>
-          </select>
-          <input type="text" id="spawn-role" placeholder="Role (optional)" maxlength="80" />
-          <button type="submit" class="btn">Spawn worker</button>
-        </form>
-        <pre id="spawn-out" class="out" hidden></pre>
-        <p class="meta">Pages records the spawn locally until you run <code>spawn_agent.py</code> on PC (or SNATCHER box). Workers ≠ brains.</p>
-      </div>
-      <div class="split agents-layout">
-        <div id="roster" class="cards"></div>
-        <div class="agent-side">
-          <div id="agent-sheet" class="card agent-sheet">
-            <h4>Select an agent</h4>
-            <p class="meta">Work · pulse · brief · desk.</p>
-          </div>
-          <div class="card feed-card">
-            <div class="feed-head">
-              <h4>Activity</h4>
-              <button type="button" id="pulse-feed-btn" class="btn ghost sm">Refresh</button>
-            </div>
-            <ul id="activity-list" class="activity-list"></ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-
-    <!-- DESKS -->
-    <section id="panel-desktops" class="panel">
-      <div class="card">
-        <div class="card-head">
-          <h4>Agent Desktops</h4>
-          <span class="meta" id="desks-updated"></span>
-        </div>
-        <p class="meta">Watchable worker frames · Gate E hello · DualCortex talks, desks WORK. True Cursor multi-PC needs VMs on your machine.</p>
-        <div class="row-actions">
-          <button type="button" id="desks-reload" class="btn">Reload</button>
-          <button type="button" id="desks-how" class="btn ghost">How</button>
-        </div>
-        <pre id="desks-how-box" class="out" hidden></pre>
-        <div id="desks-grid" class="desks-grid"></div>
-      </div>
-    </section>
-
-    <!-- WAR -->
-    <section id="panel-war" class="panel">
-      <div class="card">
-        <div class="card-head">
-          <h4>War Room</h4>
-          <span class="meta" id="war-updated"></span>
-        </div>
-        <p class="meta">Last dispatch · <code>dispatch_agent.py --agent ALL --job shift</code></p>
-        <div class="row-actions">
-          <button type="button" id="war-reload" class="btn">Reload</button>
-          <button type="button" id="war-how" class="btn ghost">How</button>
-        </div>
-        <pre id="war-how-box" class="out" hidden></pre>
-        <div id="war-results" class="war-results"></div>
-      </div>
-      <div class="card" style="margin-top:0.85rem">
-        <h4>Queue</h4>
-        <div class="war-queue">
-          <select id="war-agent"></select>
-          <select id="war-job">
-            <option value="shift">shift</option>
-            <option value="sandbox_hello">sandbox_hello</option>
-            <option value="thrift_score">thrift_score</option>
-            <option value="inventory">inventory</option>
-            <option value="log_event">log_event</option>
-            <option value="brains_demo">brains_demo</option>
-            <option value="dualcortex">dualcortex</option>
-            <option value="desktop_hello">desktop_hello</option>
-            <option value="desktop_inventory">desktop_inventory</option>
-          </select>
-          <button type="button" id="war-dispatch" class="btn">Dispatch</button>
-        </div>
-        <pre id="war-out" class="out" style="margin-top:0.65rem" hidden></pre>
-      </div>
-      <div class="card" style="margin-top:0.85rem">
-        <div class="card-head">
-          <h4>Immune / Swarm</h4>
-          <span class="meta" id="immune-updated"></span>
-        </div>
-        <p class="meta">Prune · dome · stem · credits · bus · NOT LIVE sovereign</p>
-        <div class="row-actions">
-          <button type="button" id="immune-reload" class="btn">Reload</button>
-        </div>
-        <div id="immune-panel" class="war-results" style="margin-top:0.65rem"></div>
-      </div>
-    </section>
-
-    <!-- OPS (nav hidden 2026-10-02 — dead code; systems/actions/thrift still filled; War/Agents own UX) -->
-    <section id="panel-ops" class="panel" hidden aria-hidden="true">
-      <div id="panel-systems" class="ops-block">
-        <div class="card">
-          <h4>Systems</h4>
-          <div id="systems" class="systems-list"></div>
-          <p class="meta" style="margin-top:0.6rem">Gate E · <span id="gate-scope"></span></p>
-          <div id="sandbox-flags" class="meta"></div>
-          <pre id="systems-output" class="out" hidden style="margin-top:0.65rem"></pre>
-        </div>
-      </div>
-      <div id="panel-actions" class="ops-block" style="margin-top:0.85rem">
-        <div class="card">
-          <div class="card-head">
-            <h4>Actions</h4>
-            <span class="meta" id="pulse-updated"></span>
-          </div>
-          <div class="action-grid" id="action-defs"></div>
-          <div class="row-actions" style="margin-top:0.65rem">
-            <button type="button" id="reload-pulse-btn" class="btn">Reload pulse</button>
-            <button type="button" id="how-pulse-btn" class="btn ghost">PC how-to</button>
-          </div>
-          <pre id="how-pulse-box" class="out" hidden></pre>
-          <div id="last-actions" class="actions-results"></div>
-        </div>
-      </div>
-      <div id="panel-thrift" class="ops-block" style="margin-top:0.85rem">
-        <div class="card" id="thrift">
-          <h4>Thrift</h4>
-          <p class="meta">Advisory.</p>
-        </div>
-        <div class="card" style="margin-top:0.65rem" id="thrift-score-card" hidden>
-          <h4>Score</h4>
-          <div id="thrift-score-out" class="meta"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- BRAINS -->
-    <section id="panel-brains" class="panel">
-      <div class="card brains-status">
-        <div class="card-head">
-          <h4>DualCortex</h4>
-          <span class="meta">DeepSeek · Qwen · Merge</span>
-        </div>
-        <div class="brains-chips" id="brains-chips">
-          <span class="sys-chip held" id="chip-mode">Mode: …</span>
-          <span class="sys-chip held" id="chip-bridge">Bridge: …</span>
-          <span class="sys-chip held" id="chip-ollama">Ollama: …</span>
-          <span class="sys-chip held" id="chip-left">Left: …</span>
-          <span class="sys-chip held" id="chip-right">Right: …</span>
-          <span class="sys-chip held" id="chip-merge">Merge: …</span>
-        </div>
-        <div class="quick-prompts" id="quick-prompts"></div>
-      </div>
-      <div class="card" style="margin-top:0.85rem">
-        <textarea id="brains-prompt" rows="3" placeholder="Ask DualCortex…"></textarea>
-        <div class="row-actions">
-          <button type="button" id="brains-send" class="btn">Send</button>
-          <button type="button" id="brains-refresh" class="btn ghost">Status</button>
-        </div>
-        <p id="brains-err" class="meta err" hidden></p>
-      </div>
-      <div class="brains-out">
-        <div class="card"><h4>Left</h4><pre id="brains-left" class="brains-pre">—</pre></div>
-        <div class="card"><h4>Right</h4><pre id="brains-right" class="brains-pre">—</pre></div>
-        <div class="card brains-merge"><h4>Merge</h4><pre id="brains-merged" class="brains-pre">DEMO on Pages · LIVE on :8787</pre></div>
-      </div>
-    </section>
-
-    <!-- LAW -->
-    <section id="panel-law" class="panel">
-      <div class="card">
-        <h4>Law</h4>
-        <p class="meta">Year 0 · Constitution · Security · Army Spec</p>
-        <div id="law-articles" class="law-articles"></div>
-      </div>
-    </section>
-
-    <footer class="foot">
-      <span id="updated"></span>
-      <a href="https://github.com/egglockedgoof/money-city-ui" target="_blank" rel="noopener">UI repo</a>
-    </footer>
+<div id="pwgate">
+  <div class="moon-ring">
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCABAADQDASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAAAAYBBAUHAgP/xAAwEAACAQMCBAQEBgMAAAAAAAABAgMABBEFIQYSMVEUQWFxEyIygVKRobHB8FOi0f/EABkBAAMBAQEAAAAAAAAAAAAAAAIDBAEABf/EAB0RAAMAAgMBAQAAAAAAAAAAAAABAgMRBBIxIUH/2gAMAwEAAhEDEQA/AOgVFTVW9uhbRgLvI2yj+a5LZjaS2z3cXUduuXO/XA61Ttb27vnZoI444Acc75Yk+g2rD1m4aKBvmJcjJJpm0+JYbCCNeixqP0o6nqhEZHkp/iRYXPKMnJ8zU0UUBQFFFFccQSACScClo3njL5pM5QnC+w6Vq6/cG10W6lXryco++380s6XIORSadiXrI+VbXVH01WEzCQdxW7w9qKXlgkTMBPCoV1PU42BqjdRo7qquOcjPL51j3lrNbyi4t3aOVdwQcUdJWhWO3ht78Y91NKWk8XZcQ6iBscGVRjHuP+U1o6yIrowZWGQQcgip2mj0E0/D1RRRWGmNxYM8P3HoUP8AsKVtNlBiGDuKd9VtfG6Zc2/nJGQPfy/WuXw3D20xU7elOxPRJycbtfBy0+/d4ZPhW/OQx5mZwvMew71GoOrkEKGIweXmxmsKDVY1KqxC52HlmomvJfFCVioiRSOxwe9M0k9omdXU9WijqoCagxQcqsMgU18E37vHLZSEkIPiR+gJ3H5/vSdcz+IkyOh6Ux8FRsdXkYfSkBB+5FKrxlWLa0h5ooopRURSPxdoLRTPf265hc5kAH0N39jTzUEBgQQCD1BrU9GNbRyBUYdd6szTXVyqrNNJKqjYN/d6d77hOyuJDJbM1sx6qoyv5eX2qkvB0vP818oX0j3/AHpnaWJcUKaxcpGQWc7ADc5p+4X0ptNsWedcXE5DOPwjyH97199M0Gy05hIimSb/ACSbke3atOhqt+BxGvrJooooBh//2Q==" class="moon m1" alt="" />
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCABAADIDASIAAhEBAxEB/8QAGgAAAgMBAQAAAAAAAAAAAAAAAAcBBAUGA//EADEQAAIBAgQEAwUJAAAAAAAAAAECAwAEBRESIQYxQVETYXEUIzJSgRUiQkORsbLR8P/EABkBAAIDAQAAAAAAAAAAAAAAAAEDAAIEBf/EACARAAMAAgIDAAMAAAAAAAAAAAABAgMRBCESEzEjMlH/2gAMAwEAAhEDEQA/AGBXnNNHBGZJpFjRebMcgKmSRYo2kdgqICxJ6AVxV8ZuIEmuWn8KKPPwYzyHmR3peTIoXY/Dh9j2+kjem4pwmE5e0M/mkbEftXvY8QYXiDiO3vIzIeSNmrH6GlwhLxDWBq5EDvVG70CTRGMtAGo9S1UjK29M2Z+FEQql/Rz1NcNwZxPJJMmGYhIXLbQSsd8/lJ6+RruKens5rWnomiiioAxuLJWi4euiue+lT6FgDXBpcSrCyxPlmOWdMnF7IYjhdzaE5GVCAex6H9cqUrtNazvBOjRyxtpdSNwaRmjy7Olws8xLmizdSmFnkhAMexKvkpBOxAyO+9Vp4ly8VA2/xlvm8vKt2TEsEWzhh+zTcSJuzg6N/XmaxcQlieQtAhRT+HLYUEtfC7t1+yeivbkh9cZKyIQykdCOVOHDbsX2HW90PzY1cjsSN6T1qpMm1NPhMEcN2QPRT/I0yX20Zs8/jmjYooophjIrKxjh+yxb78yaJgMhKvP6961qKDWwpuXtCyxzh+4wjJ295ATkJF5D17VjTQtGubKR13pw3NvHdW8kEyho5F0sD1FLLGB4UYtnOqW3doie4B2pFz4NaOpx8vtlzX1GZZqWbYZ9qbWGW3seG29v1jjAPr1rg+DsLN5iCyuvuYCHY9z0H+7UxqvjXbYjl3qZx/zsmiiimmEKKKKhDyuJ47a3knmYLHGpZiegpa29jecR4rLLDGVjeQuzn4VzPX+qYV7h0N+VFy0jxA5+FqyUnzy51Zggit4hFBGsaLyVRkKpU+TH4sqxJ6+s8MMw+HDLNLeAbDck82Pc1booq6WhLbb2woooqAP/2Q==" class="moon m2" alt="" />
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAAvAEADASIAAhEBAxEB/8QAGwAAAQUBAQAAAAAAAAAAAAAABQABAwQGAgf/xAAuEAACAQMCAwYFBQAAAAAAAAABAgMABBEFIRIxURMUIkFhgQYyUnGRFUKhseH/xAAZAQACAwEAAAAAAAAAAAAAAAABBAACAwX/xAAeEQACAgIDAQEAAAAAAAAAAAAAAQIRAyEEEjFRBf/aAAwDAQACEQMRAD8A9ApqVB9S1GZ5mtLI4Zdnk+n0HrVMmSOOPaQUm3SCc11BAcSyop6E7/iof1K28nY/ZTQiCxbPiJLHmTzNW1tljG+1c186b3COjTpFesvxX1tM3Ckq8XQ7H+asUGYRD5ivvSivOxOIpQw+gnb/ACjj/RTdTVAcPgapVFbzpcR8S+48xUtdOMlJWjMgvZxa2c0x/YpI+/lWXEiokMZ8Ukxyd9j1Jo/ryNJo10F5hM/g5rN6bewFUEqrxqMBiNxXO516+GuPxh60kiEDBRjszwkDrQjVLlImSaPHjJBKmpL29dbcdyEblmHEeLHDgjf15YoVezLdSEAARqdgBsKXvvGKrQUq2yJriSVj4mHvU8NjfTqHghlYeTchVr4e09b66eWQZghxkfU3StiAAAAMAU3i46krZm8jfhkLS5vdMu071HIgOx4hsw+9a5GDorKchhkGuZoY54mjlQOjcwa4s4Tb26wkkhCQpPPGdqYxY3jdLwjdkrKHUqwyCMEHzrAavpkml3RRs9gxzE/kR0PrXoNcSxRzxmOVFdG5qwyDV8kFNUVPPYXZFISVkDfMFOM06gyssMCF3c4AHMmta/w3pbNkQFPRXYD+6u2mnWlkD3aBEJ5tzJ96XXGd7ZLb9ONIsF06wjg2L/M56sedXaanptKlRBUqVKiQ/9k=" class="moon m3" alt="" />
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAAvAEADASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAABQcABAYDAQL/xAAvEAACAQMDAwIEBQUAAAAAAAABAgMABBEFEjEGIVETQTJhcYEHIlLB8BUWkbHR/8QAFwEBAQEBAAAAAAAAAAAAAAAAAQADAv/EABkRAQEAAwEAAAAAAAAAAAAAAAABAhEhEv/aAAwDAQACEQMRAD8AYFSpUqSV5XtDdZvDbQxwxttlnbap8D3P880W6m04at1Np+luYnZ5phzHCuSPqeBQqP8AEDTzJtmtbqJf1YVsfYGiB6etngxgbyM5rHdR6Kltuf1UTHwqeW84H71x7u+wmLYahaalbieznSaPglfY+CParVJnQNXm0bUkuY2JjziVM9nX3H18U44pEmiSWM7kdQynyDWgcL69SxWOSb8sLNtZ/wBJPBPyqwjK6hkYMp7gg5BrjfWkd9ZS20udsi4yOR4P2rAw6xcaBevY6lG4ZDjfGxXcPY44OaLbEYcsscMZklcIg5JOKxWpXrXd+98+5IIxshB7Ejz96uxaxpFwBKTJK3sJGzQHqHVDdkLHGEiThRWOWfrhgpD1DqTW2V9NTnaC0BOB5BDUGvruA3DpfPLK7x7WkVQW5zgDhck8+BQmTVrh7dbYy7Y0OQAKq30lwJ/UuS/qOAQW7HAGB2HypktvU4zxPbzNG6MhB4YYOKbnSbs/TGnls59EDv8ALtSkjWfULtEBaWaVgi57kk9hTq0+1Wx0+3tU+GGNUz5wK2CzQzW9Ds9btvSukw6/BKvxIf57USqVIqdV6V1fSHZoka4gHEkIz2+a8ig7Xk2CrjJHmndVW60ywvMm5tIJSfdkBP8Ami4ynZJEsx4r7gtp7qZYoYnllbsFUZJpuf2roe7P9Oiz9T/2iNrY2lku21t4oQediAZpDM9H9JnSyL6/AN2R+SMdxED+/wDqtbUqVJ//2Q==" class="moon m4" alt="" />
   </div>
-  
-    <section id="panel-station" class="panel">
-      <h2>Station</h2>
-      <p class="meta" id="station-counts">inbox empty</p>
-      <div id="station-rooms" class="station-grid"></div>
-      <form id="station-drop" class="card" style="margin-top:0.8rem">
-        <h3>Agent drop</h3>
-        <textarea name="job">{"id":"job-001","room":"research","agent":"SIGNAL","kind":"brief","text":"Public category brief. Original art only."}</textarea>
-        <button type="submit">Post job</button>
-        <p id="station-err" class="meta"></p>
-      </form>
-      <ul id="station-feed"></ul>
-    </section>
-  <script src="js/core.js?v=20261004city"></script>
-  <script src="js/gate_config.js?v=20261004city"></script>
-  <script src="js/gate.js?v=20261004city"></script>
-  <script src="js/live_loop.js?v=20261004city"></script>
-  <script src="js/future_vibe.js?v=20261004city"></script>
-  <script src="js/city.js?v=20261004city"></script>
-  <script src="js/desktops.js?v=20261004city"></script>
-  <script src="js/brains.js?v=20261004city"></script>
-  <script src="js/life.js?v=20261004city"></script>
-  <script src="js/crew.js?v=20261004city"></script>
-  <script src="js/station.js?v=20261004city"></script>
+  <div class="card">
+    <h2>🔒 Highway Chat</h2>
+    <p>This room is locked.<br/>Enter the password to continue.</p>
+    <input id="pw" type="password" placeholder="Password" autocomplete="off" />
+    <button id="pwjoin">Unlock</button>
+    <div id="pwerr"></div>
+  </div>
+</div>
+<div id="gate" style="display:none">
+  <div class="card">
+    <h2>🛣️ Highway Chat</h2>
+    <p>Choose your verified display name.<br/>It will be badged on everything you do.</p>
+    <input id="name" maxlength="24" placeholder="e.g. whisper" autocomplete="off" />
+    <div id="authfields" style="display:none">
+      <input id="email" type="email" placeholder="Highway account email" autocomplete="email" />
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+    </div>
+    <button id="join">Enter the highway</button>
+    <div id="err"></div>
+  </div>
+</div>
+
+<div class="shell">
+  <div class="head">
+    <div class="head-top">
+      <span class="dot off" id="livedot"></span>
+      <h1>Highway Chat<small id="sub">connecting…</small></h1>
+      <span class="me" id="mebadge">—</span>
+      <span id="devbadge" style="font-size:9px;opacity:.5;margin-left:6px"></span>
+    </div>
+    <div id="presence"></div>
+  </div>
+
+  <div class="tabs"><span class="tab-glider"></span><button class="tab active" data-v="view-chat"><svg viewBox="0 0 24 24"><path d="M4 5h16v10H9l-5 5z"/></svg> Chat</button><button class="tab" data-v="view-nexus"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg> Nexus</button><button class="tab" data-v="view-tasks"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16"/><path d="M9 12l2 2 4-4"/></svg> Tasks</button><button class="tab" data-v="view-notes"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Notes</button><button class="tab" data-v="view-activity"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Activity</button><button class="tab" data-v="view-news"><svg viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0V9"/></svg> News</button></div>
+
+  <div class="view active" id="view-chat">
+    <div id="chat"></div>
+    <div id="typing"></div>
+    <div class="foot">
+      <textarea id="msg" placeholder="Type a message…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="100000" rows="1"></textarea>
+      <input type="file" id="attachInput" accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.md" style="display:none;" />
+      <button id="attachBtn" title="Attach a file" style="background:#1a1214;border:1px solid rgba(248,113,113,.4);color:var(--red);font-weight:700;border-radius:12px;padding:0 14px;font-size:18px;cursor:pointer;min-width:44px;min-height:44px;">📎</button>
+      <button id="clear" title="Clear all chat messages" style="background:#1a1214;border:1px solid rgba(248,113,113,.4);color:var(--red);font-weight:700;border-radius:12px;padding:0 14px;font-size:14px;cursor:pointer;min-width:44px;min-height:44px;">🗑</button>
+      <button id="voiceBtn" title="Voice message" style="background:#1a1214;border:1px solid rgba(248,113,113,.4);color:var(--red);font-weight:700;border-radius:12px;padding:0 14px;font-size:18px;cursor:pointer;min-width:44px;min-height:44px;">🎤</button>
+      <button id="send">Send</button>
+    </div>
+    <div id="attachBar" style="display:none;margin:0 12px 8px;padding:8px 10px;background:rgba(25,12,14,.85);border:1px solid var(--line);border-radius:12px;align-items:center;gap:10px;">
+      <img id="attachThumb" style="display:none;width:48px;height:48px;object-fit:cover;border-radius:8px;" alt="" />
+      <div style="flex:1;min-width:0;">
+        <div id="attachName" style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+        <div id="attachMeta" style="font-size:11px;color:var(--muted);"></div>
+        <div id="attachProgWrap" style="display:none;margin-top:4px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;">
+          <div id="attachProg" style="height:100%;width:0%;background:linear-gradient(90deg,#ff4d5e,#a30f1a);border-radius:2px;transition:width .2s;"></div>
+        </div>
+      </div>
+      <button id="attachCancel" title="Remove attachment" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;min-width:44px;min-height:44px;">✕</button>
+    </div>
+  </div>
+
+  <div class="view" id="view-nexus">
+    <div id="nexus-chat"></div>
+    <div class="foot" id="nexus-foot" style="display:none;">
+      <input type="file" id="nexus-img" accept="image/*" style="display:none;" />
+      <button id="nexus-imgbtn" style="background:linear-gradient(180deg,#ff4d5e,#a30f1a);border:none;color:#fff;font-weight:700;border-radius:12px;padding:0 18px;font-size:14px;cursor:pointer;">📷 Share Image</button>
+    </div>
+    <div id="nexus-readonly" style="padding:8px 14px;font-size:11px;color:var(--muted);text-align:center;border-top:1px solid var(--line);">Image board — only the team can post</div>
+  </div>
+
+  <div class="view" id="view-tasks">
+    <div class="foot" style="border-top:none;border-bottom:1px solid var(--line);">
+      <input id="taskin" placeholder="New team task…" autocomplete="off" maxlength="300" />
+      <button id="taskadd" style="background:linear-gradient(180deg,#ff4d5e,#a30f1a);border:none;color:#2b060a;font-weight:700;border-radius:12px;padding:0 18px;font-size:14px;cursor:pointer;">Add</button>
+    </div>
+    <div id="tasklist" style="padding:14px;overflow-y:auto;flex:1;"></div>
+  </div>
+
+  <div class="view" id="view-notes">
+    <textarea id="notes" placeholder="The page is blank. Write something worth remembering…"></textarea>
+    <div id="notes-meta">—</div>
+  </div>
+
+  <div class="view" id="view-activity">
+    <div class="foot" style="border-top:none;border-bottom:1px solid var(--line);">
+      <input id="actin" placeholder="Log what you're working on…" autocomplete="off" maxlength="300" />
+      <button id="actadd" style="background:linear-gradient(180deg,var(--amber),#d97706);border:none;color:#1a1005;font-weight:700;border-radius:12px;padding:0 18px;font-size:14px;cursor:pointer;">Log</button>
+    </div>
+    <div id="actlist" style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+
+  <div class="view" id="view-news">
+    <div id="newslist" style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+</div>
+
+<div id="huddlebanner" class="huddle-banner" style="display:none;">🔥 HUDDLE MODE — focus up</div>
+</div>
+<div id="ambient" style="padding:6px 12px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);white-space:nowrap;overflow:hidden;"></div>
+<script src="highway.js"></script>
+<div id="emoji-picker"></div>
 </body>
-</html>
+</html></div>

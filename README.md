@@ -1,1 +1,1 @@
-MONEY CITY UI — lean HUD · Keysean gate art · Year 0
+# Highway Chat — Real-time team chat for sin's crew. Live at https://egglockedgoof.github.io/money-city-ui/
