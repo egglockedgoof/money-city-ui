@@ -51,10 +51,37 @@
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
   function safeUrl(u){ try{ var p=new URL(u,location.href); return (p.protocol==="http:"||p.protocol==="https:")?p.href:"#"; }catch(e){ return "#"; } }
 
+/* ============ READ METER ============
+   Counts Firestore documents each listener/read delivers (cache hits and local echoes
+   excluded) and reports them to the bridge every 5 minutes, so /health shows where the
+   daily read quota goes. Best effort: never blocks or breaks the UI. */
+var _reads={}, _readsTab=Math.random().toString(36).slice(2,12);
+function meter(src, s){
+  try{
+    if(!s||(s.metadata&&(s.metadata.fromCache||s.metadata.hasPendingWrites))) return;
+    var n=typeof s.docChanges==="function"?s.docChanges().length:1;
+    _reads[src]=(_reads[src]||0)+Math.max(1,n);
+  }catch(e){}
+}
+function flushReads(){
+  try{
+    var u=window.firebase&&firebase.auth&&firebase.auth().currentUser; if(!u) return;
+    var counts=_reads, any=false; for(var k in counts){ if(counts[k]){ any=true; break; } } if(!any) return;
+    _reads={};
+    u.getIdToken().then(function(t){
+      return fetch("https://highway-chat-mcp.onrender.com/metrics/reads",{method:"POST",keepalive:true,
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+t},
+        body:JSON.stringify({tab:_readsTab,counts:counts})});
+    }).catch(function(){});
+  }catch(e){}
+}
+setInterval(flushReads, 300000);
+window.addEventListener("pagehide", flushReads);
+
 /* ============ QUESTS / WINS / AMBIENT (inside IIFE - needs db/esc/fmtTime) ============ */
 function loadQuests(){
   var el=document.getElementById("questlist"); if(!el||!db) return;
-  db.collection("highway_tasks").orderBy("tsNum","desc").limit(20).get().then(function(snap){
+  db.collection("highway_tasks").orderBy("tsNum","desc").limit(20).get().then(function(snap){ meter("tasks",snap);
     var h='<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">\u2694\uFE0F QUEST BOARD</h3>';
     if(snap.empty){ h+='<p style="color:var(--muted);">No active quests. Add one from the Tasks tab.</p>'; }
     else snap.forEach(function(doc){
@@ -68,7 +95,7 @@ function loadQuests(){
 }
 function loadWins(){
   var el=document.getElementById("winlist"); if(!el||!db) return;
-  db.collection("highway_activity").orderBy("tsNum","desc").limit(30).get().then(function(snap){
+  db.collection("highway_activity").orderBy("tsNum","desc").limit(30).get().then(function(snap){ meter("wins",snap);
     var h='<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">\uD83C\uDFC6 WIN FEED</h3>', found=0;
     snap.forEach(function(doc){
       var d=doc.data()||{}, txt=(d.text||"").toLowerCase();
@@ -486,7 +513,7 @@ function updateAmbientStatus(snap){
   });
   function kickDuplicates(){
     if(!db||!MY_NAME||_yielded) return;
-    db.collection("highway_presence").where("name","==",MY_NAME).get().then(function(snap){
+    db.collection("highway_presence").where("name","==",MY_NAME).get().then(function(snap){ meter("kick",snap);
       snap.forEach(function(d){
         if(d.id===DEVICE_ID) return;
         var s=d.data()||{};
@@ -584,7 +611,7 @@ function updateAmbientStatus(snap){
     sysLine("Connected — chat, presence, tasks, notes & activity all sync live.");
 
     db.collection("highway_messages").orderBy("tsNum","asc").limitToLast(100)
-      .onSnapshot(function(s){ s.docChanges().forEach(function(c){
+      .onSnapshot(function(s){ meter("messages",s); s.docChanges().forEach(function(c){
         if(c.type==="added") renderMsg(c.doc);
         if(c.type==="modified"){ // reactions changed -> re-render
           var old=document.querySelector('[data-id="'+c.doc.id+'"]');
@@ -604,7 +631,7 @@ function updateAmbientStatus(snap){
       });
       presenceEl.innerHTML=html||'<span style="font-size:11px;color:var(--muted)">no one else here</span>';
     }
-    db.collection("highway_presence").onSnapshot(function(s){ _presSnap=s; onPresenceChanges(s); renderPresence(); });
+    db.collection("highway_presence").onSnapshot(function(s){ meter("presence",s); _presSnap=s; onPresenceChanges(s); renderPresence(); });
     setInterval(renderPresence,15000);
 
     var _typeSnap=null;
@@ -619,11 +646,11 @@ function updateAmbientStatus(snap){
       });
       typingEl.textContent=names.length?names.join(", ")+(names.length>1?" are":" is")+" typing…":"";
     }
-    db.collection("highway_typing").onSnapshot(function(s){ _typeSnap=s; renderTyping(); });
+    db.collection("highway_typing").onSnapshot(function(s){ meter("typing",s); _typeSnap=s; renderTyping(); });
     setInterval(renderTyping,5000);
 
     db.collection("highway_tasks").orderBy("ts","asc")
-      .onSnapshot(function(s){
+      .onSnapshot(function(s){ meter("tasks",s);
         var list=$("tasklist"); list.innerHTML="";
         s.forEach(function(d){ var el=renderTask(d); if(el) list.appendChild(el); });
         if(!s.size) list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted);">'
@@ -633,7 +660,7 @@ function updateAmbientStatus(snap){
       });
 
     db.collection("highway_notes").doc("shared")
-      .onSnapshot(function(s){
+      .onSnapshot(function(s){ meter("notes",s);
         var d=s.data(); if(!d) return;
         if(!notesFocused && d.ts && (!lastNotesTs || d.ts.toMillis()>lastNotesTs)){
           lastNotesTs=d.ts.toMillis();
@@ -643,7 +670,7 @@ function updateAmbientStatus(snap){
       });
 
     db.collection("highway_activity").orderBy("ts","desc").limit(30)
-      .onSnapshot(function(s){
+      .onSnapshot(function(s){ meter("activity",s);
         updateAmbientStatus(s);
         var list=$("actlist"); list.innerHTML="";
         s.forEach(function(d){
@@ -777,7 +804,7 @@ function updateAmbientStatus(snap){
   sendBtn.addEventListener("click", sendMsg);
   $("clear").addEventListener("click", function(){
     if(!db||!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
-    db.collection("highway_messages").get().then(function(s){
+    db.collection("highway_messages").get().then(function(s){ meter("other",s);
       var docs=[]; s.forEach(function(d){ docs.push(d.ref); });
       function next(){
         if(!docs.length) return Promise.resolve();
@@ -1158,7 +1185,7 @@ setInterval(applyMood, 600000);
     }
 
     db.collection("highway_dm").orderBy("ts", "asc").limitToLast(50)
-      .onSnapshot(function(s){
+      .onSnapshot(function(s){ meter("dm",s);
         s.docChanges().forEach(function(c){
           if (c.type === "added") renderNexusImg(c.doc);
         });
