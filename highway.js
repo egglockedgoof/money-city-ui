@@ -1,14 +1,70 @@
 
 (function(){
   "use strict";
-  /* ============ FIREBASE PROJECT ============ */
-  var FIREBASE_CONFIG = {
-    apiKey:            "AIzaSyDmAMnxfBorxPkwt4Y2FjhkEB83914ut1U",
-    authDomain:        "highway-chat.firebaseapp.com",
-    projectId:         "highway-chat",
-    storageBucket:     "highway-chat.firebasestorage.app",
-    messagingSenderId: "1063748874829",
-    appId:             "1:1063748874829:web:5565a2fa6012a0c3b76204"
+  /* ============ BRIDGE API (Supabase-backed, replaces Firebase) ============
+     The bridge at https://highway-chat-mcp.onrender.com exposes:
+     - GET /api/messages?channel=&limit=&since_ts= (requires Bearer token)
+     - GET /api/tasks, /api/presence, /api/typing, /api/notes, /api/activity
+     - GET /api/stream (SSE for real-time updates)
+     NOTE: POST endpoints for writes are not yet implemented in the bridge.
+     Write operations below call the intended endpoints; they will 404 until
+     the backend adds them. See MIGRATION-NOTES.md for details. */
+  var BRIDGE_BASE = "https://highway-chat-mcp.onrender.com";
+  // WIDGET_TOKEN: the bridge accepts this as a Bearer token for the site API.
+  // It is a shared secret — possession IS the authorization. For a public
+  // read-only widget this is acceptable; writes should use per-user auth.
+  var WIDGET_TOKEN = ""; // Set via ?token= or localStorage; empty = anonymous (will 401)
+  try{
+    var _qt = new URLSearchParams(location.search).get("token");
+    if(_qt) WIDGET_TOKEN = _qt;
+    else { var _lt = localStorage.getItem("hw_widget_token"); if(_lt) WIDGET_TOKEN = _lt; }
+  }catch(e){}
+  function bridgeHeaders(extra){
+    var h = {"Content-Type":"application/json"};
+    if(WIDGET_TOKEN) h["Authorization"] = "Bearer "+WIDGET_TOKEN;
+    if(extra) for(var k in extra) h[k]=extra[k];
+    return h;
+  }
+  var BridgeAPI = {
+    base: BRIDGE_BASE,
+    async get(path){
+      var r = await fetch(BRIDGE_BASE+path, {headers: bridgeHeaders()});
+      if(!r.ok) throw new Error("API "+r.status+": "+path);
+      return r.json();
+    },
+    async post(path, body){
+      // BLOCKER: bridge has no POST /api/* endpoints yet (only GET).
+      // This will 404 until the backend implements writes.
+      var r = await fetch(BRIDGE_BASE+path, {method:"POST", headers: bridgeHeaders(), body: JSON.stringify(body||{})});
+      if(!r.ok) throw new Error("API "+r.status+": POST "+path+" (write endpoints not implemented)");
+      return r.json();
+    },
+    messages: function(channel, limit, since_ts){
+      var q = "?channel="+(channel||"room")+"&limit="+(limit||100);
+      if(since_ts) q += "&since_ts="+since_ts;
+      return this.get("/api/messages"+q);
+    },
+    tasks: function(){ return this.get("/api/tasks?limit=100&include_done=true"); },
+    presence: function(){ return this.get("/api/presence"); },
+    typing: function(){ return this.get("/api/typing"); },
+    notes: function(){ return this.get("/api/notes"); },
+    activity: function(){ return this.get("/api/activity?limit=30"); },
+    // Writes (require backend POST endpoints — currently 404):
+    sendMessage: function(msg){ return this.post("/api/messages", msg); },
+    setPresence: function(p){ return this.post("/api/presence", p); },
+    setTyping: function(t){ return this.post("/api/typing", t); },
+    addTask: function(t){ return this.post("/api/tasks", t); },
+    updateTask: function(id, patch){ return this.post("/api/tasks/"+id, patch); },
+    deleteTask: function(id){ return this.post("/api/tasks/"+id+"/delete", {}); },
+    logActivity: function(a){ return this.post("/api/activity", a); },
+    saveNotes: function(n){ return this.post("/api/notes", n); },
+    // SSE stream for real-time updates (replaces onSnapshot)
+    stream: function(onEvent){
+      var es = new EventSource(BRIDGE_BASE+"/api/stream");
+      es.onmessage = function(e){ try{ onEvent(JSON.parse(e.data)); }catch(err){} };
+      es.onerror = function(){ /* EventSource auto-reconnects */ };
+      return es;
+    }
   };
 
   /* ============ DEVICE ID (per-tab identity) ============ */
@@ -64,8 +120,10 @@ function meter(src, s){
   }catch(e){}
 }
 function flushReads(){
+  // Read metering disabled: no Firebase, no quota to track.
+  // Bridge API reads go to Supabase; no per-tab metering needed.
   try{
-    var u=window.firebase&&firebase.auth&&firebase.auth().currentUser; if(!u) return;
+    return; // no-op
     var counts=_reads, any=false; for(var k in counts){ if(counts[k]){ any=true; break; } } if(!any) return;
     _reads={};
     u.getIdToken().then(function(t){
@@ -81,7 +139,7 @@ window.addEventListener("pagehide", flushReads);
 /* ============ QUESTS / WINS / AMBIENT (inside IIFE - needs db/esc/fmtTime) ============ */
 function loadQuests(){
   var el=document.getElementById("questlist"); if(!el||!db) return;
-  db.collection("highway_tasks").orderBy("tsNum","desc").limit(20).get().then(function(snap){ meter("tasks",snap);
+  BridgeAPI.tasks().then(function(res){ var snap={empty:!(res.tasks||[]).length, forEach:function(fn){(res.tasks||[]).forEach(function(t){fn({data:function(){return t;}});});}};
     var h='<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">\u2694\uFE0F QUEST BOARD</h3>';
     if(snap.empty){ h+='<p style="color:var(--muted);">No active quests. Add one from the Tasks tab.</p>'; }
     else snap.forEach(function(doc){
@@ -95,7 +153,7 @@ function loadQuests(){
 }
 function loadWins(){
   var el=document.getElementById("winlist"); if(!el||!db) return;
-  db.collection("highway_activity").orderBy("tsNum","desc").limit(30).get().then(function(snap){ meter("wins",snap);
+  BridgeAPI.activity().then(function(list){ var snap={forEach:function(fn){(list||[]).forEach(function(a){fn({data:function(){return a;}});});}};
     var h='<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">\uD83C\uDFC6 WIN FEED</h3>', found=0;
     snap.forEach(function(doc){
       var d=doc.data()||{}, txt=(d.text||"").toLowerCase();
@@ -258,17 +316,9 @@ function updateAmbientStatus(snap){
       showPicker(id, els.length?els[0]:document.body);
       return;
     }
-    var ref=db.collection("highway_messages").doc(id);
-    db.runTransaction(function(tx){
-      return tx.get(ref).then(function(snap){
-        var rx=(snap.data()&&snap.data().reactions)||{};
-        var users=rx[emoji]||[];
-        var i=users.indexOf(MY_NAME);
-        if(i>=0) users.splice(i,1); else users.push(MY_NAME);
-        if(users.length) rx[emoji]=users; else delete rx[emoji];
-        tx.update(ref,{reactions:rx});
-      });
-    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+    // BLOCKER: reactions require a bridge API endpoint (not implemented).
+    // The bridge has no POST /api/messages/:id/reactions route.
+    if(window.console&&console.warn) console.warn("[highway] reactions not supported (no API endpoint)");
   }
   function sendMsg(){
     var t=msg.value.trim();
@@ -282,9 +332,9 @@ function updateAmbientStatus(snap){
     if(!t||!MY_NAME||!db) return;
     msg.value=""; msg.style.height="auto"; setTyping(false); msg.focus();
     if(window.HighwayAmbient)HighwayAmbient.sendChime();
-    db.collection("highway_messages").add({
+    BridgeAPI.sendMessage({
       name:MY_NAME, text:t, deviceId:DEVICE_ID, reactions:{},
-      ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
+      ts:new Date().toISOString(), tsNum:Date.now()
     }).catch(function(e){
       sysLine("Send failed: "+(e.message||"permission denied")+" — try rejoining.");
       msg.value=t;
@@ -311,10 +361,10 @@ function updateAmbientStatus(snap){
         var reader=new FileReader();
         reader.onloadend=function(){
           var b64=reader.result.split(",")[1];
-          db.collection("highway_messages").add({
+          BridgeAPI.sendMessage({
             name:MY_NAME, text:"🎤 voice message", deviceId:DEVICE_ID, reactions:{},
             audio:b64, audioType:_recorder.mimeType,
-            ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
+            ts:new Date().toISOString(), tsNum:Date.now()
           });
           sysLine("Voice message sent.");
         };
@@ -420,11 +470,12 @@ function updateAmbientStatus(snap){
         reader.onload=function(){
           var b64=String(reader.result||"").split(",")[1]||"";
           if(!b64){ reject(new Error("Could not read file.")); return; }
-          var user=firebase.auth().currentUser;
-          if(!user){ reject(new Error("Sign in again to upload.")); return; }
-          user.getIdToken().then(function(token){
+          // Firebase Auth removed: use WIDGET_TOKEN for upload auth
+          var token = WIDGET_TOKEN;
+          if(!token){ reject(new Error("Set ?token= to upload.")); return; }
+          (function(){
             var xhr=new XMLHttpRequest();
-            xhr.open("POST", BRIDGE_URL+"/upload", true);
+            xhr.open("POST", BRIDGE_BASE+"/upload", true);
             xhr.setRequestHeader("Content-Type","application/json");
             xhr.setRequestHeader("Authorization","Bearer "+token);
             xhr.upload.onprogress=function(e){
@@ -447,7 +498,7 @@ function updateAmbientStatus(snap){
               mime_type:file.type||"application/octet-stream",
               data_base64:b64
             }));
-          }).catch(function(){ reject(new Error("Sign in again to upload.")); });
+          })();
         };
         reader.readAsDataURL(file);
       });
@@ -473,10 +524,10 @@ function updateAmbientStatus(snap){
           uploaded_by:MY_NAME, uploaded_at:Date.now()
         };
         var text=(caption&&caption.trim())?caption.trim():("📎 "+f.name);
-        return db.collection("highway_messages").add({
+        return BridgeAPI.sendMessage({
           name:MY_NAME, text:text, deviceId:DEVICE_ID, reactions:{},
           attachments:[att],
-          ts:firebase.firestore.FieldValue.serverTimestamp(), tsNum:Date.now()
+          ts:new Date().toISOString(), tsNum:Date.now()
         });
       }).then(function(){
         clearPending();
@@ -513,7 +564,7 @@ function updateAmbientStatus(snap){
   });
   function kickDuplicates(){
     if(!db||!MY_NAME||_yielded) return;
-    db.collection("highway_presence").where("name","==",MY_NAME).get().then(function(snap){ meter("kick",snap);
+    BridgeAPI.presence().then(function(list){ var snap={forEach:function(fn){(list||[]).filter(function(p){return p.name===MY_NAME;}).forEach(function(p){fn({data:function(){return p;}});});}};
       snap.forEach(function(d){
         if(d.id===DEVICE_ID) return;
         var s=d.data()||{};
@@ -523,9 +574,8 @@ function updateAmbientStatus(snap){
   }
   function doBeat(){
     if(!db||!MY_NAME||_yielded) return;
-    var myRef=db.collection("highway_presence").doc(DEVICE_ID);
-    // New session takes over: claim presence, old tabs will see their doc gone and go quiet
-    myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp(), session:TAB_SESSION}, {merge:true}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+    // New session takes over: claim presence via bridge API
+    BridgeAPI.setPresence({id:DEVICE_ID, name:MY_NAME, platform:PLATFORM, ts:Date.now(), session:TAB_SESSION}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
   // A newer session deleted our presence doc (seen via the presence snapshot): go idle silently.
   function onPresenceChanges(s){
@@ -535,16 +585,15 @@ function updateAmbientStatus(snap){
     });
   }
   window.addEventListener("beforeunload", function(){
-    if(db) db.collection("highway_presence").doc(DEVICE_ID).delete().catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+    // Presence cleanup: best-effort (no delete endpoint yet)
+    if(window.console&&console.warn) console.warn("[highway] presence cleanup skipped (no API)");
   });
 
   /* ================= TYPING INDICATORS ================= */
   var typingTimer=null;
   function setTyping(on){
     if(!db||!MY_NAME) return;
-    db.collection("highway_typing").doc(DEVICE_ID).set({
-      name:MY_NAME, typing:!!on, ts:firebase.firestore.FieldValue.serverTimestamp()
-    }, {merge:true});
+    BridgeAPI.setTyping({id:DEVICE_ID, name:MY_NAME, typing:!!on, ts:Date.now()}).catch(function(){});
   }
 
   /* ================= TASKS ================= */
@@ -558,20 +607,20 @@ function updateAmbientStatus(snap){
       '<button class="tdel">×</button>';
     el.querySelector(".tcheck").addEventListener("change", function(e){
       if(e.target.checked){ el.classList.add("completing"); setTimeout(function(){el.classList.remove("completing");},650); }
-      db.collection("highway_tasks").doc(doc.id).update({done:e.target.checked});
+      BridgeAPI.updateTask(doc.id, {done:e.target.checked}).catch(function(){});
       if(db && MY_NAME){
         var action = e.target.checked ? "completed quest" : "reopened quest";
-        db.collection("highway_activity").add({text:action+": "+(t.text||"").slice(0,200), by:MY_NAME,
-          ts:firebase.firestore.FieldValue.serverTimestamp()});
+        BridgeAPI.logActivity({text:action+": "+(t.text||"").slice(0,200), by:MY_NAME,
+          ts:new Date().toISOString()});
       }
     });
     el.querySelector(".tdel").addEventListener("click", function(){
       if(confirm("Abandon this quest?")){
         var taskText = (t.text||"").slice(0,200);
-        db.collection("highway_tasks").doc(doc.id).delete();
+        BridgeAPI.deleteTask(doc.id).catch(function(){});
         if(db && MY_NAME){
-          db.collection("highway_activity").add({text:"abandoned quest: "+taskText, by:MY_NAME,
-            ts:firebase.firestore.FieldValue.serverTimestamp()});
+          BridgeAPI.logActivity({text:"abandoned quest: "+taskText, by:MY_NAME,
+            ts:new Date().toISOString()});
         }
       }
     });
@@ -582,108 +631,131 @@ function updateAmbientStatus(snap){
   var notesTimer=null, notesFocused=false, lastNotesTs=null;
   function saveNotes(){
     if(!db||!MY_NAME) return;
-    db.collection("highway_notes").doc("shared").set({
+    BridgeAPI.saveNotes({
       content:$("notes").value.slice(0,20000),
-      updatedBy:MY_NAME, ts:firebase.firestore.FieldValue.serverTimestamp()
-    }, {merge:true});
+      updatedBy:MY_NAME, ts:Date.now()
+    }).catch(function(){});
   }
 
   /* ================= ACTIVITY FEED ================= */
   function logActivity(){
     var t=$("actin").value.trim(); if(!t||!db||!MY_NAME) return;
     $("actin").value="";
-    db.collection("highway_activity").add({
+    BridgeAPI.logActivity({
       text:t.slice(0,300), by:MY_NAME,
-      ts:firebase.firestore.FieldValue.serverTimestamp()
+      ts:new Date().toISOString()
     });
   }
 
   /* ================= GO LIVE ================= */
   function goLive(){
-    try{
-      firebase.initializeApp(FIREBASE_CONFIG);
-      // Sign in anonymously for authenticated Firestore access
-      db=firebase.firestore();
-    }
-    catch(e){ sub.textContent="config error"; return; }
+    // No Firebase init — we use the bridge REST API (Supabase-backed).
+    // The bridge API requires a Bearer token (WIDGET_TOKEN). If not set,
+    // reads will 401. Set ?token= in URL or localStorage hw_widget_token.
+    db = BridgeAPI; // db is now the BridgeAPI client (not Firestore)
 
     dot.classList.remove("off"); sub.textContent="live";
-    sysLine("Connected — chat, presence, tasks, notes & activity all sync live.");
+    sysLine("Connected — chat, presence, tasks, notes & activity via bridge API (Supabase).");
 
-    db.collection("highway_messages").orderBy("tsNum","asc").limitToLast(100)
-      .onSnapshot(function(s){ meter("messages",s); s.docChanges().forEach(function(c){
-        if(c.type==="added") renderMsg(c.doc);
-        if(c.type==="modified"){ // reactions changed -> re-render
-          var old=document.querySelector('[data-id="'+c.doc.id+'"]');
-          if(old){ delete seen[c.doc.id]; var rows=chat.querySelectorAll(".row");
-            for(var i=0;i<rows.length;i++){ if(rows[i].innerHTML.indexOf('data-id="'+c.doc.id+'"')>=0){ rows[i].remove(); break; } }
-            renderMsg(c.doc); }
-        }
-      }); });
+    // Messages: poll + SSE (replaces onSnapshot)
+    var _lastMsgTs = 0;
+    function pollMessages(){
+      BridgeAPI.messages("room", 100, _lastMsgTs).then(function(res){
+        var msgs = res.messages||[];
+        msgs.forEach(function(m){
+          // Convert bridge API format to doc-like for renderMsg
+          var doc = { id: m.id, data: function(){ return m; } };
+          if(m.ts > _lastMsgTs) _lastMsgTs = m.ts;
+          renderMsg(doc);
+        });
+      }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+    }
+    pollMessages();
+    setInterval(pollMessages, 5000); // Poll every 5s (replaces real-time listener)
+    // SSE for instant updates (if available)
+    try{
+      BridgeAPI.stream(function(evt){
+        if(evt.type==="message") pollMessages();
+      });
+    }catch(e){}
 
-    var _presSnap=null;
-    function renderPresence(){
-      if(!_presSnap||!presenceEl) return;
+    // Presence: poll (replaces onSnapshot)
+    function pollPresence(){
+      BridgeAPI.presence().then(function(list){
+        renderPresenceList(list||[]);
+      }).catch(function(){});
+    }
+    function renderPresenceList(list){
+      if(!presenceEl) return;
       var now=Date.now(), html="";
-      _presSnap.forEach(function(d){
-        var p=d.data(); if(!p||!p.ts) return;
-        try{ if(now-p.ts.toDate().getTime()<ONLINE_MS) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+(p.platform?' <span style="font-size:9px;opacity:.55">'+esc(p.platform)+'</span>':'')+'</span>'; }catch(e){}
+      list.forEach(function(p){
+        if(!p||!p.ts) return;
+        if(now-p.ts<ONLINE_MS) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+(p.platform?' <span style="font-size:9px;opacity:.55">'+esc(p.platform)+'</span>':'')+'</span>';
       });
       presenceEl.innerHTML=html||'<span style="font-size:11px;color:var(--muted)">no one else here</span>';
     }
-    db.collection("highway_presence").onSnapshot(function(s){ meter("presence",s); _presSnap=s; onPresenceChanges(s); renderPresence(); });
-    setInterval(renderPresence,15000);
+    pollPresence(); setInterval(pollPresence,15000);
 
-    var _typeSnap=null;
-    function renderTyping(){
-      if(!_typeSnap||!typingEl) return;
-      var names=[];
-      _typeSnap.forEach(function(d){
-        var t=d.data();
-        if(t&&t.typing&&d.id!==DEVICE_ID){
-          try{ if(Date.now()-t.ts.toDate().getTime()<8000) names.push(t.name); }catch(e){}
-        }
-      });
-      typingEl.textContent=names.length?names.join(", ")+(names.length>1?" are":" is")+" typing…":"";
+    // Typing: poll (replaces onSnapshot)
+    function pollTyping(){
+      BridgeAPI.typing().then(function(list){
+        var names=[];
+        (list||[]).forEach(function(t){
+          if(t&&t.typing&&t.id!==DEVICE_ID){
+            if(Date.now()-t.ts<8000) names.push(t.name);
+          }
+        });
+        if(typingEl) typingEl.textContent=names.length?names.join(", ")+(names.length>1?" are":" is")+" typing…":"";
+      }).catch(function(){});
     }
-    db.collection("highway_typing").onSnapshot(function(s){ meter("typing",s); _typeSnap=s; renderTyping(); });
-    setInterval(renderTyping,5000);
+    pollTyping(); setInterval(pollTyping,5000);
 
-    db.collection("highway_tasks").orderBy("ts","asc")
-      .onSnapshot(function(s){ meter("tasks",s);
+    // Tasks: poll (replaces onSnapshot)
+    function pollTasks(){
+      BridgeAPI.tasks().then(function(res){
         var list=$("tasklist"); list.innerHTML="";
-        s.forEach(function(d){ var el=renderTask(d); if(el) list.appendChild(el); });
-        if(!s.size) list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted);">'
+        (res.tasks||[]).forEach(function(t){
+          var doc={id:t.id, data:function(){return t;}};
+          var el=renderTask(doc); if(el) list.appendChild(el);
+        });
+        if(!(res.tasks||[]).length) list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted);">'
           +'<div style="font-size:32px;margin-bottom:12px;">⚔️</div>'
           +'<div style="font-size:15px;font-weight:600;color:var(--txt);margin-bottom:6px;">No quests on the board</div>'
           +'<div style="font-size:13px;">Every legend starts with a single step.<br>Set your first quest above.</div></div>';
-      });
+      }).catch(function(){});
+    }
+    pollTasks(); setInterval(pollTasks,10000);
 
-    db.collection("highway_notes").doc("shared")
-      .onSnapshot(function(s){ meter("notes",s);
-        var d=s.data(); if(!d) return;
-        if(!notesFocused && d.ts && (!lastNotesTs || d.ts.toMillis()>lastNotesTs)){
-          lastNotesTs=d.ts.toMillis();
-          $("notes").value=d.content||"";
+    // Notes: poll (replaces onSnapshot)
+    function pollNotes(){
+      BridgeAPI.notes().then(function(n){
+        if(!n) return;
+        if(!notesFocused && n.ts && (!lastNotesTs || n.ts>lastNotesTs)){
+          lastNotesTs=n.ts;
+          $("notes").value=n.content||"";
         }
-        $("notes-meta").textContent=d.updatedBy?("last edited by "+d.updatedBy):"";
-      });
+        $("notes-meta").textContent=n.updatedBy?("last edited by "+n.updatedBy):"";
+      }).catch(function(){});
+    }
+    pollNotes(); setInterval(pollNotes,10000);
 
-    db.collection("highway_activity").orderBy("ts","desc").limit(30)
-      .onSnapshot(function(s){ meter("activity",s);
-        updateAmbientStatus(s);
-        var list=$("actlist"); list.innerHTML="";
-        s.forEach(function(d){
-          var a=d.data(); if(!a) return;
+    // Activity: poll (replaces onSnapshot)
+    function pollActivity(){
+      BridgeAPI.activity().then(function(list){
+        updateAmbientStatus({docs:(list||[]).slice(0,5).map(function(a){return {data:function(){return a;}};})});
+        var alist=$("actlist"); alist.innerHTML="";
+        (list||[]).forEach(function(a){
           var el=document.createElement("div"); el.className="arow";
-          el.innerHTML="<b>"+esc(a.by||"")+"</b> "+esc(a.text||"")+"<time>"+fmtTs(a.ts)+"</time>";
-          list.appendChild(el);
+          el.innerHTML="<b>"+esc(a.by||"")+"</b> "+esc(a.text||"")+"<time>"+fmtTs({toDate:function(){return new Date(a.ts);}})+"</time>";
+          alist.appendChild(el);
         });
-        if(!s.size) list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted);">'
+        if(!(list||[]).length) alist.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted);">'
           +'<div style="font-size:32px;margin-bottom:12px;">📜</div>'
           +'<div style="font-size:15px;font-weight:600;color:var(--txt);margin-bottom:6px;">The story hasn\'t begun</div>'
           +'<div style="font-size:13px;">Every message, quest, and moment<br>will be written here.</div></div>';
-      });
+      }).catch(function(){});
+    }
+    pollActivity(); setInterval(pollActivity,15000);
 
     startHeartbeat();
   }
@@ -706,36 +778,14 @@ function updateAmbientStatus(snap){
   $("pw").addEventListener("keydown", function(e){ if(e.key==="Enter") tryPw(); });
 
   /* ================= UI EVENTS ================= */
-  var authShown=false;
   function join(){
     var n=nameIn.value.trim().slice(0,24);
     if(!n){ err.textContent="Pick a name first."; return; }
-    // First click: reveal the account fields. Second click: sign in.
-    if(!authShown){
-      authShown=true;
-      $("authfields").style.display="block";
-      $("email").focus();
-      err.textContent="Sign in with your Highway account.";
-      return;
-    }
-    var email=$("email").value.trim();
-    var pw=$("password").value;
-    if(!email||!pw){ err.textContent="Enter your email and password."; return; }
-    err.textContent="Verifying...";
-    try{ firebase.initializeApp(FIREBASE_CONFIG); }catch(e){}
-    firebase.auth().signInWithEmailAndPassword(email,pw).then(function(cred){
-      // Name must match the account's allowed name (enforced server-side too)
-      completeJoin(n,true);
-    }).catch(function(e){
-      var msg="Sign-in failed.";
-      if(e&&e.code==="auth/user-not-found") msg="No account for that email.";
-      else if(e&&e.code==="auth/wrong-password") msg="Wrong password.";
-      else if(e&&e.code==="auth/invalid-email") msg="That email looks invalid.";
-      err.textContent=msg+" Try again.";
-    });
+    // Firebase Auth removed: name-only join. The bridge API uses WIDGET_TOKEN
+    // (set via ?token= or localStorage). No per-user password needed.
+    completeJoin(n,false);
   }
   function completeJoin(n,verified){
-    try{ firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(e){}
     MY_NAME=n;
     try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); }catch(e){}
     mebadge.textContent=n+(verified?" ✓":"");
@@ -803,18 +853,9 @@ function updateAmbientStatus(snap){
 
   sendBtn.addEventListener("click", sendMsg);
   $("clear").addEventListener("click", function(){
-    if(!db||!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
-    db.collection("highway_messages").get().then(function(s){ meter("other",s);
-      var docs=[]; s.forEach(function(d){ docs.push(d.ref); });
-      function next(){
-        if(!docs.length) return Promise.resolve();
-        var b=db.batch();
-        docs.splice(0,450).forEach(function(r){ b.delete(r); });
-        return b.commit().then(next);
-      }
-      return next();
-    }).then(function(){ sysLine("Chat cleared — fresh highway."); })
-    .catch(function(e){ sysLine("Clear failed: "+(e.message||e)); });
+    // BLOCKER: bulk delete needs a bridge API endpoint (not implemented).
+    if(!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
+    sysLine("Clear not supported: no bridge API endpoint for bulk delete.");
   });
   msg.addEventListener("keydown", function(e){
     if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMsg(); }
@@ -831,10 +872,10 @@ function updateAmbientStatus(snap){
   $("taskadd").addEventListener("click", function(){
     var t=$("taskin").value.trim(); if(!t||!db||!MY_NAME) return;
     $("taskin").value="";
-    db.collection("highway_tasks").add({text:t.slice(0,300),done:false,createdBy:MY_NAME,
-      ts:firebase.firestore.FieldValue.serverTimestamp()});
-    db.collection("highway_activity").add({text:"started quest: "+t.slice(0,200), by:MY_NAME,
-      ts:firebase.firestore.FieldValue.serverTimestamp()});
+    BridgeAPI.addTask({text:t.slice(0,300),done:false,createdBy:MY_NAME,
+      ts:new Date().toISOString()});
+    BridgeAPI.logActivity({text:"started quest: "+t.slice(0,200), by:MY_NAME,
+      ts:new Date().toISOString()});
   });
   $("taskin").addEventListener("keydown", function(e){ if(e.key==="Enter") $("taskadd").click(); });
 
@@ -956,13 +997,7 @@ function updateAmbientStatus(snap){
       if (typeof db !== 'undefined' && db) {
         var myName = 'anon';
         try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
-        db.collection('highway_push_subs').doc(btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').substring(0,60)).set({
-          endpoint: sub.endpoint,
-          keys: subJson.keys,
-          name: myName,
-          platform: navigator.platform || 'unknown',
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+        /* Push subscriptions disabled: no bridge API endpoint for highway_push_subs */
       }
     }).catch(function(err){ console.warn('push subscribe failed', err); });
   }
@@ -1161,14 +1196,10 @@ setInterval(applyMood, 600000);
 // Team-only image posting, public viewing.
 // Images stored as data URLs in highway_dm. Sin + agents can post.
 (function initNexus(){
-  var checkReady = setInterval(function(){
-    if (typeof firebase === 'undefined' || !firebase.firestore) return;
-    clearInterval(checkReady);
-    setupNexus();
-  }, 500);
+  // Firebase removed: use bridge API for DM/nexus
+  setupNexus();
 
   function setupNexus(){
-    var db = firebase.firestore();
     var nexusChat = document.getElementById('nexus-chat');
     var nexusFoot = document.getElementById('nexus-foot');
     var nexusReadonly = document.getElementById('nexus-readonly');
@@ -1184,13 +1215,16 @@ setInterval(applyMood, 600000);
       if (nexusReadonly) nexusReadonly.style.display = 'none';
     }
 
-    db.collection("highway_dm").orderBy("ts", "asc").limitToLast(50)
-      .onSnapshot(function(s){ meter("dm",s);
-        s.docChanges().forEach(function(c){
-          if (c.type === "added") renderNexusImg(c.doc);
+    // Poll DM via bridge API (channel=dm)
+    function pollDM(){
+      BridgeAPI.messages("dm", 50).then(function(res){
+        (res.messages||[]).forEach(function(m){
+          if(m.image) renderNexusImg({id:m.id, data:function(){return m;}});
         });
         nexusChat.scrollTop = nexusChat.scrollHeight;
-      });
+      }).catch(function(){});
+    }
+    pollDM(); setInterval(pollDM, 10000);
 
     function renderNexusImg(doc){
       var d = doc.data() || {};
@@ -1226,9 +1260,11 @@ setInterval(applyMood, 600000);
           canvas.height = img.height * scale;
           canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
           var compressed = canvas.toDataURL('image/jpeg', 0.7);
-          db.collection("highway_dm").add({
+          // BLOCKER: DM/image posting needs bridge API POST endpoint (not implemented)
+          BridgeAPI.sendMessage({
             name: myName,
             image: compressed,
+            channel: "dm",
             ts: new Date().toISOString(),
             tsNum: Date.now(),
           }).catch(function(e){ console.error('Nexus image failed:', e.message); });
