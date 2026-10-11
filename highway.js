@@ -660,7 +660,7 @@ function updateAmbientStatus(snap){
     // Messages: poll + SSE (replaces onSnapshot)
     var _lastMsgTs = 0;
     function pollMessages(){
-      BridgeAPI.messages("room", 50, _lastMsgTs).then(function(res){
+      BridgeAPI.messages("room", 20, _lastMsgTs).then(function(res){
         var msgs = res.messages||[];
         // DEBUG: log message count
         if(window.console&&console.log) console.log("[highway] got "+msgs.length+" messages");
@@ -1274,7 +1274,7 @@ setInterval(applyMood, 600000);
 
     // Poll DM via bridge API (channel=dm)
     function pollDM(){
-      BridgeAPI.messages("dm", 50).then(function(res){
+      BridgeAPI.messages("dm", 20).then(function(res){
         (res.messages||[]).forEach(function(m){
           if(m.image) renderNexusImg({id:m.id, data:function(){return m;}});
         });
