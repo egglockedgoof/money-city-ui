@@ -781,13 +781,20 @@ function updateAmbientStatus(snap){
   function join(){
     var n=nameIn.value.trim().slice(0,24);
     if(!n){ err.textContent="Pick a name first."; return; }
-    // Show email/password fields if not already shown
+    // The name "sin" is protected - requires email/password login
+    var isSin = (n.toLowerCase() === "sin");
+    if(!isSin){
+      // Other names can join directly
+      completeJoin(n, false);
+      return;
+    }
+    // "sin" requires login - show email/password fields if not already shown
     var authFields = $("authfields");
     var emailIn = $("email");
     var pwIn = $("password");
     if(authFields && authFields.style.display==="none"){
       authFields.style.display="";
-      err.textContent="Sign in with your Highway account.";
+      err.textContent="The name 'sin' is protected. Sign in to use it.";
       if(emailIn) emailIn.focus();
       return;
     }
