@@ -45,6 +45,8 @@ html, body, .shell{ height:100%; }
 .shell{
 padding-top:env(safe-area-inset-top, 0px);
 padding-bottom:env(safe-area-inset-bottom, 0px);
+padding-left:env(safe-area-inset-left, 0px);
+padding-right:env(safe-area-inset-right, 0px);
 }
 .head{ margin:8px 8px 0; border-radius:14px; }
 .tabs{ margin:8px 8px 0; }
