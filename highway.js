@@ -662,13 +662,40 @@ function updateAmbientStatus(snap){
     function pollMessages(){
       BridgeAPI.messages("room", 100, _lastMsgTs).then(function(res){
         var msgs = res.messages||[];
+        // DEBUG: log message count
+        if(window.console&&console.log) console.log("[highway] got "+msgs.length+" messages");
         msgs.forEach(function(m){
           // Convert bridge API format to doc-like for renderMsg
           var doc = { id: m.id, data: function(){ return m; } };
           if(m.ts > _lastMsgTs) _lastMsgTs = m.ts;
-          renderMsg(doc);
+          try {
+            renderMsg(doc);
+          } catch(e) {
+            // Fallback: simple render if complex renderMsg fails
+            if(window.console&&console.warn) console.warn("[highway] renderMsg failed, using fallback:", e.message);
+            var fallback = document.createElement("div");
+            fallback.style.cssText = "padding:8px;border-bottom:1px solid #333;";
+            fallback.textContent = (m.name||"anon") + ": " + (m.text||"");
+            var chatEl = document.getElementById("chat");
+            if(chatEl && !document.querySelector('[data-id="'+m.id+'"]')) {
+              fallback.setAttribute("data-id", m.id);
+              chatEl.appendChild(fallback);
+            }
+          }
         });
-      }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+      }).catch(function(e){ 
+        if(window.console&&console.warn) console.warn("[highway] poll failed:", e&&e.message||e); 
+        // Show visible error to user
+        var chatEl = document.getElementById("chat");
+        if(chatEl && !document.getElementById("poll-error")) {
+          var errDiv = document.createElement("div");
+          errDiv.id = "poll-error";
+          errDiv.style.cssText = "padding:12px;background:#400;color:#fff;text-align:center;";
+          errDiv.textContent = "Failed to load messages: " + (e.message||"unknown error");
+          chatEl.appendChild(errDiv);
+          setTimeout(function(){ var el=document.getElementById("poll-error"); if(el) el.remove(); }, 5000);
+        }
+      });
     }
     pollMessages();
     setInterval(pollMessages, 5000); // Poll every 5s (replaces real-time listener)
