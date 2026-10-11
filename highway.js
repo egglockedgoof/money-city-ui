@@ -13,7 +13,7 @@
   // WIDGET_TOKEN: the bridge accepts this as a Bearer token for the site API.
   // It is a shared secret — possession IS the authorization. For a public
   // read-only widget this is acceptable; writes should use per-user auth.
-  var WIDGET_TOKEN = ""; // Set via ?token= or localStorage; empty = anonymous (will 401)
+var WIDGET_TOKEN="whw_e495bc8292c2b001a7f3d8e9c4b2a6f1d8e5c3b7a9f4d2e6c8a1b3d5f7e9a4b2";
   try{
     var _qt = new URLSearchParams(location.search).get("token");
     if(_qt) WIDGET_TOKEN = _qt;
