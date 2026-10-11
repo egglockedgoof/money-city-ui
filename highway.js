@@ -1209,7 +1209,7 @@ setInterval(applyMood, 600000);
 
     var myName = 'anon';
     try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
-    var canPost = (myName.toLowerCase() === 'sin');
+    var canPost = true; // Everyone can post - no restrictions
     if (canPost) {
       nexusFoot.style.display = '';
       if (nexusReadonly) nexusReadonly.style.display = 'none';
