@@ -66,6 +66,7 @@ var WIDGET_TOKEN="3AdUv8TuG429PrerCfD3hg5OBpCgGyYycAJAw0CcHlsJxPxp7cNCp5Uic8IaF1
       return es;
     }
   };
+  window.BridgeAPI = BridgeAPI; // hangout + push IIFEs live outside this scope
 
   /* ============ DEVICE ID (per-tab identity) ============ */
   var DEVICE_ID = sessionStorage.getItem("hw_device_id");
@@ -191,6 +192,18 @@ function updateAmbientStatus(snap){
   }
 
   /* ================= CHAT ================= */
+  function isOwnerSession(){ try { return !!sessionStorage.getItem("hw_owner_token"); } catch(e){ return false; } }
+  function deleteMessageById(id, rowEl){
+    var tok = null; try { tok = sessionStorage.getItem("hw_owner_token"); } catch(e){}
+    if(!tok || !id) return;
+    if(!window.confirm("Delete this message?")) return;
+    fetch(BRIDGE_BASE + "/api/messages/" + encodeURIComponent(id), {
+      method: "DELETE", headers: { "Authorization": "Bearer " + tok }
+    }).then(function(r){ return r.json(); }).then(function(res){
+      if(res && res.ok){ if(rowEl && rowEl.parentNode) rowEl.parentNode.removeChild(rowEl); }
+      else if(window.console&&console.warn) console.warn("[highway] delete failed:", res);
+    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway] delete failed:", e&&e.message||e); });
+  }
   function renderMsg(doc){
     var m=doc.data(); if(!m||seen[doc.id]) return; seen[doc.id]=1;
     var _seenKeys=Object.keys(seen);
@@ -238,9 +251,10 @@ function updateAmbientStatus(snap){
     if(_isLong){
       attHtml+='<button class="fulltext-btn" style="background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:15px;cursor:pointer;margin-top:6px;display:block;">📄 long message — tap to expand</button>';
     }
+    var delHtml = isOwnerSession() ? '<span class="msg-del" data-del="'+doc.id+'" title="Delete message">\u2715</span>' : "";
     row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+
       (mine?"":'<span class="ver">VERIFIED</span>')+crownHtml(m.name)+
-      '<span class=ts>'+fmtTime(m)+'</span></div>'+
+      '<span class=ts>'+fmtTime(m)+'</span>'+delHtml+'</div>'+
       '<div class="bubble">'+(m.audio?'<button data-voice="'+doc.id+'" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+'<span class="msg-text">'+pingify(_shownText)+'</span>'+attHtml+'</div>'+
       '<div class="reacts">'+rxHtml+'</div></div>';
     // Sorted insertion: oldest at top, newest at bottom. Numeric tsNum, doc ID tie-breaker.
@@ -263,6 +277,9 @@ function updateAmbientStatus(snap){
     if(!mine){ row.classList.add("arrived"); setTimeout(function(){row.classList.remove("arrived");},1200); }
     row.querySelectorAll(".rx").forEach(function(el){
       el.addEventListener("click", function(ev){ ev.stopPropagation(); toggleReaction(el.getAttribute("data-id"), el.getAttribute("data-e")); });
+    });
+    row.querySelectorAll("[data-del]").forEach(function(el){
+      el.addEventListener("click", function(ev){ ev.stopPropagation(); deleteMessageById(el.getAttribute("data-del"), row); });
     });
     row.querySelectorAll("[data-voice]").forEach(function(btn){
       btn.addEventListener("click", function(){ window.playVoice(btn.getAttribute("data-voice"), btn); });
@@ -307,18 +324,39 @@ function updateAmbientStatus(snap){
   }
   function pickEmoji(e){
     document.getElementById("emoji-picker").classList.remove("open");
-    if(_pickerFor&&e) toggleReaction(_pickerFor, e.trim().slice(0,4));
-    _pickerFor=null;
+    if(_pickerFor&&e) toggleReaction(_pickerFor, e.trim().slice(0,4), _pickerLane);
+    _pickerFor=null; _pickerLane="room";
   }
-  function toggleReaction(id, emoji){
+  // Hangout-lane reaction toggle (set by the hangout IIFE when it loads).
+  window.HW_hangoutToggle = null;
+  var _pickerLane = "room";
+  function toggleReaction(id, emoji, lane){
     if(emoji==="__pick__"){
       var els=document.querySelectorAll('.rx-add[data-id="'+id+'"]');
+      _pickerLane = lane || "room";
       showPicker(id, els.length?els[0]:document.body);
       return;
     }
-    // BLOCKER: reactions require a bridge API endpoint (not implemented).
-    // The bridge has no POST /api/messages/:id/reactions route.
-    if(window.console&&console.warn) console.warn("[highway] reactions not supported (no API endpoint)");
+    if(lane === "hangout" && window.HW_hangoutToggle){ window.HW_hangoutToggle(id, emoji); return; }
+    if(!MY_NAME) return;
+    BridgeAPI.post("/api/messages/"+encodeURIComponent(id)+"/reactions", { emoji: emoji, name: MY_NAME })
+      .then(function(){ refreshRowReactions(id, "room"); })
+      .catch(function(e){ if(window.console&&console.warn) console.warn("[highway] react failed:", e&&e.message||e); });
+  }
+  function refreshRowReactions(id, channel){
+    // Re-render one row after a reaction toggle: drop the old row, forget it
+    // in `seen`, and re-render from a fresh fetch. Sorted insert keeps place.
+    var sel = channel === "hangout" ? '#hangout-chat [data-id="'+id+'"]' : '#chat [data-id="'+id+'"]';
+    var row = document.querySelector(sel);
+    if(!row || !row.parentNode) return;
+    BridgeAPI.messages(channel, 100).then(function(res){
+      var msgs = res.messages || [], m = null;
+      for(var i=0;i<msgs.length;i++) if(String(msgs[i].id)===String(id)){ m = msgs[i]; break; }
+      if(!m) return;
+      row.parentNode.removeChild(row);
+      if(channel === "hangout" && window.HW_hangoutRender){ window.HW_hangoutRender(m, true); }
+      else { delete seen[id]; renderMsg({ id: id, data: function(){ return m; } }); }
+    }).catch(function(){});
   }
   function sendMsg(){
     var t=msg.value.trim();
@@ -834,6 +872,18 @@ function updateAmbientStatus(snap){
       if(res.ok && res.token){
         WIDGET_TOKEN = res.token;
         try{ localStorage.setItem("hw_widget_token", res.token); }catch(e){}
+        if(res.isOwner){
+          // Owner session: mint the single-purpose delete capability.
+          // Stored in sessionStorage (tab-scoped), never localStorage.
+          fetch(BRIDGE_BASE+"/api/auth/owner", {
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({email:email, password:pw})
+          }).then(function(r){ return r.json(); }).then(function(or){
+            if(or && or.ok && or.ownerToken){
+              try{ sessionStorage.setItem("hw_owner_token", or.ownerToken); }catch(e){}
+            }
+          }).catch(function(){});
+        }
         completeJoin(n, true);
       } else {
         err.textContent="Invalid email or password.";
@@ -1013,9 +1063,12 @@ function updateAmbientStatus(snap){
 })();
 
 
-/* Highway Chat push notifications */
+/* Highway Chat push notifications — bridge-backed (VAPID).
+   Server: GET /api/push/vapid-key, POST /api/push/subscribe.
+   iOS note: push only arrives when the site is installed to the home screen. */
 (function(){
-  var VAPID_PUBLIC = "BEm8B9zNCKOVR7_nvgrVOrBiVUJTnWTdLkn23Wk---Y03oqTXMDjXwvTliytNJBN412Z8gU7O29YGPpTke0Papk";
+  var VAPID_FALLBACK = "BEm8B9zNCKOVR7_nvgrVOrBiVUJTnWTdLkn23Wk---Y03oqTXMDjXwvTliytNJBN412Z8gU7O29YGPpTke0Papk";
+  var VAPID_PUBLIC = null; // fetched from the bridge; fallback only if the bridge is older
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
   function urlB64ToUint8(base64String) {
@@ -1043,20 +1096,46 @@ function updateAmbientStatus(snap){
     });
   }
 
+  function vapidKey(){
+    // The bridge serves its live VAPID public key; fall back to the baked-in
+    // one only when the bridge predates the push lane.
+    return fetch("https://highway-chat-mcp.onrender.com" + "/api/push/vapid-key").then(function(r){
+      return r.json();
+    }).then(function(j){
+      if(j && j.ok && j.publicKey) return j.publicKey;
+      return VAPID_FALLBACK;
+    }).catch(function(){ return VAPID_FALLBACK; });
+  }
+
+  function pushNote(text){
+    var header = document.querySelector('.head-top');
+    if(!header || document.getElementById('pushnote')) return;
+    var n = document.createElement('div');
+    n.id = 'pushnote'; n.className = 'push-note'; n.textContent = text;
+    header.appendChild(n);
+  }
+
   function enablePush(){
     if (Notification.permission === 'denied') { alert('Notifications blocked. Enable them in Settings > Highway Chat.'); return; }
-    navigator.serviceWorker.ready.then(function(reg){
-      return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
+    vapidKey().then(function(key){
+      return navigator.serviceWorker.ready.then(function(reg){
+        return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(key) });
+      });
     }).then(function(sub){
       var btn = document.getElementById('pushbell');
       if (btn) { btn.textContent = '\uD83D\uDD14'; btn.title = 'Notifications on'; }
-      var subJson = sub.toJSON();
-      if (typeof db !== 'undefined' && db) {
-        var myName = 'anon';
-        try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
-        /* Push subscriptions disabled: no bridge API endpoint for highway_push_subs */
-      }
-    }).catch(function(err){ console.warn('push subscribe failed', err); });
+      var myName = 'anon';
+      try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
+      return window.BridgeAPI.post("/api/push/subscribe", { subscription: sub.toJSON(), name: myName });
+    }).then(function(){
+      if(window.console&&console.log) console.log("[highway] push subscribed");
+    }).catch(function(err){
+      if(window.console&&console.warn) console.warn('push subscribe failed', err);
+      // Honest iOS guidance: no fake success.
+      var isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+      if(isiOS) pushNote("Push needs this site installed to your home screen (Share \u2192 Add to Home Screen), then tap the bell again.");
+      else if(err && (err.name === "NotAllowedError" || Notification.permission === "denied")) pushNote("Notifications are blocked for this site — allow them in browser settings, then tap the bell again.");
+    });
   }
 
   navigator.serviceWorker.register('sw.js').then(function(){ addBell(); }).catch(function(e){ console.warn('sw failed', e); });
@@ -1252,91 +1331,161 @@ setInterval(applyMood, 600000);
 // ============ NEXUS IMAGE BOARD ============
 // Team-only image posting, public viewing.
 // Images stored as data URLs in highway_dm. Sin + agents can post.
-(function initNexus(){
-  // Firebase removed: use bridge API for DM/nexus
-  setupNexus();
+/* Highway Chat: HANGOUT lane (the star tab). Just talk — ideas and
+   conversation. No code, no work threads. Bridge channel: "hangout". */
+/* Highway Chat: HANGOUT lane (the star tab). Just talk — ideas and
+   conversation. No code, no work threads. Bridge channel: "hangout".
+   NOTE: this IIFE is top-level — it cannot see the chat IIFE's scope, so it
+   carries its own helpers and talks to the bridge via window.BridgeAPI. */
+(function initHangout(){
+  var API = window.BridgeAPI;
+  var hangoutChat = document.getElementById('hangout-chat');
+  var hangoutMsg = document.getElementById('hangout-msg');
+  var hangoutSend = document.getElementById('hangout-send');
+  if(!hangoutChat || !API) return;
+  var hseen = {};
+  var _lastTs = 0;
 
-  function setupNexus(){
-    var nexusChat = document.getElementById('nexus-chat');
-    var nexusFoot = document.getElementById('nexus-foot');
-    var nexusReadonly = document.getElementById('nexus-readonly');
-    var nexusImg = document.getElementById('nexus-img');
-    var nexusImgBtn = document.getElementById('nexus-imgbtn');
-    if (!nexusChat) return;
+  function hEsc(s){ return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  function hPingify(s){ return hEsc(s).replace(/@([a-z0-9_]+)/gi,'<span class="ping">@$1</span>'); }
+  function hFmtTime(m){ var n=m.tsNum||0; if(!n) return ""; var d=new Date(n),h=d.getHours(),a=h>=12?"PM":"AM";
+    return (h%12||12)+":"+("0"+d.getMinutes()).slice(-2)+" "+a; }
+  function hMyName(){ try { return sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || null; } catch(e){ return null; } }
+  function hDeviceId(){ try { return sessionStorage.getItem('hw_device_id') || ""; } catch(e){ return ""; } }
+  function hIsOwner(){ try { return !!sessionStorage.getItem("hw_owner_token"); } catch(e){ return false; } }
+  function hOwnerToken(){ try { return sessionStorage.getItem("hw_owner_token"); } catch(e){ return null; } }
+  function scrollDown(){ hangoutChat.scrollTop = hangoutChat.scrollHeight; }
 
-    var myName = 'anon';
-    try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
-    var canPost = true; // Everyone can post - no restrictions
-    if (canPost) {
-      nexusFoot.style.display = '';
-      if (nexusReadonly) nexusReadonly.style.display = 'none';
+  function hDelete(id, rowEl){
+    var tok = hOwnerToken();
+    if(!tok || !id) return;
+    if(!window.confirm("Delete this message?")) return;
+    fetch("https://highway-chat-mcp.onrender.com/api/messages/" + encodeURIComponent(id), {
+      method: "DELETE", headers: { "Authorization": "Bearer " + tok }
+    }).then(function(r){ return r.json(); }).then(function(res){
+      if(res && res.ok){ if(rowEl && rowEl.parentNode) rowEl.parentNode.removeChild(rowEl); }
+    }).catch(function(){});
+  }
+
+  function renderHangoutMsg(m, force){
+    if(!m || (!force && hseen[m.id])) return;
+    hseen[m.id] = 1;
+    var myName = hMyName();
+    var row = document.createElement("div");
+    var mine = (m.deviceId === hDeviceId());
+    row.className = "row " + (mine ? "me-row" : "them-row");
+    row.setAttribute("data-id", m.id);
+    row.setAttribute("data-ts", String(Number(m.tsNum) || 0));
+    var rx = m.reactions || {}, rxHtml = "";
+    Object.keys(rx).forEach(function(e){
+      var users = rx[e] || [];
+      rxHtml += '<span class="rx' + (users.indexOf(myName) >= 0 ? " mine" : "") +
+        '" data-id="' + m.id + '" data-e="' + hEsc(e) + '">' + hEsc(e) + " " + (users.length || "") + "</span>";
+    });
+    rxHtml += '<span class="rx rx-add" data-id="' + m.id + '" data-e="__pick__">\uFF0B</span>';
+    var delHtml = hIsOwner() ? '<span class="msg-del" data-del="' + m.id + '" title="Delete message">\u2715</span>' : "";
+    var crown = (String(m.name||"").toLowerCase()==="sin" || String(m.name||"").toLowerCase()==="grim")
+      ? '<span class="crown" title="Owner">\uD83D\uDC51</span>' : "";
+    row.innerHTML = '<div class="bwrap"><div class="who">' + hEsc(m.name || "anon") + crown +
+      '<span class=ts>' + hFmtTime(m) + "</span>" + delHtml + "</div>" +
+      '<div class="bubble"><span class="msg-text">' + hPingify(m.text || "") + "</span></div>" +
+      '<div class="reacts">' + rxHtml + "</div></div>";
+    var tsn = Number(m.tsNum) || 0, rows = hangoutChat.querySelectorAll(".row"), inserted = false;
+    for(var i = 0; i < rows.length; i++){
+      var rts = parseFloat(rows[i].getAttribute("data-ts") || "0");
+      var rid = rows[i].getAttribute("data-id") || "";
+      if(tsn < rts || (tsn === rts && String(m.id) < rid)){ hangoutChat.insertBefore(row, rows[i]); inserted = true; break; }
     }
+    if(!inserted) hangoutChat.appendChild(row);
+    if(!mine){ row.classList.add("arrived"); setTimeout(function(){ row.classList.remove("arrived"); }, 1200); }
+    row.querySelectorAll(".rx").forEach(function(el){
+      el.addEventListener("click", function(ev){
+        ev.stopPropagation();
+        var eid = el.getAttribute("data-id"), e = el.getAttribute("data-e");
+        if(e === "__pick__"){ hangoutPick(eid, el); } else { hangoutToggle(eid, e); }
+      });
+    });
+    row.querySelectorAll("[data-del]").forEach(function(el){
+      el.addEventListener("click", function(ev){ ev.stopPropagation(); hDelete(el.getAttribute("data-del"), row); });
+    });
+    scrollDown();
+  }
+  // Shared picker/react entry points (the chat IIFE delegates hangout lanes here).
+  window.HW_hangoutRender = function(m, force){ renderHangoutMsg(m, force); };
+  window.HW_hangoutToggle = hangoutToggle;
 
-    // Poll DM via bridge API (channel=dm)
-    function pollDM(){
-      BridgeAPI.messages("dm", 20).then(function(res){
-        (res.messages||[]).forEach(function(m){
-          if(m.image) renderNexusImg({id:m.id, data:function(){return m;}});
-        });
-        nexusChat.scrollTop = nexusChat.scrollHeight;
-      }).catch(function(){});
-    }
-    pollDM(); setInterval(pollDM, 10000);
+  function hangoutPick(id, anchorEl){
+    // Minimal inline emoji picker (the chat's picker lives in another scope).
+    var old = document.getElementById("hangout-picker");
+    if(old && old.parentNode) old.parentNode.removeChild(old);
+    var p = document.createElement("div");
+    p.id = "hangout-picker";
+    p.style.cssText = "position:fixed;z-index:9999;background:#1a1a1a;border:1px solid #c1121f;border-radius:12px;padding:8px;";
+    ["\uD83D\uDD25","\u2764\uFE0F","\uD83D\uDC4D","\uD83D\uDE02","\uD83D\uDCAF","\uD83D\uDC40"].forEach(function(e){
+      var b = document.createElement("button");
+      b.textContent = e; b.style.cssText = "font-size:20px;background:none;border:none;cursor:pointer;padding:4px;";
+      b.onclick = function(ev){ ev.stopPropagation(); hangoutToggle(id, e); document.body.removeChild(p); };
+      p.appendChild(b);
+    });
+    document.body.appendChild(p);
+    try {
+      var r = anchorEl.getBoundingClientRect();
+      p.style.left = Math.max(8, Math.min(window.innerWidth - 220, r.left - 60)) + "px";
+      p.style.top = Math.max(8, r.top - 120) + "px";
+    } catch(e){}
+    setTimeout(function(){ document.addEventListener("click", function h(){ document.removeEventListener("click", h);
+      if(p.parentNode) p.parentNode.removeChild(p); }); }, 0);
+  }
 
-    function renderNexusImg(doc){
-      var d = doc.data() || {};
-      if (!d.image) return;
-      var div = document.createElement('div');
-      div.className = 'row';
-      div.setAttribute('data-id', doc.id);
-      div.style.cssText = 'margin-bottom:12px;';
-      var name = document.createElement('div');
-      name.className = 'who';
-      name.textContent = d.name || 'anon';
-      name.style.cssText = 'font-size:11px;opacity:.6;margin-bottom:4px;';
-      var img = document.createElement('img');
-      img.src = d.image;
-      img.style.cssText = 'max-width:100%;border-radius:12px;display:block;';
-      img.loading = 'lazy';
-      div.appendChild(name);
-      div.appendChild(img);
-      nexusChat.appendChild(div);
-    }
+  function hangoutToggle(id, emoji){
+    var myName = hMyName();
+    if(!myName) return;
+    API.post("/api/messages/" + encodeURIComponent(id) + "/reactions", { emoji: emoji, name: myName })
+      .then(function(){ refreshHangoutRow(id); })
+      .catch(function(e){ if(window.console&&console.warn) console.warn("[highway] hangout react failed:", e&&e.message||e); });
+  }
 
-    function uploadImage(file){
-      if (!file || !canPost) return;
-      var reader = new FileReader();
-      reader.onload = function(e){
-        var dataUrl = e.target.result;
-        // Compress: max 800px wide, JPEG 0.7
-        var img = new Image();
-        img.onload = function(){
-          var canvas = document.createElement('canvas');
-          var scale = Math.min(1, 800 / img.width);
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          var compressed = canvas.toDataURL('image/jpeg', 0.7);
-          // BLOCKER: DM/image posting needs bridge API POST endpoint (not implemented)
-          BridgeAPI.sendMessage({
-            name: myName,
-            image: compressed,
-            channel: "dm",
-            ts: new Date().toISOString(),
-            tsNum: Date.now(),
-          }).catch(function(e){ console.error('Nexus image failed:', e.message); });
-        };
-        img.src = dataUrl;
-      };
-      reader.readAsDataURL(file);
-    }
+  function refreshHangoutRow(id){
+    API.messages("hangout", 100).then(function(res){
+      var msgs = res.messages || [];
+      for(var i = 0; i < msgs.length; i++) if(String(msgs[i].id) === String(id)){
+        var row = hangoutChat.querySelector('[data-id="' + id + '"]');
+        if(row && row.parentNode) row.parentNode.removeChild(row);
+        delete hseen[id];
+        renderHangoutMsg(msgs[i]);
+        break;
+      }
+    }).catch(function(){});
+  }
 
-    if (nexusImgBtn) nexusImgBtn.addEventListener('click', function(){ nexusImg.click(); });
-    if (nexusImg) nexusImg.addEventListener('change', function(){ 
-      if (nexusImg.files[0]) uploadImage(nexusImg.files[0]);
-      nexusImg.value = '';
+  function pollHangout(){
+    API.messages("hangout", 30, _lastTs).then(function(res){
+      (res.messages || []).forEach(function(m){
+        if(m.ts > _lastTs) _lastTs = m.ts;
+        try { renderHangoutMsg(m); } catch(e){}
+      });
+      scrollDown();
+    }).catch(function(){});
+  }
+
+  function sendHangout(){
+    var t = hangoutMsg.value.trim();
+    var myName = hMyName();
+    if(!t || !myName) return;
+    hangoutMsg.value = ""; hangoutMsg.focus();
+    API.sendMessage({
+      name: myName, text: t, channel: "hangout", deviceId: hDeviceId(), reactions: {},
+      ts: new Date().toISOString(), tsNum: Date.now()
+    }).then(function(){ pollHangout(); }).catch(function(e){
+      if(window.console&&console.warn) console.warn("[highway] hangout send failed:", e&&e.message||e);
+      hangoutMsg.value = t;
     });
   }
+  if(hangoutSend) hangoutSend.addEventListener("click", sendHangout);
+  if(hangoutMsg) hangoutMsg.addEventListener("keydown", function(e){ if(e.key === "Enter") sendHangout(); });
+
+  pollHangout(); setInterval(pollHangout, 10000);
 })();
 
 // ============ iOS PREMIUM: Visual Viewport + Haptics ============
