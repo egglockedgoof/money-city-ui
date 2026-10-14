@@ -680,3 +680,11 @@ input, textarea, select, button{
   color:var(--muted);
   opacity:.7;
 }
+
+/* Hangout lane + owner delete control */
+.msg-del{font-size:11px;color:var(--muted);cursor:pointer;margin-left:8px;opacity:.45;border:1px solid var(--line);border-radius:6px;padding:1px 6px;}
+.msg-del:hover{opacity:1;color:#ff6b6b;border-color:#ff6b6b;}
+#hangout-chat{padding:10px 14px;overflow-y:auto;}
+#hangout-foot{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line);}
+#hangout-msg{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;color:#fff;padding:10px 14px;font-size:14px;}
+.push-note{font-size:11px;color:var(--muted);padding:6px 14px;text-align:center;}
