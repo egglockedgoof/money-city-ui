@@ -1,6 +1,8 @@
 /* Highway service worker.
  *
- * - App shell (HTML/CSS/JS/icons, same-origin): CACHE-FIRST, so the app opens instantly.
+ * - HTML / navigations: NETWORK-FIRST (short timeout), falling back to the cached shell when
+ *   offline or slow. A stale cached index.html can therefore never pin an installed PWA.
+ * - Other app shell files (CSS/JS/icons, same-origin): CACHE-FIRST, so the app opens instantly.
  * - Everything else (same-origin): NETWORK-FIRST, falling back to cache when offline.
  * - Cross-origin requests (the bridge: /api/*, /ws, uploads) are NEVER intercepted or
  *   cached. They carry Authorization headers and can include DM content; they go
@@ -10,13 +12,17 @@
  *   {title, body, url?}.
  *
  * UPDATING: bump CACHE_VERSION on every deploy that changes a shell file. The old
- * cache is deleted on activate. Cache-first means a shell file will not refresh
- * until this version string changes.
+ * cache is deleted on activate. Non-HTML shell files are cache-first, so they will not
+ * refresh until this version string changes. Install fetches every shell file with
+ * cache:"reload" so a new version never snapshots a stale HTTP-cached copy (GitHub Pages
+ * sends max-age=600).
  */
-var CACHE_VERSION = "highway-shell-v7";
+var CACHE_VERSION = "highway-shell-v8";
+var HTML_TIMEOUT_MS = 4000;
 var SHELL = [
   "./",
   "index.html",
+  "highway.css",
   "highway.js",
   "live.js",
   "haptics.js",
@@ -35,7 +41,7 @@ self.addEventListener("install", function (event) {
       // Tolerate a missing file (e.g. index.html lives in money-city-ui, not this repo):
       // one 404 must not fail the whole install.
       return Promise.all(SHELL.map(function (url) {
-        return cache.add(url).catch(function () { /* skip */ });
+        return cache.add(new Request(url, { cache: "reload" })).catch(function () { /* skip */ });
       }));
     }).then(function () { return self.skipWaiting(); })
   );
@@ -51,10 +57,43 @@ self.addEventListener("activate", function (event) {
   );
 });
 
-function isShellRequest(req, url) {
+function isHtmlRequest(req, url) {
   if (req.mode === "navigate") return true;
-  if (url.pathname.endsWith("/") ) return true;
+  if (url.pathname.endsWith("/")) return true;
+  return /\.html$/i.test(url.pathname);
+}
+
+function isShellRequest(req, url) {
   return SHELL_EXT.test(url.pathname);
+}
+
+function cachedShellHtml(req) {
+  return caches.match(req, { ignoreSearch: true }).then(function (r) {
+    return r || caches.match("index.html").then(function (r2) { return r2 || caches.match("./"); });
+  });
+}
+
+// HTML: ask the network first (bypassing the HTTP cache), but never leave the person staring
+// at a blank screen: after HTML_TIMEOUT_MS fall back to the cached shell while the fetch
+// keeps going and refreshes the cache for next time.
+function htmlNetworkFirst(req, url) {
+  var network = fetch(url.href, { cache: "no-cache", credentials: "same-origin" }).then(function (res) {
+    if (res && res.ok) {
+      var copy = res.clone();
+      caches.open(CACHE_VERSION).then(function (c) { c.put(req, copy); });
+    }
+    return res;
+  });
+  var timeout = new Promise(function (resolve) {
+    setTimeout(function () { resolve(null); }, HTML_TIMEOUT_MS);
+  });
+  return Promise.race([network.catch(function () { return null; }), timeout]).then(function (res) {
+    if (res) return res;
+    return cachedShellHtml(req).then(function (hit) {
+      if (hit) return hit;
+      return network; // nothing cached at all: wait for the network
+    });
+  });
 }
 
 self.addEventListener("fetch", function (event) {
@@ -62,6 +101,11 @@ self.addEventListener("fetch", function (event) {
   if (req.method !== "GET") return;
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // bridge etc.: untouched
+
+  if (isHtmlRequest(req, url)) {
+    event.respondWith(htmlNetworkFirst(req, url));
+    return;
+  }
 
   if (isShellRequest(req, url)) {
     // cache-first
@@ -75,7 +119,6 @@ self.addEventListener("fetch", function (event) {
           }
           return res;
         }).catch(function () {
-          if (req.mode === "navigate") return caches.match("index.html").then(function (r) { return r || caches.match("./"); });
           return Response.error();
         });
       })

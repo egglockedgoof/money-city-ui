@@ -1448,6 +1448,17 @@ setInterval(applyMood, 600000);
   // Register independently of the push block: on iOS, PushManager only exists once installed,
   // and that block returns early without it, so it can't be the thing that registers the worker.
   if ("serviceWorker" in navigator) {
+    // When a new worker takes over (a shell update), reload once into the new shell so an
+    // installed PWA never keeps running the old one. Skipped if the person is mid-message,
+    // and on first install (no previous controller).
+    var hadController = !!navigator.serviceWorker.controller, swReloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function(){
+      if (!hadController || swReloaded) return;
+      var box = document.getElementById("msg");
+      if (box && box.value) return;
+      swReloaded = true;
+      location.reload();
+    });
     window.addEventListener("load", function(){
       navigator.serviceWorker.register("sw.js").catch(function(e){ console.warn("[highway] sw register failed", e); });
     });

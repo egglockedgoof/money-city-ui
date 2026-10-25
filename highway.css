@@ -688,3 +688,16 @@ input, textarea, select, button{
 #hangout-foot{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line);}
 #hangout-msg{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;color:#fff;padding:10px 14px;font-size:14px;}
 .push-note{font-size:11px;color:var(--muted);padding:6px 14px;text-align:center;}
+
+/* === Face strip: ambient line + Listen/Look/Tilt/Place (last children of .shell) === */
+.shell > #ambient, .shell > #sense{ flex:0 0 auto; width:100%; min-width:0; box-sizing:border-box; }
+.shell > #ambient{ padding:6px 12px; font-size:11px; color:var(--muted); border-top:1px solid var(--line); white-space:nowrap; overflow:hidden; }
+.shell > #ambient:empty{ display:none; }
+.shell > #sense{ position:relative; padding:8px 12px 10px; border-top:1px solid var(--line); background:rgba(20,10,12,.55); }
+.shell > #sense:empty{ display:none; }
+#sense .hs-wrap{ gap:6px; }
+#sense .hs-status{ font-size:11px; gap:2px 12px; }
+/* tiny build stamp so a stale installed shell is obvious at a glance */
+.shell > #sense::after{ content:"face " attr(data-build); position:absolute; right:12px; bottom:2px; font-size:9px; opacity:.35; pointer-events:none; }
+.hs-s[data-state="error"]::before{ background:#c1121f; }
+.hs-s[data-state="no-login"]::before{ background:#b8860b; }

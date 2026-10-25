@@ -15,13 +15,16 @@
  *              distance between consecutive spectra (0 = identical, 1 = disjoint). Averaged
  *              over frames. Frames sampled every 100 ms.
  *
- * Endpoints (/api/sense/*) may not exist yet. POSTs fail silently; only the latest payload
- * per kind is kept and retried on the next cycle. No backlog.
+ * Uploads go to the bridge (BRIDGE + /api/sense/*) with the hw_jwt login token. Only the latest
+ * payload per kind is kept and retried on the next cycle. No backlog. Outcomes show on the
+ * "uplink" status chip (live = last send OK, no-login = waiting for sign-in, error = see tooltip).
  */
 (function (root) {
   'use strict';
 
-  var API = '/api/sense/';
+  // The app is served from GitHub Pages, so a relative '/api/...' would hit Pages, not the bridge.
+  var BRIDGE = 'https://highway-chat-mcp.onrender.com';
+  var API = BRIDGE + '/api/sense/';
   var ENDPOINT = {
     audio: 'audio-features',
     look: 'look',
@@ -149,15 +152,18 @@
     mic: { state: 'off', note: '' },
     camera: { state: 'off', note: '' },
     orientation: { state: 'off', note: '' },
-    geo: { state: 'off', note: '' }
+    geo: { state: 'off', note: '' },
+    uplink: { state: 'idle', note: 'Nothing sent yet' }
   };
-  var LABEL = { mic: 'mic', camera: 'camera', orientation: 'orientation', geo: 'geo' };
+  var LABEL = { mic: 'mic', camera: 'camera', orientation: 'orientation', geo: 'geo', uplink: 'uplink' };
 
   function defaultJwt() {
     try { return root.localStorage.getItem('hw_jwt'); } catch (e) { return null; }
   }
 
   function setStatus(name, state, note) {
+    var prev = status[name];
+    if (prev && prev.state === state && prev.note === (note || '')) return;
     status[name] = { state: state, note: note || '' };
     renderStatus();
   }
@@ -165,7 +171,7 @@
   function renderStatus() {
     if (!statusEl) return;
     statusEl.textContent = '';
-    ['mic', 'camera', 'orientation', 'geo'].forEach(function (k) {
+    ['mic', 'camera', 'orientation', 'geo', 'uplink'].forEach(function (k) {
       var s = status[k];
       var span = root.document.createElement('span');
       span.className = 'hs-s';
@@ -191,7 +197,7 @@
     if (!p || inflight[kind]) return;
     var jwt;
     try { jwt = cfg.getJwt(); } catch (e) { jwt = null; }
-    if (!jwt) return;
+    if (!jwt) { setStatus('uplink', 'no-login', 'Not signed in: ' + kind + ' is waiting to be sent'); return; }
     inflight[kind] = true;
     try {
       root.fetch(API + ENDPOINT[kind], {
@@ -199,8 +205,15 @@
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
         body: JSON.stringify(p)
       }).then(function (r) {
-        if (r && r.ok && pending[kind] === p) pending[kind] = null;
-      }).catch(function () { /* silent */ }).then(function () {
+        if (r && r.ok) {
+          if (pending[kind] === p) pending[kind] = null;
+          setStatus('uplink', 'live', kind + ' sent ' + new Date().toLocaleTimeString());
+        } else {
+          setStatus('uplink', 'error', kind + ' rejected: HTTP ' + (r && r.status));
+        }
+      }).catch(function () {
+        setStatus('uplink', 'error', kind + ' not sent: bridge unreachable');
+      }).then(function () {
         inflight[kind] = false;
       });
     } catch (e) {

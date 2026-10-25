@@ -121,19 +121,29 @@
   <div class="view" id="view-news">
     <div id="newslist" style="padding:14px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;"></div>
   </div>
-</div>
 
-<div id="huddlebanner" class="huddle-banner" style="display:none;">🔥 HUDDLE MODE — focus up</div>
-<div id="ambient" style="padding:6px 12px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);white-space:nowrap;overflow:hidden;"></div>
-<div id="sense" style="padding:8px 12px;border-top:1px solid var(--line);"></div>
+  <!-- Last children of .shell (the 100dvh flex column). The single </div> below closes .shell.
+       body is a flex row, so anything placed after .shell lands off-screen to its right. -->
+  <div id="huddlebanner" class="huddle-banner" style="display:none;">🔥 HUDDLE MODE — focus up</div>
+  <div id="ambient"></div>
+  <div id="sense" data-build="v8"></div>
 </div>
 <script src="highway.js"></script>
 <script src="haptics.js"></script>
 <script src="sensors.js"></script>
 <script>
   // Trinity Face: mount the sensory manager (Listen / Look / Tilt / Place + status line).
-  if (window.HighwaySense) { try { window.HighwaySense.mount(document.querySelector('#sense')); } catch (e) { /* sensors never break the app */ } }
+  // Sensors never break the app, but a failure must be VISIBLE, not silent.
+  (function () {
+    var host = document.querySelector('#sense');
+    if (!host) return;
+    function fail(why) { host.textContent = 'sensors unavailable: ' + why; }
+    try {
+      if (window.HighwaySense) window.HighwaySense.mount(host);
+      else fail('sensors.js did not load');
+    } catch (e) { fail(String((e && e.message) || e)); }
+  })();
 </script>
 <div id="emoji-picker"></div>
 </body>
-</html></div>
+</html>
