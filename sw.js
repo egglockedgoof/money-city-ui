@@ -17,7 +17,7 @@
  * cache:"reload" so a new version never snapshots a stale HTTP-cached copy (GitHub Pages
  * sends max-age=600).
  */
-var CACHE_VERSION = "highway-shell-v9";
+var CACHE_VERSION = "highway-shell-v10";
 var HTML_TIMEOUT_MS = 4000;
 var SHELL = [
   "./",
@@ -27,6 +27,8 @@ var SHELL = [
   "live.js",
   "haptics.js",
   "sensors.js",
+  "ear.js",
+  "ear-app.js",
   "manifest.json",
   "icons/icon-192.png",
   "icons/icon-512.png",
