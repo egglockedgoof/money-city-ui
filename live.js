@@ -1,9 +1,10 @@
 /* Highway live layer: socket client + haptic touch engine + gesture registry.
  *
- * EXPERIMENTAL / UNVERIFIED: this renders sound through Web Audio, i.e. the SPEAKER.
- * Whether that couples into the iPhone's Taptic Engine as a physical purr is UNVERIFIED until
- * it is tested on sin's phone. (iPhone speakers also roll off hard below ~100 Hz, so the 50 Hz
- * fundamental of the purr may be mostly inaudible; its soft harmonic is what is likely heard.)
+ * EXPERIMENTAL: this renders sound through Web Audio, i.e. the SPEAKER.
+ * First real-device test (Oct 24 2026, sin's iPhone): heartbeat clearly heard; the purr
+ * heard and likely FELT in hand (operator report). Whether that feeling is true Taptic
+ * coupling is still not proven. (iPhone speakers also roll off hard below ~100 Hz, so the
+ * 50 Hz fundamental of the purr may be mostly inaudible; its soft harmonic is what is heard.)
  * iOS also mutes Web Audio when the ringer switch is on silent. Build the path; don't promise
  * the physics.
  *
@@ -254,7 +255,7 @@
         render: function (P, c, t) { P.tap(c, t, { gain: 0.38, freq: 100 }); } });
     R({ name: "purr", when: "set down, SANCTUARY: a continuous breathing rumble; the state holds ~20 s per event and is renewed by the next.",
         needs: "setdown", sustain: true, holdMs: PURR_HOLD_MS,
-        render: function (P, c) { return P.rumble(c, { level: 0.2 }); } });
+        render: function (P, c) { return P.rumble(c, { level: 0.32 }); } }); // level raised 0.2 -> 0.32 (Oct 24, sin: "amped up a bit")
     R({ name: "heartbeat", when: "set down ONLY, never in hand: a few loose lub-dubs, then minutes of rest.", needs: "setdown", cooldownMs: 90000,
         render: function (P, c, t) { P.phrase(c, t, { beats: P.jit(1, 1) > 1 ? 4 : 3, gain: 0.26 }); } });
     R({ name: "greeting", when: "pickup/app-open after an absence: one slow rise-and-fall swell.", pickup: true,
