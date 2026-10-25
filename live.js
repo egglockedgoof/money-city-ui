@@ -248,6 +248,29 @@
     };
   }
 
+  /* A composition the Loom invented on the spot: steps of engine primitives,
+   * clamped hard here so no payload can shout or run long. A rumble step is
+   * the only sustained primitive; it is stopped after its dur. */
+  function renderCompose(P, c, t, spec) {
+    function num(v, a, b, dflt) { var n = (typeof v === "number" && isFinite(v)) ? v : dflt; return clamp(n, a, b); }
+    var steps = (spec && spec.steps) || [];
+    for (var i = 0; i < steps.length && i < 12; i++) {
+      var st = steps[i] || {}, at = t + num(st.at, 0, 20, 0);
+      var gain = num(st.gain, 0.02, 0.9, 0.35), freq = num(st.freq, 30, 400, 80);
+      if (st.p === "tap") P.tap(c, at, { gain: gain, freq: freq, dur: num(st.dur, 0.03, 1.5, 0.07) });
+      else if (st.p === "thud") P.thud(c, at, { gain: gain, freq: freq });
+      else if (st.p === "beat") P.beat(c, at, { gain: gain, freq: freq, dur: num(st.dur, 0.03, 1.5, 0.13) });
+      else if (st.p === "phrase") P.phrase(c, at, { beats: Math.round(num(st.beats, 1, 6, 3)), gain: gain });
+      else if (st.p === "swell") P.swell(c, at, { dur: num(st.dur, 0.3, 8, 1.6), peak: gain, freq: freq, freqEnd: st.freqEnd ? num(st.freqEnd, 30, 400, freq) : undefined });
+      else if (st.p === "rumble") {
+        (function (lvl, d) {
+          var h = P.rumble(c, { level: lvl });
+          setTimeout(function () { try { h.stop(0.8); } catch (e) { /* ignore */ } }, d * 1000);
+        })(num(st.level, 0.05, 0.5, 0.3), num(st.dur, 2, 25, 6));
+      }
+    }
+  }
+
   /* ---------------- starter gestures ---------------- */
   function registerStarters(hub) {
     var R = hub.registerGesture;
@@ -276,6 +299,11 @@
         } });
     R({ name: "knock", when: "attention please: two firm taps with a beat between.",
         render: function (P, c, t) { P.tap(c, t, { gain: 0.6, freq: 78 }); P.tap(c, t + P.jit(0.34, 0.12), { gain: 0.66, freq: 74 }); } });
+    /* The Loom's own compositions: not a fixed gesture but a spec it sends
+     * with its turn. heldOk because a chosen act is expression, not ambience —
+     * it lands the second it is sent, in hand or set down. */
+    R({ name: "compose", when: "a touch the Loom composes on the spot from the engine primitives and sends with its turn.", heldOk: true,
+        render: function (P, c, t, params) { renderCompose(P, c, t, params && params.spec); } });
     return hub;
   }
 
@@ -310,7 +338,10 @@
           clearPing();
           (function ping() { pingTimer = setT(function () { try { ws.send(JSON.stringify({ type: "ping" })); } catch (e) { /* closing */ } ping(); }, 25000); })();
         } else if (f.type === "haptic" && typeof f.action === "string") {
-          if (opts.onHaptic) opts.onHaptic(f.action, f.from);
+          if (opts.onHaptic) {
+            if (f.spec !== undefined) opts.onHaptic(f.action, f.from, f.spec);
+            else opts.onHaptic(f.action, f.from);
+          }
         } else if (f.type === "message") {
           if (opts.onMessage) opts.onMessage(f);
         }
@@ -382,7 +413,7 @@
     url: HW_BRIDGE.replace(/^http/, "ws") + "/ws",
     getToken: getToken,
     onStatus: paint,
-    onHaptic: function (action) { hub.play(action); },
+    onHaptic: function (action, from, spec) { hub.play(action, spec ? { spec: spec } : undefined); },
     onMessage: function () { if (typeof window.hwPullMessages === "function") window.hwPullMessages(); }
   });
   function addControl() {
