@@ -17,12 +17,15 @@
  * cache:"reload" so a new version never snapshots a stale HTTP-cached copy (GitHub Pages
  * sends max-age=600).
  */
-var CACHE_VERSION = "highway-shell-v11";
+var CACHE_VERSION = "highway-shell-v12";
 var HTML_TIMEOUT_MS = 4000;
 var SHELL = [
   "./",
   "index.html",
   "highway.css",
+  "realm.css",
+  "realm.js",
+  "wallpaper.jpg",
   "highway.js",
   "live.js",
   "haptics.js",

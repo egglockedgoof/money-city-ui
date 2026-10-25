@@ -1364,10 +1364,18 @@ setInterval(applyMood, 600000);
     });
   }
   // Kill global rubber-banding, preserve chat scroll
-  document.body.addEventListener('touchmove', function(e){
-    if (!e.target.closest('#chat')) {
-      e.preventDefault();
+  // Only block the page-level bounce. Anything inside a real scroller (chat, tasks, notes,
+  // activity, news, hangout, the composer) keeps native momentum scrolling.
+  function inScroller(el){
+    while (el && el !== document.body && el.nodeType === 1) {
+      var cs = getComputedStyle(el), oy = cs.overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 1) return true;
+      el = el.parentElement;
     }
+    return false;
+  }
+  document.body.addEventListener('touchmove', function(e){
+    if (!inScroller(e.target)) e.preventDefault();
   }, { passive:false });
   // Expose for new message arrivals
   window.scrollChatToBottom = scrollChatToBottom;
