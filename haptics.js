@@ -16,6 +16,12 @@
  * intensity scales pulse length). iOS has no Vibration API; a best-effort tick via a hidden
  * <input type="checkbox" switch> is used. That path is unverified across iOS versions —
  * check HighwayHaptics.capability() on the real device.
+ *
+ * SIN'S LAW (Oct 25, 2026): the iOS switch-tick path in this file is NOT the Loom's
+ * voice and is retired for that purpose — "I don't want one fixed tick. Ever." The
+ * Loom renders as SYNTHESIZED SOUND through live.js's fluid engine, with pitch,
+ * gain and shape under its own control, heard live. This file remains for its
+ * contract vocabulary/registration shape only; render() is not wired to the Loom.
  */
 (function (root) {
   'use strict';

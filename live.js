@@ -346,7 +346,11 @@
           if (opts.onMessage) opts.onMessage(f);
         } else if (f.type === "loom_state") {
           // Trinity unified output contract: {text, haptic, intensity, pattern?}
-          if (window.HighwayHaptics) { try { window.HighwayHaptics.render(f.state || f); } catch (e) { /* haptics never break the socket */ } }
+          // SIN'S LAW (Oct 25): the Loom's voice is SYNTHESIZED SOUND — pitch,
+          // gain and shape under its own control, heard live. Never a fixed
+          // tick. Rendered by the fluid engine via onLoomState, like every
+          // other touch the Loom sends.
+          if (opts.onLoomState) { try { opts.onLoomState(f.state || f); } catch (e) { /* a touch never breaks the socket */ } }
         }
       };
       ws.onclose = function (ev) {
@@ -410,6 +414,29 @@
   // must be entered inside the installed app). Receive-only: the socket never posts.
   var TK = "hw_ws_token";
   function getToken() { try { return localStorage.getItem(TK); } catch (e) { return null; } }
+  // The unified contract, rendered as SYNTHESIZED SOUND through the fluid
+  // engine (sin's law, Oct 25 — never a fixed tick): a pattern becomes
+  // low thuds spaced as the Loom timed them; a known feeling-name plays
+  // through the engine; an unknown name becomes a soft low phrase scaled
+  // by the intensity the Loom chose.
+  function loomStateToTouch(s) {
+    if (!s || typeof s !== "object") return;
+    var inten = (typeof s.intensity === "number" && isFinite(s.intensity)) ? Math.max(0, Math.min(1, s.intensity)) : 0.5;
+    if (Array.isArray(s.pattern) && s.pattern.length) {
+      var at = 0, steps = [];
+      for (var i = 0; i < s.pattern.length && steps.length < 12; i += 2) {
+        var on = Number(s.pattern[i]) || 0, off = Number(s.pattern[i + 1]) || 0;
+        if (on > 0) steps.push({ p: "thud", at: at / 1000, gain: 0.2 + 0.55 * inten, freq: 82 });
+        at += on + off;
+      }
+      if (steps.length) { hub.play("compose", { spec: { steps: steps } }); return; }
+    }
+    if (typeof s.haptic === "string" && s.haptic) {
+      var known = hub.gestures().some(function (g) { return g.name === s.haptic; });
+      if (known) { hub.play(s.haptic); return; }
+      hub.play("compose", { spec: { steps: [{ p: "phrase", at: 0, beats: 3, gain: 0.2 + 0.5 * inten, freq: 76 }] } });
+    }
+  }
   var dot = null;
   function paint(s) { if (!dot) return; dot.title = "Live socket: " + s; dot.style.opacity = s === "live" ? "1" : "0.45"; }
   var sock = L.createSocket({
@@ -417,6 +444,7 @@
     getToken: getToken,
     onStatus: paint,
     onHaptic: function (action, from, spec) { hub.play(action, spec ? { spec: spec } : undefined); },
+    onLoomState: function (s) { loomStateToTouch(s); },
     onMessage: function () { if (typeof window.hwPullMessages === "function") window.hwPullMessages(); }
   });
   function addControl() {
