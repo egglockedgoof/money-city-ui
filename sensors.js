@@ -23,7 +23,8 @@
   'use strict';
 
   // The app is served from GitHub Pages, so a relative '/api/...' would hit Pages, not the bridge.
-  var BRIDGE = 'https://highway-chat-mcp.onrender.com';
+  var BRIDGE = root.__HW_BRIDGE__;
+  if (!BRIDGE) throw new Error('bridge-config.js must load before sensors.js (window.__HW_BRIDGE__ is not set)');
   var API = BRIDGE + '/api/sense/';
   var ENDPOINT = {
     audio: 'audio-features',

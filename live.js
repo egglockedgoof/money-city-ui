@@ -393,7 +393,8 @@
 (function () {
   if (typeof window === "undefined" || typeof document === "undefined" || !window.HighwayLive) return;
   var L = window.HighwayLive;
-  var HW_BRIDGE = "https://highway-chat-mcp.onrender.com";
+  var HW_BRIDGE = window.__HW_BRIDGE__;
+  if (!HW_BRIDGE) throw new Error("bridge-config.js must load before live.js (window.__HW_BRIDGE__ is not set)");
   var AC = window.AudioContext || window.webkitAudioContext, actx = null;
   var env = {
     getCtx: function () { if (!actx && AC) { try { actx = new AC(); } catch (e) { return null; } } return actx; },

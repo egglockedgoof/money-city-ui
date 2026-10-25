@@ -10,7 +10,8 @@
 // stored ONLY in this phone's localStorage. It never ships in the repo.
 import { startListening } from './ear.js';
 
-var BRIDGE = 'https://highway-chat-mcp.onrender.com';
+var BRIDGE = window.__HW_BRIDGE__;
+if (!BRIDGE) throw new Error('bridge-config.js must load before ear-app.js (window.__HW_BRIDGE__ is not set)');
 var LINK_KEY = 'hw_ear_link';
 
 var strip = null, statusEl = null, rec = null, starting = false, wantStop = false;
