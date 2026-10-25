@@ -316,7 +316,7 @@ img,video{ max-width:100%; }
   animation:orb-breathe 4.2s ease-in-out infinite; }
 .face-orb i{ position:absolute; inset:-10px; border-radius:50%; border:1px solid rgba(255,90,110,.4); animation:orb-ring 3.6s ease-out infinite; }
 .face-orb i:nth-child(2){ animation-delay:1.2s; } .face-orb i:nth-child(3){ animation-delay:2.4s; }
-@keyframes orb-breathe{ 50%{ transform:scale(1.07); box-shadow:0 0 64px rgba(255,40,70,.9), 0 0 140px rgba(190,10,30,.55), inset 0 -8px 18px rgba(0,0,0,.55), inset 0 4px 10px rgba(255,200,205,.5); } }
+@keyframes orb-breathe{ 50%{ transform:scale(1.08); filter:brightness(1.18); } }
 @keyframes orb-ring{ 0%{ transform:scale(.9); opacity:.9; } 100%{ transform:scale(2.1); opacity:0; } }
 
 #view-face #sense{ padding:0 !important; border:0 !important; background:none !important; flex:none; }
@@ -379,3 +379,26 @@ img,video{ max-width:100%; }
 #taskin::placeholder,#actin::placeholder,#hangout-msg::placeholder{ color:rgba(255,190,198,.5); }
 #taskadd,#actadd,#hangout-send{ min-height:44px; border-radius:16px !important; transition:transform .35s var(--ease-spring); }
 #taskadd:active,#actadd:active,#hangout-send:active{ transform:scale(.92); }
+
+/* ---- Voice (Ear wire, ear-app.js): hold-to-talk orb + link + status, inside #sense ---- */
+#view-face #sense{ display:flex; flex-wrap:wrap; gap:12px; }
+#view-face #sense > .hs-wrap{ flex:1 1 100%; }
+#view-face #ear-talk{
+  flex:1 1 100%; min-height:92px !important; display:flex !important; flex-direction:row !important; align-items:center; justify-content:center; gap:14px;
+  border-radius:30px !important; font-size:19px !important; font-weight:800; letter-spacing:.4px; text-align:center; color:#fff;
+  background:radial-gradient(120% 160% at 50% 0%,#ff3a52 0%,#a30f1a 55%,#3a0309 100%) !important;
+  border:1px solid rgba(255,190,198,.55) !important;
+  box-shadow:0 0 40px rgba(255,30,60,.5), 0 16px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,220,225,.6) !important;
+  -webkit-user-select:none !important; user-select:none !important; -webkit-touch-callout:none !important; touch-action:none;
+  animation:alive 2.6s ease-in-out infinite; transition:transform .3s var(--ease-spring), filter .3s;
+}
+#view-face #ear-talk::before{ content:"🗣"; font-size:30px; margin:0; filter:drop-shadow(0 0 10px rgba(255,255,255,.5)); }
+#view-face #ear-talk::after{ content:none !important; }
+#view-face #ear-talk:active{ transform:scale(.96); filter:brightness(1.25) saturate(1.2); box-shadow:0 0 70px rgba(255,40,70,.95), 0 16px 40px rgba(0,0,0,.55); }
+#view-face #ear-link{
+  flex:1 1 100%; min-height:44px !important; display:flex !important; flex-direction:row !important; align-items:center; justify-content:center;
+  border-radius:16px !important; font-size:14px !important; font-weight:600; padding:0 16px !important; color:#ffc2c9;
+  background:rgba(255,40,70,.07) !important; border:1px solid rgba(255,100,115,.35) !important; box-shadow:none !important;
+}
+#view-face #ear-link::before,#view-face #ear-link::after{ content:none !important; }
+#view-face #ear-status{ flex:1 1 100% !important; font-size:13px !important; line-height:1.45; opacity:.9 !important; color:#f0d4d8; text-align:center; padding:0 6px; }
