@@ -13,7 +13,7 @@ import { startListening } from './ear.js';
 var BRIDGE = 'https://highway-chat-mcp.onrender.com';
 var LINK_KEY = 'hw_ear_link';
 
-var strip = null, statusEl = null, rec = null, starting = false;
+var strip = null, statusEl = null, rec = null, starting = false, wantStop = false;
 
 function say(msg) { if (statusEl) statusEl.textContent = msg; }
 
@@ -83,9 +83,11 @@ async function begin() {
     say('Could not open the Ear: ' + ((e && e.message) || e));
   }
   starting = false;
+  if (wantStop) { wantStop = false; end(); }
 }
 
 async function end() {
+  if (starting) { wantStop = true; return; }
   if (!rec) return;
   var r = rec; rec = null;
   say('Sending to the Ear\u2026');
@@ -107,10 +109,13 @@ function mount(tries) {
   talk.id = 'ear-talk';
   talk.textContent = 'Talk (hold)';
   talk.style.touchAction = 'none';
-  talk.addEventListener('pointerdown', function (e) { e.preventDefault(); begin(); });
+  talk.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    try { talk.setPointerCapture(e.pointerId); } catch (err) {}
+    begin();
+  });
   talk.addEventListener('pointerup', function (e) { e.preventDefault(); end(); });
   talk.addEventListener('pointercancel', function () { end(); });
-  talk.addEventListener('pointerleave', function () { if (rec) end(); });
   talk.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
   var linkBtn = document.createElement('button');
