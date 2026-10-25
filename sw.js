@@ -13,12 +13,14 @@
  * cache is deleted on activate. Cache-first means a shell file will not refresh
  * until this version string changes.
  */
-var CACHE_VERSION = "highway-shell-v4";
+var CACHE_VERSION = "highway-shell-v5";
 var SHELL = [
   "./",
   "index.html",
   "highway.js",
   "live.js",
+  "haptics.js",
+  "sensors.js",
   "manifest.json",
   "icons/icon-192.png",
   "icons/icon-512.png",

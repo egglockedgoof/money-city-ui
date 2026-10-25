@@ -344,6 +344,9 @@
           }
         } else if (f.type === "message") {
           if (opts.onMessage) opts.onMessage(f);
+        } else if (f.type === "loom_state") {
+          // Trinity unified output contract: {text, haptic, intensity, pattern?}
+          if (window.HighwayHaptics) { try { window.HighwayHaptics.render(f.state || f); } catch (e) { /* haptics never break the socket */ } }
         }
       };
       ws.onclose = function (ev) {
