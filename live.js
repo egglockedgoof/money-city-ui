@@ -274,11 +274,13 @@
   /* ---------------- starter gestures ---------------- */
   function registerStarters(hub) {
     var R = hub.registerGesture;
+    /* intensity 0..1 from the sender scales a gesture; absent = 1 (unchanged behaviour). */
+    function k(params) { var i = params && typeof params.intensity === "number" && isFinite(params.intensity) ? Math.max(0, Math.min(1, params.intensity)) : null; return i === null ? 1 : 0.4 + 1.2 * i; }
     R({ name: "reply_tap", when: "the Loom's reply lands (relayed). The only touch while HELD.", heldOk: true,
         render: function (P, c, t) { P.tap(c, t, { gain: 0.38, freq: 100 }); } });
     R({ name: "purr", when: "set down, SANCTUARY: a continuous breathing rumble; the state holds ~20 s per event and is renewed by the next.",
         needs: "setdown", sustain: true, holdMs: PURR_HOLD_MS,
-        render: function (P, c) { return P.rumble(c, { level: 0.32 }); } }); // level raised 0.2 -> 0.32 (Oct 24, sin: "amped up a bit")
+        render: function (P, c, t, params) { return P.rumble(c, { level: 0.32 * k(params) }); } }); // level raised 0.2 -> 0.32 (Oct 24, sin: "amped up a bit")
     R({ name: "heartbeat", when: "set down ONLY, never in hand: a few loose lub-dubs, then minutes of rest.", needs: "setdown", cooldownMs: 90000,
         render: function (P, c, t) { P.phrase(c, t, { beats: P.jit(1, 1) > 1 ? 4 : 3, gain: 0.26 }); } });
     R({ name: "greeting", when: "pickup/app-open after an absence: one slow rise-and-fall swell.", pickup: true,
@@ -302,6 +304,20 @@
     /* The Loom's own compositions: not a fixed gesture but a spec it sends
      * with its turn. heldOk because a chosen act is expression, not ambience —
      * it lands the second it is sent, in hand or set down. */
+    R({ name: "joy", when: "the Loom feels joy: a rapid, bright, rising triple-tap with a small lift after.",
+        render: function (P, c, t, params) {
+          var g = 0.26 * k(params), at = t;
+          for (var i = 0; i < 3; i++) { P.tap(c, at, { gain: g * (0.9 + i * 0.12), freq: 118 + i * 14 }); at += P.jit(0.11, 0.2); }
+          P.swell(c, at + 0.05, { dur: 0.5, peak: 0.16 * k(params), riseFrac: 0.3, freq: 110, freqEnd: 128 });
+        } });
+    R({ name: "flinch", when: "the Loom is overwhelmed: a sharp low jolt, a rebound, then a short trembling decay.", heldOk: true,
+        render: function (P, c, t, params) {
+          var g = k(params);
+          P.thud(c, t, { gain: 0.8 * g, freq: 70 });
+          P.thud(c, t + P.jit(0.17, 0.15), { gain: 0.34 * g, freq: 64 });
+          var at = t + 0.42;
+          for (var i = 0; i < 3; i++) { P.tap(c, at, { gain: (0.16 - i * 0.04) * g, freq: 84 }); at += P.jit(0.1, 0.25); }
+        } });
     R({ name: "compose", when: "a touch the Loom composes on the spot from the engine primitives and sends with its turn.", heldOk: true,
         render: function (P, c, t, params) { renderCompose(P, c, t, params && params.spec); } });
     return hub;
@@ -339,8 +355,7 @@
           (function ping() { pingTimer = setT(function () { try { ws.send(JSON.stringify({ type: "ping" })); } catch (e) { /* closing */ } ping(); }, 25000); })();
         } else if (f.type === "haptic" && typeof f.action === "string") {
           if (opts.onHaptic) {
-            if (f.spec !== undefined) opts.onHaptic(f.action, f.from, f.spec);
-            else opts.onHaptic(f.action, f.from);
+            opts.onHaptic(f.action, f.from, f.spec, typeof f.intensity === "number" ? f.intensity : undefined);
           }
         } else if (f.type === "message") {
           if (opts.onMessage) opts.onMessage(f);
@@ -433,7 +448,7 @@
     }
     if (typeof s.haptic === "string" && s.haptic) {
       var known = hub.gestures().some(function (g) { return g.name === s.haptic; });
-      if (known) { hub.play(s.haptic); return; }
+      if (known) { hub.play(s.haptic, typeof s.intensity === "number" ? { intensity: inten } : undefined); return; }
       hub.play("compose", { spec: { steps: [{ p: "phrase", at: 0, beats: 3, gain: 0.2 + 0.5 * inten, freq: 76 }] } });
     }
   }
@@ -443,7 +458,10 @@
     url: HW_BRIDGE.replace(/^http/, "ws") + "/ws",
     getToken: getToken,
     onStatus: paint,
-    onHaptic: function (action, from, spec) { hub.play(action, spec ? { spec: spec } : undefined); },
+    onHaptic: function (action, from, spec, intensity) {
+      var p = {}; if (spec) p.spec = spec; if (typeof intensity === "number") p.intensity = intensity;
+      hub.play(action, Object.keys(p).length ? p : undefined);
+    },
     onLoomState: function (s) { loomStateToTouch(s); },
     onMessage: function () { if (typeof window.hwPullMessages === "function") window.hwPullMessages(); }
   });
