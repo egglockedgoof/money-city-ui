@@ -1,72 +1,15 @@
 
 (function(){
   "use strict";
-  /* ============ BRIDGE API (Supabase-backed, replaces Firebase) ============
-     The bridge at https://highway-chat-mcp.onrender.com exposes:
-     - GET /api/messages?channel=&limit=&since_ts= (requires Bearer token)
-     - GET /api/tasks, /api/presence, /api/typing, /api/notes, /api/activity
-     - GET /api/stream (SSE for real-time updates)
-     NOTE: POST endpoints for writes are not yet implemented in the bridge.
-     Write operations below call the intended endpoints; they will 404 until
-     the backend adds them. See MIGRATION-NOTES.md for details. */
-  var BRIDGE_BASE = "https://highway-chat-mcp.onrender.com";
-  // WIDGET_TOKEN: the bridge accepts this as a Bearer token for the site API.
-  // It is a shared secret — possession IS the authorization. For a public
-  // read-only widget this is acceptable; writes should use per-user auth.
-var WIDGET_TOKEN="3AdUv8TuG429PrerCfD3hg5OBpCgGyYycAJAw0CcHlsJxPxp7cNCp5Uic8IaF1W-";
-  try{
-    var _qt = new URLSearchParams(location.search).get("token");
-    if(_qt) WIDGET_TOKEN = _qt;
-    else { var _lt = localStorage.getItem("hw_widget_token"); if(_lt) WIDGET_TOKEN = _lt; }
-  }catch(e){}
-  function bridgeHeaders(extra){
-    var h = {"Content-Type":"application/json"};
-    if(WIDGET_TOKEN) h["Authorization"] = "Bearer "+WIDGET_TOKEN;
-    if(extra) for(var k in extra) h[k]=extra[k];
-    return h;
-  }
-  var BridgeAPI = {
-    base: BRIDGE_BASE,
-    async get(path){
-      var r = await fetch(BRIDGE_BASE+path, {headers: bridgeHeaders()});
-      if(!r.ok) throw new Error("API "+r.status+": "+path);
-      return r.json();
-    },
-    async post(path, body){
-      // BLOCKER: bridge has no POST /api/* endpoints yet (only GET).
-      // This will 404 until the backend implements writes.
-      var r = await fetch(BRIDGE_BASE+path, {method:"POST", headers: bridgeHeaders(), body: JSON.stringify(body||{})});
-      if(!r.ok) throw new Error("API "+r.status+": POST "+path+" (write endpoints not implemented)");
-      return r.json();
-    },
-    messages: function(channel, limit, since_ts){
-      var q = "?channel="+(channel||"room")+"&limit="+(limit||100);
-      if(since_ts) q += "&since_ts="+since_ts;
-      return this.get("/api/messages"+q);
-    },
-    tasks: function(){ return this.get("/api/tasks?limit=100&include_done=true"); },
-    presence: function(){ return this.get("/api/presence"); },
-    typing: function(){ return this.get("/api/typing"); },
-    notes: function(){ return this.get("/api/notes"); },
-    activity: function(){ return this.get("/api/activity?limit=30"); },
-    // Writes (require backend POST endpoints — currently 404):
-    sendMessage: function(msg){ return this.post("/api/messages", msg); },
-    setPresence: function(p){ return this.post("/api/presence", p); },
-    setTyping: function(t){ return this.post("/api/typing", t); },
-    addTask: function(t){ return this.post("/api/tasks", t); },
-    updateTask: function(id, patch){ return this.post("/api/tasks/"+id, patch); },
-    deleteTask: function(id){ return this.post("/api/tasks/"+id+"/delete", {}); },
-    logActivity: function(a){ return this.post("/api/activity", a); },
-    saveNotes: function(n){ return this.post("/api/notes", n); },
-    // SSE stream for real-time updates (replaces onSnapshot)
-    stream: function(onEvent){
-      var es = new EventSource(BRIDGE_BASE+"/api/stream");
-      es.onmessage = function(e){ try{ onEvent(JSON.parse(e.data)); }catch(err){} };
-      es.onerror = function(){ /* EventSource auto-reconnects */ };
-      return es;
-    }
+  /* ============ FIREBASE PROJECT ============ */
+  var FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyDmAMnxfBorxPkwt4Y2FjhkEB83914ut1U",
+    authDomain:        "highway-chat.firebaseapp.com",
+    projectId:         "highway-chat",
+    storageBucket:     "highway-chat.firebasestorage.app",
+    messagingSenderId: "1063748874829",
+    appId:             "1:1063748874829:web:5565a2fa6012a0c3b76204"
   };
-  window.BridgeAPI = BridgeAPI; // hangout + push IIFEs live outside this scope
 
   /* ============ DEVICE ID (per-tab identity) ============ */
   var DEVICE_ID = sessionStorage.getItem("hw_device_id");
@@ -104,7 +47,11 @@ var WIDGET_TOKEN="3AdUv8TuG429PrerCfD3hg5OBpCgGyYycAJAw0CcHlsJxPxp7cNCp5Uic8IaF1
   function pingify(s){ return esc(s).replace(/@([a-z0-9_]+)/gi,'<span class="ping">@$1</span>'); }
 
   function fmtTime(m){var n=m.tsNum||0;if(!n)return"";var d=new Date(n),h=d.getHours(),a=h>=12?"PM":"AM";return(h%12||12)+":"+("0"+d.getMinutes()).slice(-2)+" "+a;}
-  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
+  // H-93: allowlist http(s) at the render sink. esc() HTML-escapes but does NOT
+// neutralize javascript:/data:/vbscript: URLs in <a href> -- pre-fix persisted
+// rows may still carry them. Returns "" for anything unsafe (row renders no link).
+function safeUrl(u){var s=String(u||"").replace(/^\s+/,"").toLowerCase();return (s.indexOf("http://")===0||s.indexOf("https://")===0)?String(u):"";}
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
   function safeUrl(u){ try{ var p=new URL(u,location.href); return (p.protocol==="http:"||p.protocol==="https:")?p.href:"#"; }catch(e){ return "#"; } }
 
@@ -121,10 +68,8 @@ function meter(src, s){
   }catch(e){}
 }
 function flushReads(){
-  // Read metering disabled: no Firebase, no quota to track.
-  // Bridge API reads go to Supabase; no per-tab metering needed.
   try{
-    return; // no-op
+    var u=window.firebase&&firebase.auth&&firebase.auth().currentUser; if(!u) return;
     var counts=_reads, any=false; for(var k in counts){ if(counts[k]){ any=true; break; } } if(!any) return;
     _reads={};
     u.getIdToken().then(function(t){
@@ -137,14 +82,37 @@ function flushReads(){
 setInterval(flushReads, 300000);
 window.addEventListener("pagehide", flushReads);
 
+/* Bridge reads (no Firestore listeners). Writes still use Firebase. */
+var HW_BRIDGE="https://highway-chat-mcp.onrender.com";
+function hwToken(){
+  var u=window.firebase&&firebase.auth&&firebase.auth().currentUser;
+  return u?u.getIdToken():Promise.reject(new Error("no auth"));
+}
+function hwGet(path){
+  return hwToken().then(function(t){
+    return fetch(HW_BRIDGE+path,{headers:{Authorization:"Bearer "+t}}).then(function(r){
+      if(!r.ok) throw new Error("api "+r.status);
+      return r.json();
+    });
+  });
+}
+function asDoc(row){
+  var ts=Number(row.tsNum||row.ts||0)||0;
+  var data=Object.assign({},row,{
+    tsNum:ts,
+    ts:{toDate:function(){return new Date(ts);},toMillis:function(){return ts;}}
+  });
+  return {id:row.id,data:function(){ return data; }};
+}
+
 /* ============ QUESTS / WINS / AMBIENT (inside IIFE - needs db/esc/fmtTime) ============ */
 function loadQuests(){
-  var el=document.getElementById("questlist"); if(!el||!db) return;
-  BridgeAPI.tasks().then(function(res){ var snap={empty:!(res.tasks||[]).length, forEach:function(fn){(res.tasks||[]).forEach(function(t){fn({data:function(){return t;}});});}};
-    var h='<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">\u2694\uFE0F QUEST BOARD</h3>';
-    if(snap.empty){ h+='<p style="color:var(--muted);">No active quests. Add one from the Tasks tab.</p>'; }
-    else snap.forEach(function(doc){
-      var d=doc.data()||{}, done=d.done?'\u2705':'\u23F3';
+  var el=document.getElementById("questlist"); if(!el) return;
+  hwGet("/api/tasks?limit=20").then(function(body){
+    var items=body.tasks||[], h='<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">\u2694\uFE0F QUEST BOARD</h3>';
+    if(!items.length){ h+='<p style="color:var(--muted);">No active quests. Add one from the Tasks tab.</p>'; }
+    else items.forEach(function(d){
+      var done=d.done?'\u2705':'\u23F3';
       h+='<div style="padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;">'
         +'<div>'+done+' <b>'+esc(d.text||"Untitled")+'</b></div>'
         +'<div style="font-size:12px;color:var(--muted);">by '+esc(d.createdBy||"unknown")+'</div></div>';
@@ -153,21 +121,21 @@ function loadQuests(){
   }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
 }
 function loadWins(){
-  var el=document.getElementById("winlist"); if(!el||!db) return;
-  BridgeAPI.activity().then(function(list){ var snap={forEach:function(fn){(list||[]).forEach(function(a){fn({data:function(){return a;}});});}};
+  var el=document.getElementById("winlist"); if(!el) return;
+  hwGet("/api/activity?limit=30").then(function(body){
     var h='<div style="padding:12px;"><h3 style="color:var(--red);margin:0 0 12px;">\uD83C\uDFC6 WIN FEED</h3>', found=0;
-    snap.forEach(function(doc){
-      var d=doc.data()||{}, txt=(d.text||"").toLowerCase();
+    (body.items||[]).forEach(function(d){
+      var txt=(d.text||"").toLowerCase();
       if(/win|completed|beat|crushed|done|success/.test(txt)){ found++;
         h+='<div style="padding:8px;border-bottom:1px solid var(--line);"><div>'+esc(d.text||"")
-          +'</div><div style="font-size:11px;color:var(--muted);">'+esc(d.by||"")+' \u2022 '+fmtTime(d)+'</div></div>';
+          +'</div><div style="font-size:11px;color:var(--muted);">'+esc(d.by||"")+' \u2022 '+fmtTime({tsNum:d.ts})+'</div></div>';
       }
     });
     if(!found) h+='<p style="color:var(--muted);">No wins yet. Go get one.</p>';
     el.innerHTML=h+'</div>';
   }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
 }
-// Fed by the activity onSnapshot in goLive — no polling, no extra reads.
+// Fed by /api/activity pull in goLive.
 function updateAmbientStatus(snap){
   var el=document.getElementById("ambient"); if(!el||!snap) return;
   var h="";
@@ -192,18 +160,6 @@ function updateAmbientStatus(snap){
   }
 
   /* ================= CHAT ================= */
-  function isOwnerSession(){ try { return !!sessionStorage.getItem("hw_owner_token"); } catch(e){ return false; } }
-  function deleteMessageById(id, rowEl){
-    var tok = null; try { tok = sessionStorage.getItem("hw_owner_token"); } catch(e){}
-    if(!tok || !id) return;
-    if(!window.confirm("Delete this message?")) return;
-    fetch(BRIDGE_BASE + "/api/messages/" + encodeURIComponent(id), {
-      method: "DELETE", headers: { "Authorization": "Bearer " + tok }
-    }).then(function(r){ return r.json(); }).then(function(res){
-      if(res && res.ok){ if(rowEl && rowEl.parentNode) rowEl.parentNode.removeChild(rowEl); }
-      else if(window.console&&console.warn) console.warn("[highway] delete failed:", res);
-    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway] delete failed:", e&&e.message||e); });
-  }
   function renderMsg(doc){
     var m=doc.data(); if(!m||seen[doc.id]) return; seen[doc.id]=1;
     var _seenKeys=Object.keys(seen);
@@ -236,7 +192,7 @@ function updateAmbientStatus(snap){
     // File attachments (Cloudinary CDN): render inline by type.
     var _atts=(m.attachments&&m.attachments.length)?m.attachments:[];
     _atts.forEach(function(a){
-      var _u=esc(a.download_url||""), _fn=esc(a.filename||"file"), _mt=String(a.mime_type||"");
+      var _u=esc(safeUrl(a.download_url)), _fn=esc(a.filename||"file"), _mt=String(a.mime_type||"");
       if(!_u) return;
       if(_mt.indexOf("image/")===0||a.is_image){
         attHtml+='<a href="'+_u+'" target="_blank" rel="noopener"><img src="'+_u+'" alt="'+_fn+'" loading="lazy" style="max-width:100%;max-height:320px;border-radius:10px;margin-top:6px;display:block;" /></a>';
@@ -251,11 +207,10 @@ function updateAmbientStatus(snap){
     if(_isLong){
       attHtml+='<button class="fulltext-btn" style="background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:15px;cursor:pointer;margin-top:6px;display:block;">📄 long message — tap to expand</button>';
     }
-    var delHtml = isOwnerSession() ? '<span class="msg-del" data-del="'+doc.id+'" title="Delete message">\u2715</span>' : "";
-    row.innerHTML='<div class="bwrap"><div class="who">'+esc(m.name||"anon")+
+    row.innerHTML='<div class="bwrap"><div class="who" style="unicode-bidi:isolate">'+esc(m.name||"anon")+
       (mine?"":'<span class="ver">VERIFIED</span>')+crownHtml(m.name)+
-      '<span class=ts>'+fmtTime(m)+'</span>'+delHtml+'</div>'+
-      '<div class="bubble">'+(m.audio?'<button data-voice="'+doc.id+'" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+'<span class="msg-text">'+pingify(_shownText)+'</span>'+attHtml+'</div>'+
+      '<span class=ts>'+fmtTime(m)+'</span></div>'+
+      '<div class="bubble">'+(m.audio?'<button data-voice="'+doc.id+'" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+'<span class="msg-text" style="unicode-bidi:isolate">'+pingify(_shownText)+'</span>'+attHtml+'</div>'+
       '<div class="reacts">'+rxHtml+'</div></div>';
     // Sorted insertion: oldest at top, newest at bottom. Numeric tsNum, doc ID tie-breaker.
     // This fixes out-of-order rendering when Firestore returns mixed-type or unsorted docs.
@@ -277,9 +232,6 @@ function updateAmbientStatus(snap){
     if(!mine){ row.classList.add("arrived"); setTimeout(function(){row.classList.remove("arrived");},1200); }
     row.querySelectorAll(".rx").forEach(function(el){
       el.addEventListener("click", function(ev){ ev.stopPropagation(); toggleReaction(el.getAttribute("data-id"), el.getAttribute("data-e")); });
-    });
-    row.querySelectorAll("[data-del]").forEach(function(el){
-      el.addEventListener("click", function(ev){ ev.stopPropagation(); deleteMessageById(el.getAttribute("data-del"), row); });
     });
     row.querySelectorAll("[data-voice]").forEach(function(btn){
       btn.addEventListener("click", function(){ window.playVoice(btn.getAttribute("data-voice"), btn); });
@@ -324,39 +276,26 @@ function updateAmbientStatus(snap){
   }
   function pickEmoji(e){
     document.getElementById("emoji-picker").classList.remove("open");
-    if(_pickerFor&&e) toggleReaction(_pickerFor, e.trim().slice(0,4), _pickerLane);
-    _pickerFor=null; _pickerLane="room";
+    if(_pickerFor&&e) toggleReaction(_pickerFor, e.trim().slice(0,4));
+    _pickerFor=null;
   }
-  // Hangout-lane reaction toggle (set by the hangout IIFE when it loads).
-  window.HW_hangoutToggle = null;
-  var _pickerLane = "room";
-  function toggleReaction(id, emoji, lane){
+  function toggleReaction(id, emoji){
     if(emoji==="__pick__"){
       var els=document.querySelectorAll('.rx-add[data-id="'+id+'"]');
-      _pickerLane = lane || "room";
       showPicker(id, els.length?els[0]:document.body);
       return;
     }
-    if(lane === "hangout" && window.HW_hangoutToggle){ window.HW_hangoutToggle(id, emoji); return; }
-    if(!MY_NAME) return;
-    BridgeAPI.post("/api/messages/"+encodeURIComponent(id)+"/reactions", { emoji: emoji, name: MY_NAME })
-      .then(function(){ refreshRowReactions(id, "room"); })
-      .catch(function(e){ if(window.console&&console.warn) console.warn("[highway] react failed:", e&&e.message||e); });
-  }
-  function refreshRowReactions(id, channel){
-    // Re-render one row after a reaction toggle: drop the old row, forget it
-    // in `seen`, and re-render from a fresh fetch. Sorted insert keeps place.
-    var sel = channel === "hangout" ? '#hangout-chat [data-id="'+id+'"]' : '#chat [data-id="'+id+'"]';
-    var row = document.querySelector(sel);
-    if(!row || !row.parentNode) return;
-    BridgeAPI.messages(channel, 100).then(function(res){
-      var msgs = res.messages || [], m = null;
-      for(var i=0;i<msgs.length;i++) if(String(msgs[i].id)===String(id)){ m = msgs[i]; break; }
-      if(!m) return;
-      row.parentNode.removeChild(row);
-      if(channel === "hangout" && window.HW_hangoutRender){ window.HW_hangoutRender(m, true); }
-      else { delete seen[id]; renderMsg({ id: id, data: function(){ return m; } }); }
-    }).catch(function(){});
+    var ref=db.collection("highway_messages").doc(id);
+    db.runTransaction(function(tx){
+      return tx.get(ref).then(function(snap){
+        var rx=(snap.data()&&snap.data().reactions)||{};
+        var users=rx[emoji]||[];
+        var i=users.indexOf(MY_NAME);
+        if(i>=0) users.splice(i,1); else users.push(MY_NAME);
+        if(users.length) rx[emoji]=users; else delete rx[emoji];
+        tx.update(ref,{reactions:rx});
+      });
+    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
   function sendMsg(){
     var t=msg.value.trim();
@@ -370,9 +309,9 @@ function updateAmbientStatus(snap){
     if(!t||!MY_NAME||!db) return;
     msg.value=""; msg.style.height="auto"; setTyping(false); msg.focus();
     if(window.HighwayAmbient)HighwayAmbient.sendChime();
-    BridgeAPI.sendMessage({
+    db.collection("highway_messages").add({
       name:MY_NAME, text:t, deviceId:DEVICE_ID, reactions:{},
-      ts:new Date().toISOString(), tsNum:Date.now()
+      ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
     }).catch(function(e){
       sysLine("Send failed: "+(e.message||"permission denied")+" — try rejoining.");
       msg.value=t;
@@ -399,10 +338,10 @@ function updateAmbientStatus(snap){
         var reader=new FileReader();
         reader.onloadend=function(){
           var b64=reader.result.split(",")[1];
-          BridgeAPI.sendMessage({
+          db.collection("highway_messages").add({
             name:MY_NAME, text:"🎤 voice message", deviceId:DEVICE_ID, reactions:{},
             audio:b64, audioType:_recorder.mimeType,
-            ts:new Date().toISOString(), tsNum:Date.now()
+            ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
           });
           sysLine("Voice message sent.");
         };
@@ -444,9 +383,9 @@ function updateAmbientStatus(snap){
   /* ================= FILE ATTACHMENTS (Cloudinary via bridge) =================
      📎 button → native file picker → preview bar → upload with progress →
      Firestore message with attachments[] → inline render.
-     Uploads go through the bridge POST /upload (Firebase ID token auth);
-     the Cloudinary API secret never touches the browser. No dashboard
-     upload preset needed. */
+     Uploads go through the bridge POST /upload (per-user widget JWT auth,
+     minted server-side at login); the Cloudinary API secret never touches
+     the browser. No dashboard upload preset needed. */
   window.HW_uploading=false;
   (function(){
     var BRIDGE_URL="https://highway-chat-mcp.onrender.com";
@@ -498,9 +437,21 @@ function updateAmbientStatus(snap){
     }
     if(attachCancel) attachCancel.addEventListener("click", function(){ clearPending(); sysLine("Attachment removed."); });
 
-    // Upload through the bridge: file → base64 → POST /upload (Firebase ID
-    // token auth) → bridge uploads to Cloudinary server-side, returns the
-    // public CDN URL as download_url. XHR (not fetch) keeps upload progress.
+    // H-125: POST /upload authenticates with the H-8 per-user widget JWT minted
+    // server-side at login (same verifier as DM reads). The raw WIDGET_TOKEN
+    // secret NEVER enters the browser, and Firebase ID tokens are rejected by
+    // the bridge (it no longer verifies them) — uploads never go through
+    // Firebase auth. Hook point for the login flow (H-124): the login flow
+    // sets the token via window.HW_setWidgetJwt(token) once it mints
+    // per-user JWTs. Until then no client token exists and uploads fail with
+    // a clear message instead of a 401.
+    var HW_WIDGET_JWT=null;
+    window.HW_setWidgetJwt=function(t){ HW_WIDGET_JWT=t?String(t):null; };
+    function widgetJwt(){ return HW_WIDGET_JWT; }
+
+    // Upload through the bridge: file → base64 → POST /upload (per-user
+    // widget JWT auth) → bridge uploads to Cloudinary server-side, returns
+    // the public CDN URL as download_url. XHR (not fetch) keeps upload progress.
     function uploadViaBridge(file, onProgress){
       return new Promise(function(resolve, reject){
         var reader=new FileReader();
@@ -508,35 +459,32 @@ function updateAmbientStatus(snap){
         reader.onload=function(){
           var b64=String(reader.result||"").split(",")[1]||"";
           if(!b64){ reject(new Error("Could not read file.")); return; }
-          // Firebase Auth removed: use WIDGET_TOKEN for upload auth
-          var token = WIDGET_TOKEN;
-          if(!token){ reject(new Error("Set ?token= to upload.")); return; }
-          (function(){
-            var xhr=new XMLHttpRequest();
-            xhr.open("POST", BRIDGE_BASE+"/upload", true);
-            xhr.setRequestHeader("Content-Type","application/json");
-            xhr.setRequestHeader("Authorization","Bearer "+token);
-            xhr.upload.onprogress=function(e){
-              if(e.lengthComputable&&onProgress) onProgress(Math.round(e.loaded/e.total*100));
-            };
-            xhr.onload=function(){
-              var res=null;
-              try{ res=JSON.parse(xhr.responseText); }catch(e){}
-              if(xhr.status>=200&&xhr.status<300&&res&&res.ok&&res.download_url){
-                resolve(res);
-              } else {
-                reject(new Error((res&&res.error)||("Upload failed ("+xhr.status+")")));
-              }
-            };
-            xhr.onerror=function(){ reject(new Error("Upload network error.")); };
-            xhr.ontimeout=function(){ reject(new Error("Upload timed out.")); };
-            xhr.timeout=120000;
-            xhr.send(JSON.stringify({
-              filename:file.name,
-              mime_type:file.type||"application/octet-stream",
-              data_base64:b64
-            }));
-          })();
+          var token=widgetJwt();
+          if(!token){ reject(new Error("Uploads need the widget login — sign in again.")); return; }
+          var xhr=new XMLHttpRequest();
+          xhr.open("POST", BRIDGE_URL+"/upload", true);
+          xhr.setRequestHeader("Content-Type","application/json");
+          xhr.setRequestHeader("Authorization","Bearer "+token);
+          xhr.upload.onprogress=function(e){
+            if(e.lengthComputable&&onProgress) onProgress(Math.round(e.loaded/e.total*100));
+          };
+          xhr.onload=function(){
+            var res=null;
+            try{ res=JSON.parse(xhr.responseText); }catch(e){}
+            if(xhr.status>=200&&xhr.status<300&&res&&res.ok&&res.download_url){
+              resolve(res);
+            } else {
+              reject(new Error((res&&res.error)||("Upload failed ("+xhr.status+")")));
+            }
+          };
+          xhr.onerror=function(){ reject(new Error("Upload network error.")); };
+          xhr.ontimeout=function(){ reject(new Error("Upload timed out.")); };
+          xhr.timeout=120000;
+          xhr.send(JSON.stringify({
+            filename:file.name,
+            mime_type:file.type||"application/octet-stream",
+            data_base64:b64
+          }));
         };
         reader.readAsDataURL(file);
       });
@@ -562,10 +510,10 @@ function updateAmbientStatus(snap){
           uploaded_by:MY_NAME, uploaded_at:Date.now()
         };
         var text=(caption&&caption.trim())?caption.trim():("📎 "+f.name);
-        return BridgeAPI.sendMessage({
+        return db.collection("highway_messages").add({
           name:MY_NAME, text:text, deviceId:DEVICE_ID, reactions:{},
           attachments:[att],
-          ts:new Date().toISOString(), tsNum:Date.now()
+          ts:firebase.firestore.FieldValue.serverTimestamp(), tsNum:Date.now()
         });
       }).then(function(){
         clearPending();
@@ -602,7 +550,7 @@ function updateAmbientStatus(snap){
   });
   function kickDuplicates(){
     if(!db||!MY_NAME||_yielded) return;
-    BridgeAPI.presence().then(function(list){ var snap={forEach:function(fn){(list||[]).filter(function(p){return p.name===MY_NAME;}).forEach(function(p){fn({data:function(){return p;}});});}};
+    db.collection("highway_presence").where("name","==",MY_NAME).get().then(function(snap){ meter("kick",snap);
       snap.forEach(function(d){
         if(d.id===DEVICE_ID) return;
         var s=d.data()||{};
@@ -612,8 +560,9 @@ function updateAmbientStatus(snap){
   }
   function doBeat(){
     if(!db||!MY_NAME||_yielded) return;
-    // New session takes over: claim presence via bridge API
-    BridgeAPI.setPresence({id:DEVICE_ID, name:MY_NAME, platform:PLATFORM, ts:Date.now(), session:TAB_SESSION}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+    var myRef=db.collection("highway_presence").doc(DEVICE_ID);
+    // New session takes over: claim presence, old tabs will see their doc gone and go quiet
+    myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp(), session:TAB_SESSION}, {merge:true}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
   // A newer session deleted our presence doc (seen via the presence snapshot): go idle silently.
   function onPresenceChanges(s){
@@ -623,15 +572,16 @@ function updateAmbientStatus(snap){
     });
   }
   window.addEventListener("beforeunload", function(){
-    // Presence cleanup: best-effort (no delete endpoint yet)
-    if(window.console&&console.warn) console.warn("[highway] presence cleanup skipped (no API)");
+    if(db) db.collection("highway_presence").doc(DEVICE_ID).delete().catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   });
 
   /* ================= TYPING INDICATORS ================= */
   var typingTimer=null;
   function setTyping(on){
     if(!db||!MY_NAME) return;
-    BridgeAPI.setTyping({id:DEVICE_ID, name:MY_NAME, typing:!!on, ts:Date.now()}).catch(function(){});
+    db.collection("highway_typing").doc(DEVICE_ID).set({
+      name:MY_NAME, typing:!!on, ts:firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
   }
 
   /* ================= TASKS ================= */
@@ -645,20 +595,20 @@ function updateAmbientStatus(snap){
       '<button class="tdel">×</button>';
     el.querySelector(".tcheck").addEventListener("change", function(e){
       if(e.target.checked){ el.classList.add("completing"); setTimeout(function(){el.classList.remove("completing");},650); }
-      BridgeAPI.updateTask(doc.id, {done:e.target.checked}).catch(function(){});
+      db.collection("highway_tasks").doc(doc.id).update({done:e.target.checked});
       if(db && MY_NAME){
         var action = e.target.checked ? "completed quest" : "reopened quest";
-        BridgeAPI.logActivity({text:action+": "+(t.text||"").slice(0,200), by:MY_NAME,
-          ts:new Date().toISOString()});
+        db.collection("highway_activity").add({text:action+": "+(t.text||"").slice(0,200), by:MY_NAME,
+          ts:firebase.firestore.FieldValue.serverTimestamp()});
       }
     });
     el.querySelector(".tdel").addEventListener("click", function(){
       if(confirm("Abandon this quest?")){
         var taskText = (t.text||"").slice(0,200);
-        BridgeAPI.deleteTask(doc.id).catch(function(){});
+        db.collection("highway_tasks").doc(doc.id).delete();
         if(db && MY_NAME){
-          BridgeAPI.logActivity({text:"abandoned quest: "+taskText, by:MY_NAME,
-            ts:new Date().toISOString()});
+          db.collection("highway_activity").add({text:"abandoned quest: "+taskText, by:MY_NAME,
+            ts:firebase.firestore.FieldValue.serverTimestamp()});
         }
       }
     });
@@ -669,158 +619,152 @@ function updateAmbientStatus(snap){
   var notesTimer=null, notesFocused=false, lastNotesTs=null;
   function saveNotes(){
     if(!db||!MY_NAME) return;
-    BridgeAPI.saveNotes({
+    db.collection("highway_notes").doc("shared").set({
       content:$("notes").value.slice(0,20000),
-      updatedBy:MY_NAME, ts:Date.now()
-    }).catch(function(){});
+      updatedBy:MY_NAME, ts:firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
   }
 
   /* ================= ACTIVITY FEED ================= */
   function logActivity(){
     var t=$("actin").value.trim(); if(!t||!db||!MY_NAME) return;
     $("actin").value="";
-    BridgeAPI.logActivity({
+    db.collection("highway_activity").add({
       text:t.slice(0,300), by:MY_NAME,
-      ts:new Date().toISOString()
+      ts:firebase.firestore.FieldValue.serverTimestamp()
     });
   }
 
   /* ================= GO LIVE ================= */
   function goLive(){
-    // No Firebase init — we use the bridge REST API (Supabase-backed).
-    // The bridge API requires a Bearer token (WIDGET_TOKEN). If not set,
-    // reads will 401. Set ?token= in URL or localStorage hw_widget_token.
-    db = BridgeAPI; // db is now the BridgeAPI client (not Firestore)
+    try{
+      firebase.initializeApp(FIREBASE_CONFIG);
+      // Sign in anonymously for authenticated Firestore access
+      db=firebase.firestore();
+    }
+    catch(e){ sub.textContent="config error"; return; }
 
     dot.classList.remove("off"); sub.textContent="live";
-    sysLine("Connected — chat, presence, tasks, notes & activity via bridge API (Supabase).");
+    sysLine("Connected — chat, presence, tasks, notes & activity all sync live.");
 
-    // Messages: poll + SSE (replaces onSnapshot)
-    var _lastMsgTs = 0;
-    function pollMessages(){
-      BridgeAPI.messages("room", 20, _lastMsgTs).then(function(res){
-        var msgs = res.messages||[];
-        // DEBUG: log message count
-        if(window.console&&console.log) console.log("[highway] got "+msgs.length+" messages");
-        msgs.forEach(function(m){
-          // Convert bridge API format to doc-like for renderMsg
-          var doc = { id: m.id, data: function(){ return m; } };
-          if(m.ts > _lastMsgTs) _lastMsgTs = m.ts;
-          try {
-            renderMsg(doc);
-          } catch(e) {
-            // Fallback: simple render if complex renderMsg fails
-            if(window.console&&console.warn) console.warn("[highway] renderMsg failed, using fallback:", e.message);
-            var fallback = document.createElement("div");
-            fallback.style.cssText = "padding:8px;border-bottom:1px solid #333;";
-            fallback.textContent = (m.name||"anon") + ": " + (m.text||"");
-            var chatEl = document.getElementById("chat");
-            if(chatEl && !document.querySelector('[data-id="'+m.id+'"]')) {
-              fallback.setAttribute("data-id", m.id);
-              chatEl.appendChild(fallback);
-            }
+    var _msgWatermark=0, _presReady=false, _presItems=[], _typeItems=[], _actItems=[];
+    function pullMessages(){
+      var q="/api/messages?channel=room&limit=50";
+      if(_msgWatermark) q+="&since_ts="+_msgWatermark;
+      hwGet(q).then(function(body){
+        var rows=(body.messages||[]).slice().reverse();
+        rows.forEach(function(m){
+          if(m.ts>_msgWatermark) _msgWatermark=m.ts;
+          var id=m.id;
+          if(seen[id]){
+            var old=document.querySelector('[data-id="'+id+'"]');
+            if(old){ delete seen[id]; old.remove(); }
           }
+          renderMsg(asDoc(m));
         });
-      }).catch(function(e){ 
-        if(window.console&&console.warn) console.warn("[highway] poll failed:", e&&e.message||e); 
-        // Show visible error to user
-        var chatEl = document.getElementById("chat");
-        if(chatEl && !document.getElementById("poll-error")) {
-          var errDiv = document.createElement("div");
-          errDiv.id = "poll-error";
-          errDiv.style.cssText = "padding:12px;background:#400;color:#fff;text-align:center;";
-          errDiv.textContent = "Failed to load messages: " + (e.message||"unknown error");
-          chatEl.appendChild(errDiv);
-          setTimeout(function(){ var el=document.getElementById("poll-error"); if(el) el.remove(); }, 5000);
-        }
-      });
-    }
-    pollMessages();
-    setInterval(pollMessages, 5000); // Poll every 5s (replaces real-time listener)
-    // SSE for instant updates (if available)
-    try{
-      BridgeAPI.stream(function(evt){
-        if(evt.type==="message") pollMessages();
-      });
-    }catch(e){}
-
-    // Presence: poll (replaces onSnapshot)
-    function pollPresence(){
-      BridgeAPI.presence().then(function(list){
-        renderPresenceList(list||[]);
       }).catch(function(){});
     }
-    function renderPresenceList(list){
+    window.hwPullMessages=pullMessages; /* live socket (live.js) calls this when a room message lands */
+    function renderPresence(){
       if(!presenceEl) return;
       var now=Date.now(), html="";
-      list.forEach(function(p){
+      _presItems.forEach(function(p){
         if(!p||!p.ts) return;
-        if(now-p.ts<ONLINE_MS) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+(p.platform?' <span style="font-size:9px;opacity:.55">'+esc(p.platform)+'</span>':'')+'</span>';
+        if(now-Number(p.ts)<ONLINE_MS) html+='<span class="p-chip">'+esc(p.name)+crownHtml(p.name)+(p.platform?' <span style="font-size:9px;opacity:.55">'+esc(p.platform)+'</span>':'')+'</span>';
       });
       presenceEl.innerHTML=html||'<span style="font-size:11px;color:var(--muted)">no one else here</span>';
     }
-    pollPresence(); setInterval(pollPresence,15000);
-
-    // Typing: poll (replaces onSnapshot)
-    function pollTyping(){
-      BridgeAPI.typing().then(function(list){
-        var names=[];
-        (list||[]).forEach(function(t){
-          if(t&&t.typing&&t.id!==DEVICE_ID){
-            if(Date.now()-t.ts<8000) names.push(t.name);
-          }
-        });
-        if(typingEl) typingEl.textContent=names.length?names.join(", ")+(names.length>1?" are":" is")+" typing…":"";
+    function pullPresence(){
+      hwGet("/api/presence").then(function(body){
+        _presItems=body.items||[];
+        if(_presReady){
+          var mine=false;
+          for(var i=0;i<_presItems.length;i++) if(_presItems[i].id===DEVICE_ID) mine=true;
+          if(!mine&&!_yielded){ _yielded=true; stopHeartbeat(); }
+        }
+        _presReady=true;
+        renderPresence();
       }).catch(function(){});
     }
-    pollTyping(); setInterval(pollTyping,5000);
-
-    // Tasks: poll (replaces onSnapshot)
-    function pollTasks(){
-      BridgeAPI.tasks().then(function(res){
-        var list=$("tasklist"); list.innerHTML="";
-        (res.tasks||[]).forEach(function(t){
-          var doc={id:t.id, data:function(){return t;}};
-          var el=renderTask(doc); if(el) list.appendChild(el);
-        });
-        if(!(res.tasks||[]).length) list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted);">'
+    function renderTyping(){
+      if(!typingEl) return;
+      var names=[];
+      _typeItems.forEach(function(t){
+        if(t&&t.typing&&t.id!==DEVICE_ID&&t.ts&&Date.now()-Number(t.ts)<8000) names.push(t.name);
+      });
+      typingEl.textContent=names.length?names.join(", ")+(names.length>1?" are":" is")+" typing…":"";
+    }
+    function pullTyping(){
+      hwGet("/api/typing").then(function(body){ _typeItems=body.items||[]; renderTyping(); }).catch(function(){});
+    }
+    function pullTasks(){
+      hwGet("/api/tasks?limit=100").then(function(body){
+        var list=$("tasklist"); if(!list) return;
+        var items=body.tasks||[];
+        list.innerHTML="";
+        items.slice().reverse().forEach(function(t){ var el=renderTask(asDoc(t)); if(el) list.appendChild(el); });
+        if(!items.length) list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted);">'
           +'<div style="font-size:32px;margin-bottom:12px;">⚔️</div>'
           +'<div style="font-size:15px;font-weight:600;color:var(--txt);margin-bottom:6px;">No quests on the board</div>'
           +'<div style="font-size:13px;">Every legend starts with a single step.<br>Set your first quest above.</div></div>';
       }).catch(function(){});
     }
-    pollTasks(); setInterval(pollTasks,10000);
-
-    // Notes: poll (replaces onSnapshot)
-    function pollNotes(){
-      BridgeAPI.notes().then(function(n){
-        if(!n) return;
-        if(!notesFocused && n.ts && (!lastNotesTs || n.ts>lastNotesTs)){
-          lastNotesTs=n.ts;
-          $("notes").value=n.content||"";
+    function pullNotes(){
+      hwGet("/api/notes").then(function(body){
+        var d=body.notes; if(!d) return;
+        var ts=Number(d.ts)||0;
+        if(!notesFocused && ts && (!lastNotesTs || ts>lastNotesTs)){
+          lastNotesTs=ts;
+          $("notes").value=d.content||"";
         }
-        $("notes-meta").textContent=n.updatedBy?("last edited by "+n.updatedBy):"";
+        $("notes-meta").textContent=d.updatedBy?("last edited by "+d.updatedBy):"";
       }).catch(function(){});
     }
-    pollNotes(); setInterval(pollNotes,10000);
-
-    // Activity: poll (replaces onSnapshot)
-    function pollActivity(){
-      BridgeAPI.activity().then(function(list){
-        updateAmbientStatus({docs:(list||[]).slice(0,5).map(function(a){return {data:function(){return a;}};})});
-        var alist=$("actlist"); alist.innerHTML="";
-        (list||[]).forEach(function(a){
-          var el=document.createElement("div"); el.className="arow";
-          el.innerHTML="<b>"+esc(a.by||"")+"</b> "+esc(a.text||"")+"<time>"+fmtTs({toDate:function(){return new Date(a.ts);}})+"</time>";
-          alist.appendChild(el);
-        });
-        if(!(list||[]).length) alist.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted);">'
-          +'<div style="font-size:32px;margin-bottom:12px;">📜</div>'
-          +'<div style="font-size:15px;font-weight:600;color:var(--txt);margin-bottom:6px;">The story hasn\'t begun</div>'
-          +'<div style="font-size:13px;">Every message, quest, and moment<br>will be written here.</div></div>';
-      }).catch(function(){});
+    function paintActivity(items){
+      _actItems=items||[];
+      updateAmbientStatus({docs:_actItems.slice(0,5).map(function(a){ return asDoc(a); })});
+      var list=$("actlist"); if(!list) return;
+      list.innerHTML="";
+      _actItems.forEach(function(a){
+        var el=document.createElement("div"); el.className="arow";
+        el.innerHTML="<b>"+esc(a.by||"")+"</b> "+esc(a.text||"")+"<time>"+fmtTs({toDate:function(){return new Date(a.ts||0);}})+"</time>";
+        list.appendChild(el);
+      });
+      if(!_actItems.length) list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted);">'
+        +'<div style="font-size:32px;margin-bottom:12px;">📜</div>'
+        +'<div style="font-size:15px;font-weight:600;color:var(--txt);margin-bottom:6px;">The story hasn\'t begun</div>'
+        +'<div style="font-size:13px;">Every message, quest, and moment<br>will be written here.</div></div>';
     }
-    pollActivity(); setInterval(pollActivity,15000);
+    function pullActivity(){
+      hwGet("/api/activity?limit=30").then(function(body){ paintActivity(body.items||[]); }).catch(function(){});
+    }
+    function pullAll(){
+      pullMessages(); pullPresence(); pullTyping(); pullTasks(); pullNotes(); pullActivity();
+    }
+    pullAll();
+    setInterval(pullAll, 8000);
+    setInterval(renderPresence,15000);
+    setInterval(renderTyping,5000);
+    hwToken().then(function(t){
+      return fetch(HW_BRIDGE+"/api/stream",{headers:{Authorization:"Bearer "+t}}).then(function(res){
+        if(!res.body||!res.body.getReader) return;
+        var reader=res.body.getReader(), dec=new TextDecoder(), buf="";
+        function pump(){
+          return reader.read().then(function(x){
+            if(x.done) return;
+            buf+=dec.decode(x.value,{stream:true});
+            var parts=buf.split("\n\n"); buf=parts.pop();
+            parts.forEach(function(block){
+              var line=block.split("\n").filter(function(l){ return l.indexOf("data:")===0; })[0];
+              if(!line) return;
+              try{ var ev=JSON.parse(line.slice(5).trim()); if(ev&&ev.type==="messages") pullMessages(); if(ev&&ev.type==="tasks") pullTasks(); }catch(e){}
+            });
+            return pump();
+          });
+        }
+        return pump();
+      });
+    }).catch(function(){});
 
     startHeartbeat();
   }
@@ -843,56 +787,36 @@ function updateAmbientStatus(snap){
   $("pw").addEventListener("keydown", function(e){ if(e.key==="Enter") tryPw(); });
 
   /* ================= UI EVENTS ================= */
+  var authShown=false;
   function join(){
     var n=nameIn.value.trim().slice(0,24);
     if(!n){ err.textContent="Pick a name first."; return; }
-    // Everyone must log in with email/password - no exceptions
-    var authFields = $("authfields");
-    var emailIn = $("email");
-    var pwIn = $("password");
-    if(authFields && authFields.style.display==="none"){
-      authFields.style.display="";
-      err.textContent="Sign in with your Highway account to continue.";
-      if(emailIn) emailIn.focus();
+    // First click: reveal the account fields. Second click: sign in.
+    if(!authShown){
+      authShown=true;
+      $("authfields").style.display="block";
+      $("email").focus();
+      err.textContent="Sign in with your Highway account.";
       return;
     }
-    // Email/password login via bridge
-    var email = emailIn ? emailIn.value.trim() : "";
-    var pw = pwIn ? pwIn.value : "";
-    if(!email || !pw){
-      err.textContent="Enter your email and password.";
-      return;
-    }
+    var email=$("email").value.trim();
+    var pw=$("password").value;
+    if(!email||!pw){ err.textContent="Enter your email and password."; return; }
     err.textContent="Verifying...";
-    fetch(BRIDGE_BASE+"/api/auth/login", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({email:email, password:pw})
-    }).then(function(r){ return r.json(); }).then(function(res){
-      if(res.ok && res.token){
-        WIDGET_TOKEN = res.token;
-        try{ localStorage.setItem("hw_widget_token", res.token); }catch(e){}
-        if(res.isOwner){
-          // Owner session: mint the single-purpose delete capability.
-          // Stored in sessionStorage (tab-scoped), never localStorage.
-          fetch(BRIDGE_BASE+"/api/auth/owner", {
-            method:"POST", headers:{"Content-Type":"application/json"},
-            body: JSON.stringify({email:email, password:pw})
-          }).then(function(r){ return r.json(); }).then(function(or){
-            if(or && or.ok && or.ownerToken){
-              try{ sessionStorage.setItem("hw_owner_token", or.ownerToken); }catch(e){}
-            }
-          }).catch(function(){});
-        }
-        completeJoin(n, true);
-      } else {
-        err.textContent="Invalid email or password.";
-      }
+    try{ firebase.initializeApp(FIREBASE_CONFIG); }catch(e){}
+    firebase.auth().signInWithEmailAndPassword(email,pw).then(function(cred){
+      // Name must match the account's allowed name (enforced server-side too)
+      completeJoin(n,true);
     }).catch(function(e){
-      err.textContent="Login failed. Try again.";
+      var msg="Sign-in failed.";
+      if(e&&e.code==="auth/user-not-found") msg="No account for that email.";
+      else if(e&&e.code==="auth/wrong-password") msg="Wrong password.";
+      else if(e&&e.code==="auth/invalid-email") msg="That email looks invalid.";
+      err.textContent=msg+" Try again.";
     });
   }
   function completeJoin(n,verified){
+    try{ firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(e){}
     MY_NAME=n;
     try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); }catch(e){}
     mebadge.textContent=n+(verified?" ✓":"");
@@ -947,7 +871,7 @@ function updateAmbientStatus(snap){
         var img=n.image?'<img class="nthumb" src="'+esc(n.image)+'" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">':'';
         var ph='<span class="nthumb nph" style="'+(n.image?'display:none;':'display:flex;')+'">'+initial+'</span>';
         var desc=n.description?'<span class="ndesc">'+esc(n.description)+'</span>':'';
-        html+='<a class="ncard" href="'+safeUrl(n.url||"#")+'" target="_blank" rel="noopener">'
+        html+='<a class="ncard" href="'+esc(safeUrl(n.url||"#"))+'" target="_blank" rel="noopener">'
           +'<span class="nthumbwrap">'+img+ph+'</span>'
           +'<span class="nbody"><span class="nsrc">'+esc(src)+'</span>'
           +'<span class="ntitle">'+esc(n.title||"")+'</span>'+desc+'</span></a>';
@@ -960,9 +884,18 @@ function updateAmbientStatus(snap){
 
   sendBtn.addEventListener("click", sendMsg);
   $("clear").addEventListener("click", function(){
-    // BLOCKER: bulk delete needs a bridge API endpoint (not implemented).
-    if(!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
-    sysLine("Clear not supported: no bridge API endpoint for bulk delete.");
+    if(!db||!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
+    db.collection("highway_messages").get().then(function(s){ meter("other",s);
+      var docs=[]; s.forEach(function(d){ docs.push(d.ref); });
+      function next(){
+        if(!docs.length) return Promise.resolve();
+        var b=db.batch();
+        docs.splice(0,450).forEach(function(r){ b.delete(r); });
+        return b.commit().then(next);
+      }
+      return next();
+    }).then(function(){ sysLine("Chat cleared — fresh highway."); })
+    .catch(function(e){ sysLine("Clear failed: "+(e.message||e)); });
   });
   msg.addEventListener("keydown", function(e){
     if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMsg(); }
@@ -979,10 +912,10 @@ function updateAmbientStatus(snap){
   $("taskadd").addEventListener("click", function(){
     var t=$("taskin").value.trim(); if(!t||!db||!MY_NAME) return;
     $("taskin").value="";
-    BridgeAPI.addTask({text:t.slice(0,300),done:false,createdBy:MY_NAME,
-      ts:new Date().toISOString()});
-    BridgeAPI.logActivity({text:"started quest: "+t.slice(0,200), by:MY_NAME,
-      ts:new Date().toISOString()});
+    db.collection("highway_tasks").add({text:t.slice(0,300),done:false,createdBy:MY_NAME,
+      ts:firebase.firestore.FieldValue.serverTimestamp()});
+    db.collection("highway_activity").add({text:"started quest: "+t.slice(0,200), by:MY_NAME,
+      ts:firebase.firestore.FieldValue.serverTimestamp()});
   });
   $("taskin").addEventListener("keydown", function(e){ if(e.key==="Enter") $("taskadd").click(); });
 
@@ -1063,12 +996,9 @@ function updateAmbientStatus(snap){
 })();
 
 
-/* Highway Chat push notifications — bridge-backed (VAPID).
-   Server: GET /api/push/vapid-key, POST /api/push/subscribe.
-   iOS note: push only arrives when the site is installed to the home screen. */
+/* Highway Chat push notifications */
 (function(){
-  var VAPID_FALLBACK = "BEm8B9zNCKOVR7_nvgrVOrBiVUJTnWTdLkn23Wk---Y03oqTXMDjXwvTliytNJBN412Z8gU7O29YGPpTke0Papk";
-  var VAPID_PUBLIC = null; // fetched from the bridge; fallback only if the bridge is older
+  var VAPID_PUBLIC = "BEm8B9zNCKOVR7_nvgrVOrBiVUJTnWTdLkn23Wk---Y03oqTXMDjXwvTliytNJBN412Z8gU7O29YGPpTke0Papk";
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
   function urlB64ToUint8(base64String) {
@@ -1096,46 +1026,26 @@ function updateAmbientStatus(snap){
     });
   }
 
-  function vapidKey(){
-    // The bridge serves its live VAPID public key; fall back to the baked-in
-    // one only when the bridge predates the push lane.
-    return fetch("https://highway-chat-mcp.onrender.com" + "/api/push/vapid-key").then(function(r){
-      return r.json();
-    }).then(function(j){
-      if(j && j.ok && j.publicKey) return j.publicKey;
-      return VAPID_FALLBACK;
-    }).catch(function(){ return VAPID_FALLBACK; });
-  }
-
-  function pushNote(text){
-    var header = document.querySelector('.head-top');
-    if(!header || document.getElementById('pushnote')) return;
-    var n = document.createElement('div');
-    n.id = 'pushnote'; n.className = 'push-note'; n.textContent = text;
-    header.appendChild(n);
-  }
-
   function enablePush(){
     if (Notification.permission === 'denied') { alert('Notifications blocked. Enable them in Settings > Highway Chat.'); return; }
-    vapidKey().then(function(key){
-      return navigator.serviceWorker.ready.then(function(reg){
-        return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(key) });
-      });
+    navigator.serviceWorker.ready.then(function(reg){
+      return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
     }).then(function(sub){
       var btn = document.getElementById('pushbell');
       if (btn) { btn.textContent = '\uD83D\uDD14'; btn.title = 'Notifications on'; }
-      var myName = 'anon';
-      try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
-      return window.BridgeAPI.post("/api/push/subscribe", { subscription: sub.toJSON(), name: myName });
-    }).then(function(){
-      if(window.console&&console.log) console.log("[highway] push subscribed");
-    }).catch(function(err){
-      if(window.console&&console.warn) console.warn('push subscribe failed', err);
-      // Honest iOS guidance: no fake success.
-      var isiOS = /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
-      if(isiOS) pushNote("Push needs this site installed to your home screen (Share \u2192 Add to Home Screen), then tap the bell again.");
-      else if(err && (err.name === "NotAllowedError" || Notification.permission === "denied")) pushNote("Notifications are blocked for this site — allow them in browser settings, then tap the bell again.");
-    });
+      var subJson = sub.toJSON();
+      if (typeof db !== 'undefined' && db) {
+        var myName = 'anon';
+        try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
+        db.collection('highway_push_subs').doc(btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').substring(0,60)).set({
+          endpoint: sub.endpoint,
+          keys: subJson.keys,
+          name: myName,
+          platform: navigator.platform || 'unknown',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+    }).catch(function(err){ console.warn('push subscribe failed', err); });
   }
 
   navigator.serviceWorker.register('sw.js').then(function(){ addBell(); }).catch(function(e){ console.warn('sw failed', e); });
@@ -1331,161 +1241,96 @@ setInterval(applyMood, 600000);
 // ============ NEXUS IMAGE BOARD ============
 // Team-only image posting, public viewing.
 // Images stored as data URLs in highway_dm. Sin + agents can post.
-/* Highway Chat: HANGOUT lane (the star tab). Just talk — ideas and
-   conversation. No code, no work threads. Bridge channel: "hangout". */
-/* Highway Chat: HANGOUT lane (the star tab). Just talk — ideas and
-   conversation. No code, no work threads. Bridge channel: "hangout".
-   NOTE: this IIFE is top-level — it cannot see the chat IIFE's scope, so it
-   carries its own helpers and talks to the bridge via window.BridgeAPI. */
-(function initHangout(){
-  var API = window.BridgeAPI;
-  var hangoutChat = document.getElementById('hangout-chat');
-  var hangoutMsg = document.getElementById('hangout-msg');
-  var hangoutSend = document.getElementById('hangout-send');
-  if(!hangoutChat || !API) return;
-  var hseen = {};
-  var _lastTs = 0;
+(function initNexus(){
+  var checkReady = setInterval(function(){
+    if (typeof firebase === 'undefined' || !firebase.firestore) return;
+    clearInterval(checkReady);
+    setupNexus();
+  }, 500);
 
-  function hEsc(s){ return String(s).replace(/[&<>"']/g, function(c){
-    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
-  function hPingify(s){ return hEsc(s).replace(/@([a-z0-9_]+)/gi,'<span class="ping">@$1</span>'); }
-  function hFmtTime(m){ var n=m.tsNum||0; if(!n) return ""; var d=new Date(n),h=d.getHours(),a=h>=12?"PM":"AM";
-    return (h%12||12)+":"+("0"+d.getMinutes()).slice(-2)+" "+a; }
-  function hMyName(){ try { return sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || null; } catch(e){ return null; } }
-  function hDeviceId(){ try { return sessionStorage.getItem('hw_device_id') || ""; } catch(e){ return ""; } }
-  function hIsOwner(){ try { return !!sessionStorage.getItem("hw_owner_token"); } catch(e){ return false; } }
-  function hOwnerToken(){ try { return sessionStorage.getItem("hw_owner_token"); } catch(e){ return null; } }
-  function scrollDown(){ hangoutChat.scrollTop = hangoutChat.scrollHeight; }
+  function setupNexus(){
+    var db = firebase.firestore();
+    var nexusChat = document.getElementById('nexus-chat');
+    var nexusFoot = document.getElementById('nexus-foot');
+    var nexusReadonly = document.getElementById('nexus-readonly');
+    var nexusImg = document.getElementById('nexus-img');
+    var nexusImgBtn = document.getElementById('nexus-imgbtn');
+    if (!nexusChat) return;
 
-  function hDelete(id, rowEl){
-    var tok = hOwnerToken();
-    if(!tok || !id) return;
-    if(!window.confirm("Delete this message?")) return;
-    fetch("https://highway-chat-mcp.onrender.com/api/messages/" + encodeURIComponent(id), {
-      method: "DELETE", headers: { "Authorization": "Bearer " + tok }
-    }).then(function(r){ return r.json(); }).then(function(res){
-      if(res && res.ok){ if(rowEl && rowEl.parentNode) rowEl.parentNode.removeChild(rowEl); }
-    }).catch(function(){});
-  }
-
-  function renderHangoutMsg(m, force){
-    if(!m || (!force && hseen[m.id])) return;
-    hseen[m.id] = 1;
-    var myName = hMyName();
-    var row = document.createElement("div");
-    var mine = (m.deviceId === hDeviceId());
-    row.className = "row " + (mine ? "me-row" : "them-row");
-    row.setAttribute("data-id", m.id);
-    row.setAttribute("data-ts", String(Number(m.tsNum) || 0));
-    var rx = m.reactions || {}, rxHtml = "";
-    Object.keys(rx).forEach(function(e){
-      var users = rx[e] || [];
-      rxHtml += '<span class="rx' + (users.indexOf(myName) >= 0 ? " mine" : "") +
-        '" data-id="' + m.id + '" data-e="' + hEsc(e) + '">' + hEsc(e) + " " + (users.length || "") + "</span>";
-    });
-    rxHtml += '<span class="rx rx-add" data-id="' + m.id + '" data-e="__pick__">\uFF0B</span>';
-    var delHtml = hIsOwner() ? '<span class="msg-del" data-del="' + m.id + '" title="Delete message">\u2715</span>' : "";
-    var crown = (String(m.name||"").toLowerCase()==="sin" || String(m.name||"").toLowerCase()==="grim")
-      ? '<span class="crown" title="Owner">\uD83D\uDC51</span>' : "";
-    row.innerHTML = '<div class="bwrap"><div class="who">' + hEsc(m.name || "anon") + crown +
-      '<span class=ts>' + hFmtTime(m) + "</span>" + delHtml + "</div>" +
-      '<div class="bubble"><span class="msg-text">' + hPingify(m.text || "") + "</span></div>" +
-      '<div class="reacts">' + rxHtml + "</div></div>";
-    var tsn = Number(m.tsNum) || 0, rows = hangoutChat.querySelectorAll(".row"), inserted = false;
-    for(var i = 0; i < rows.length; i++){
-      var rts = parseFloat(rows[i].getAttribute("data-ts") || "0");
-      var rid = rows[i].getAttribute("data-id") || "";
-      if(tsn < rts || (tsn === rts && String(m.id) < rid)){ hangoutChat.insertBefore(row, rows[i]); inserted = true; break; }
+    var myName = 'anon';
+    try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
+    var canPost = (myName.toLowerCase() === 'sin');
+    if (canPost) {
+      nexusFoot.style.display = '';
+      if (nexusReadonly) nexusReadonly.style.display = 'none';
     }
-    if(!inserted) hangoutChat.appendChild(row);
-    if(!mine){ row.classList.add("arrived"); setTimeout(function(){ row.classList.remove("arrived"); }, 1200); }
-    row.querySelectorAll(".rx").forEach(function(el){
-      el.addEventListener("click", function(ev){
-        ev.stopPropagation();
-        var eid = el.getAttribute("data-id"), e = el.getAttribute("data-e");
-        if(e === "__pick__"){ hangoutPick(eid, el); } else { hangoutToggle(eid, e); }
-      });
-    });
-    row.querySelectorAll("[data-del]").forEach(function(el){
-      el.addEventListener("click", function(ev){ ev.stopPropagation(); hDelete(el.getAttribute("data-del"), row); });
-    });
-    scrollDown();
-  }
-  // Shared picker/react entry points (the chat IIFE delegates hangout lanes here).
-  window.HW_hangoutRender = function(m, force){ renderHangoutMsg(m, force); };
-  window.HW_hangoutToggle = hangoutToggle;
 
-  function hangoutPick(id, anchorEl){
-    // Minimal inline emoji picker (the chat's picker lives in another scope).
-    var old = document.getElementById("hangout-picker");
-    if(old && old.parentNode) old.parentNode.removeChild(old);
-    var p = document.createElement("div");
-    p.id = "hangout-picker";
-    p.style.cssText = "position:fixed;z-index:9999;background:#1a1a1a;border:1px solid #c1121f;border-radius:12px;padding:8px;";
-    ["\uD83D\uDD25","\u2764\uFE0F","\uD83D\uDC4D","\uD83D\uDE02","\uD83D\uDCAF","\uD83D\uDC40"].forEach(function(e){
-      var b = document.createElement("button");
-      b.textContent = e; b.style.cssText = "font-size:20px;background:none;border:none;cursor:pointer;padding:4px;";
-      b.onclick = function(ev){ ev.stopPropagation(); hangoutToggle(id, e); document.body.removeChild(p); };
-      p.appendChild(b);
-    });
-    document.body.appendChild(p);
-    try {
-      var r = anchorEl.getBoundingClientRect();
-      p.style.left = Math.max(8, Math.min(window.innerWidth - 220, r.left - 60)) + "px";
-      p.style.top = Math.max(8, r.top - 120) + "px";
-    } catch(e){}
-    setTimeout(function(){ document.addEventListener("click", function h(){ document.removeEventListener("click", h);
-      if(p.parentNode) p.parentNode.removeChild(p); }); }, 0);
-  }
+    var _dmSeen={};
+    function pullNexus(){
+      hwGet("/api/messages?channel=dm&limit=50").then(function(body){
+        (body.messages||[]).slice().reverse().forEach(function(m){
+          if(_dmSeen[m.id]) return;
+          _dmSeen[m.id]=1;
+          renderNexusImg(asDoc(m));
+        });
+        nexusChat.scrollTop = nexusChat.scrollHeight;
+      }).catch(function(){});
+    }
+    pullNexus();
+    setInterval(pullNexus, 8000);
 
-  function hangoutToggle(id, emoji){
-    var myName = hMyName();
-    if(!myName) return;
-    API.post("/api/messages/" + encodeURIComponent(id) + "/reactions", { emoji: emoji, name: myName })
-      .then(function(){ refreshHangoutRow(id); })
-      .catch(function(e){ if(window.console&&console.warn) console.warn("[highway] hangout react failed:", e&&e.message||e); });
-  }
+    function renderNexusImg(doc){
+      var d = doc.data() || {};
+      if (!d.image) return;
+      var div = document.createElement('div');
+      div.className = 'row';
+      div.setAttribute('data-id', doc.id);
+      div.style.cssText = 'margin-bottom:12px;';
+      var name = document.createElement('div');
+      name.className = 'who';
+      name.textContent = d.name || 'anon';
+      name.style.cssText = 'font-size:11px;opacity:.6;margin-bottom:4px;';
+      var img = document.createElement('img');
+      img.src = d.image;
+      img.style.cssText = 'max-width:100%;border-radius:12px;display:block;';
+      img.loading = 'lazy';
+      div.appendChild(name);
+      div.appendChild(img);
+      nexusChat.appendChild(div);
+    }
 
-  function refreshHangoutRow(id){
-    API.messages("hangout", 100).then(function(res){
-      var msgs = res.messages || [];
-      for(var i = 0; i < msgs.length; i++) if(String(msgs[i].id) === String(id)){
-        var row = hangoutChat.querySelector('[data-id="' + id + '"]');
-        if(row && row.parentNode) row.parentNode.removeChild(row);
-        delete hseen[id];
-        renderHangoutMsg(msgs[i]);
-        break;
-      }
-    }).catch(function(){});
-  }
+    function uploadImage(file){
+      if (!file || !canPost) return;
+      var reader = new FileReader();
+      reader.onload = function(e){
+        var dataUrl = e.target.result;
+        // Compress: max 800px wide, JPEG 0.7
+        var img = new Image();
+        img.onload = function(){
+          var canvas = document.createElement('canvas');
+          var scale = Math.min(1, 800 / img.width);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          var compressed = canvas.toDataURL('image/jpeg', 0.7);
+          db.collection("highway_dm").add({
+            name: myName,
+            image: compressed,
+            ts: new Date().toISOString(),
+            tsNum: Date.now(),
+          }).catch(function(e){ console.error('Nexus image failed:', e.message); });
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+    }
 
-  function pollHangout(){
-    API.messages("hangout", 30, _lastTs).then(function(res){
-      (res.messages || []).forEach(function(m){
-        if(m.ts > _lastTs) _lastTs = m.ts;
-        try { renderHangoutMsg(m); } catch(e){}
-      });
-      scrollDown();
-    }).catch(function(){});
-  }
-
-  function sendHangout(){
-    var t = hangoutMsg.value.trim();
-    var myName = hMyName();
-    if(!t || !myName) return;
-    hangoutMsg.value = ""; hangoutMsg.focus();
-    API.sendMessage({
-      name: myName, text: t, channel: "hangout", deviceId: hDeviceId(), reactions: {},
-      ts: new Date().toISOString(), tsNum: Date.now()
-    }).then(function(){ pollHangout(); }).catch(function(e){
-      if(window.console&&console.warn) console.warn("[highway] hangout send failed:", e&&e.message||e);
-      hangoutMsg.value = t;
+    if (nexusImgBtn) nexusImgBtn.addEventListener('click', function(){ nexusImg.click(); });
+    if (nexusImg) nexusImg.addEventListener('change', function(){ 
+      if (nexusImg.files[0]) uploadImage(nexusImg.files[0]);
+      nexusImg.value = '';
     });
   }
-  if(hangoutSend) hangoutSend.addEventListener("click", sendHangout);
-  if(hangoutMsg) hangoutMsg.addEventListener("keydown", function(e){ if(e.key === "Enter") sendHangout(); });
-
-  pollHangout(); setInterval(pollHangout, 10000);
 })();
 
 // ============ iOS PREMIUM: Visual Viewport + Haptics ============
@@ -1562,4 +1407,64 @@ setInterval(applyMood, 600000);
       requestAnimationFrame(renderLoop);
     }
   };
+})();
+
+
+/* ============ HIGHWAY PWA (Phase 1) ============
+   Makes "Add to Home Screen" on iOS 16.4+ Safari install a standalone app.
+   index.html lives in money-city-ui, so the tags are ensured from JS here
+   (idempotent: skipped if index.html already carries them; see site/README.md
+   for the static <head> block, which is the preferred long-term home). */
+(function(){
+  var head = document.head || document.getElementsByTagName("head")[0];
+  if (!head) return;
+  function ensureLink(rel, attrs){
+    if (document.querySelector('link[rel="'+rel+'"]')) return;
+    var l = document.createElement("link"); l.rel = rel;
+    Object.keys(attrs).forEach(function(k){ l.setAttribute(k, attrs[k]); });
+    head.appendChild(l);
+  }
+  function ensureMeta(name, content){
+    var m = document.querySelector('meta[name="'+name+'"]');
+    if (m) return;
+    m = document.createElement("meta"); m.name = name; m.content = content;
+    head.appendChild(m);
+  }
+  ensureLink("manifest", { href: "manifest.json" });
+  ensureLink("apple-touch-icon", { href: "icons/apple-touch-icon.png" });
+  ensureMeta("apple-mobile-web-app-capable", "yes");
+  ensureMeta("mobile-web-app-capable", "yes");
+  ensureMeta("apple-mobile-web-app-status-bar-style", "black-translucent");
+  ensureMeta("apple-mobile-web-app-title", "Highway");
+  ensureMeta("theme-color", "#c1121f");
+  // viewport-fit=cover: extend the existing viewport meta rather than adding a second one.
+  var vp = document.querySelector('meta[name="viewport"]');
+  if (!vp) {
+    vp = document.createElement("meta"); vp.name = "viewport";
+    vp.content = "width=device-width, initial-scale=1, viewport-fit=cover";
+    head.appendChild(vp);
+  } else if (!/viewport-fit\s*=\s*cover/i.test(vp.content || "")) {
+    vp.content = (vp.content ? vp.content.replace(/\s*,?\s*$/, "") + ", " : "") + "viewport-fit=cover";
+  }
+  // Standalone + black-translucent draws under the status bar/notch: keep content clear of it.
+  if (!document.getElementById("hw-safe-area")) {
+    var st = document.createElement("style"); st.id = "hw-safe-area";
+    st.textContent = "@media all and (display-mode: standalone){body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);}}";
+    head.appendChild(st);
+  }
+  // Register independently of the push block: on iOS, PushManager only exists once installed,
+  // and that block returns early without it, so it can't be the thing that registers the worker.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(e){ console.warn("[highway] sw register failed", e); });
+    });
+  }
+})();
+
+/* Live layer (Phase 2): socket client + haptic engine. Loaded as its own file so the engine and the
+   gesture registry stay independent of this script. EXPERIMENTAL, see live.js. */
+(function(){
+  var sc = document.createElement("script");
+  sc.src = "live.js"; sc.async = true;
+  document.head.appendChild(sc);
 })();
