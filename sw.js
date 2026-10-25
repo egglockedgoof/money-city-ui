@@ -13,7 +13,7 @@
  * cache is deleted on activate. Cache-first means a shell file will not refresh
  * until this version string changes.
  */
-var CACHE_VERSION = "highway-shell-v1";
+var CACHE_VERSION = "highway-shell-v2";
 var SHELL = [
   "./",
   "index.html",

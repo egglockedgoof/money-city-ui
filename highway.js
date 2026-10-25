@@ -1,16 +1,6 @@
 
 (function(){
   "use strict";
-  /* ============ FIREBASE PROJECT ============ */
-  var FIREBASE_CONFIG = {
-    apiKey:            "AIzaSyDmAMnxfBorxPkwt4Y2FjhkEB83914ut1U",
-    authDomain:        "highway-chat.firebaseapp.com",
-    projectId:         "highway-chat",
-    storageBucket:     "highway-chat.firebasestorage.app",
-    messagingSenderId: "1063748874829",
-    appId:             "1:1063748874829:web:5565a2fa6012a0c3b76204"
-  };
-
   /* ============ DEVICE ID (per-tab identity) ============ */
   var DEVICE_ID = sessionStorage.getItem("hw_device_id");
   if(!DEVICE_ID){
@@ -38,7 +28,7 @@
       gate=$("gate"), nameIn=$("name"), joinBtn=$("join"),
       err=$("err"), sub=$("sub"), dot=$("livedot"), mebadge=$("mebadge"),
       presenceEl=$("presence"), typingEl=$("typing");
-  var MY_NAME=null, db=null, seen={};
+  var MY_NAME=null, seen={};
   var VOICE_REG={}; /* docId -> {b64, type} : voice audio out of the DOM */
   var EMOJIS=["🔥","❤️","👍","😂","💯","👀"];
   var OWNERS=["sin","grim"]; // co-owners of the Highway — case-insensitive
@@ -56,7 +46,7 @@ function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
   function safeUrl(u){ try{ var p=new URL(u,location.href); return (p.protocol==="http:"||p.protocol==="https:")?p.href:"#"; }catch(e){ return "#"; } }
 
 /* ============ READ METER ============
-   Counts Firestore documents each listener/read delivers (cache hits and local echoes
+   Counts documents each listener/read delivers (cache hits and local echoes
    excluded) and reports them to the bridge every 5 minutes, so /health shows where the
    daily read quota goes. Best effort: never blocks or breaks the UI. */
 var _reads={}, _readsTab=Math.random().toString(36).slice(2,12);
@@ -69,10 +59,10 @@ function meter(src, s){
 }
 function flushReads(){
   try{
-    var u=window.firebase&&firebase.auth&&firebase.auth().currentUser; if(!u) return;
+    if(!HW_JWT) return;
     var counts=_reads, any=false; for(var k in counts){ if(counts[k]){ any=true; break; } } if(!any) return;
     _reads={};
-    u.getIdToken().then(function(t){
+    hwToken().then(function(t){
       return fetch("https://highway-chat-mcp.onrender.com/metrics/reads",{method:"POST",keepalive:true,
         headers:{"Content-Type":"application/json","Authorization":"Bearer "+t},
         body:JSON.stringify({tab:_readsTab,counts:counts})});
@@ -82,11 +72,44 @@ function flushReads(){
 setInterval(flushReads, 300000);
 window.addEventListener("pagehide", flushReads);
 
-/* Bridge reads (no Firestore listeners). Writes still use Firebase. */
+/* Bridge reads + writes (REST only). Auth is the per-user widget JWT
+   minted by POST /api/auth/login (see join()): kept in localStorage so
+   a reload can resume, and re-minted silently while this tab still
+   holds the login in memory (the JWT itself lives 15 minutes). */
 var HW_BRIDGE="https://highway-chat-mcp.onrender.com";
+var HW_JWT=null, HW_LOGIN_EMAIL=null, HW_LOGIN_PW=null;
+try{ HW_JWT=localStorage.getItem("hw_jwt")||null; }catch(e){}
+function hwJwtExp(t){
+  try{
+    var p=JSON.parse(atob(String(t).split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+    return (p.exp||0)*1000;
+  }catch(e){ return 0; }
+}
+function hwJwtEmail(){
+  try{
+    var p=JSON.parse(atob(String(HW_JWT).split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+    return p.email||null;
+  }catch(e){ return null; }
+}
+function hwSetJwt(t){
+  HW_JWT=t||null;
+  try{ if(t) localStorage.setItem("hw_jwt",t); else localStorage.removeItem("hw_jwt"); }catch(e){}
+  if(window.HW_setWidgetJwt) window.HW_setWidgetJwt(t);
+}
 function hwToken(){
-  var u=window.firebase&&firebase.auth&&firebase.auth().currentUser;
-  return u?u.getIdToken():Promise.reject(new Error("no auth"));
+  if(HW_JWT && hwJwtExp(HW_JWT)>Date.now()+5000) return Promise.resolve(HW_JWT);
+  if(HW_LOGIN_EMAIL&&HW_LOGIN_PW) return hwLogin(HW_LOGIN_EMAIL,HW_LOGIN_PW).then(function(){ return HW_JWT; });
+  return Promise.reject(new Error("no auth"));
+}
+function hwLogin(email,pw){
+  return fetch(HW_BRIDGE+"/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email,password:pw})}).then(function(r){
+    return r.json().then(function(j){
+      if(!r.ok||!j||!j.ok){ var er=new Error((j&&j.error)||("api "+r.status)); er.status=r.status; throw er; }
+      HW_LOGIN_EMAIL=email; HW_LOGIN_PW=pw;
+      hwSetJwt(j.token);
+      return j;
+    });
+  });
 }
 function hwGet(path){
   return hwToken().then(function(t){
@@ -94,6 +117,20 @@ function hwGet(path){
       if(!r.ok) throw new Error("api "+r.status);
       return r.json();
     });
+  });
+}
+function hwPost(path,body){
+  return hwToken().then(function(t){
+    return fetch(HW_BRIDGE+path,{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify(body||{})}).then(function(r){
+      if(!r.ok) throw new Error("api "+r.status);
+      return r.json().catch(function(){ return {}; });
+    });
+  });
+}
+function hwDelete(path,token){
+  return fetch(HW_BRIDGE+path,{method:"DELETE",headers:{Authorization:"Bearer "+(token||HW_JWT||"")}}).then(function(r){
+    if(!r.ok) throw new Error("api "+r.status);
+    return r.json().catch(function(){ return {}; });
   });
 }
 function asDoc(row){
@@ -105,7 +142,7 @@ function asDoc(row){
   return {id:row.id,data:function(){ return data; }};
 }
 
-/* ============ QUESTS / WINS / AMBIENT (inside IIFE - needs db/esc/fmtTime) ============ */
+/* ============ QUESTS / WINS / AMBIENT (inside IIFE - needs esc/fmtTime) ============ */
 function loadQuests(){
   var el=document.getElementById("questlist"); if(!el) return;
   hwGet("/api/tasks?limit=20").then(function(body){
@@ -213,7 +250,7 @@ function updateAmbientStatus(snap){
       '<div class="bubble">'+(m.audio?'<button data-voice="'+doc.id+'" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+'<span class="msg-text" style="unicode-bidi:isolate">'+pingify(_shownText)+'</span>'+attHtml+'</div>'+
       '<div class="reacts">'+rxHtml+'</div></div>';
     // Sorted insertion: oldest at top, newest at bottom. Numeric tsNum, doc ID tie-breaker.
-    // This fixes out-of-order rendering when Firestore returns mixed-type or unsorted docs.
+    // This fixes out-of-order rendering when the store returns mixed-type or unsorted docs.
     (function(){
       var rows = chat.querySelectorAll(".row");
       var inserted = false;
@@ -285,33 +322,23 @@ function updateAmbientStatus(snap){
       showPicker(id, els.length?els[0]:document.body);
       return;
     }
-    var ref=db.collection("highway_messages").doc(id);
-    db.runTransaction(function(tx){
-      return tx.get(ref).then(function(snap){
-        var rx=(snap.data()&&snap.data().reactions)||{};
-        var users=rx[emoji]||[];
-        var i=users.indexOf(MY_NAME);
-        if(i>=0) users.splice(i,1); else users.push(MY_NAME);
-        if(users.length) rx[emoji]=users; else delete rx[emoji];
-        tx.update(ref,{reactions:rx});
-      });
-    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+    // The bridge toggles the reaction for the token's identity server-side.
+    hwPost("/api/messages/"+encodeURIComponent(id)+"/reactions",{emoji:emoji}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
   function sendMsg(){
     var t=msg.value.trim();
     // Attachment flow: staged file uploads to Cloudinary first, then the
     // message posts with the attachment metadata. Handled by the attach module.
     if(window.HW_hasPendingFile&&window.HW_hasPendingFile()&&!window.HW_uploading){
-      if(!MY_NAME||!db) return;
+      if(!MY_NAME) return;
       window.HW_uploadAndSend(t);
       return;
     }
-    if(!t||!MY_NAME||!db) return;
+    if(!t||!MY_NAME) return;
     msg.value=""; msg.style.height="auto"; setTyping(false); msg.focus();
     if(window.HighwayAmbient)HighwayAmbient.sendChime();
-    db.collection("highway_messages").add({
-      name:MY_NAME, text:t, deviceId:DEVICE_ID, reactions:{},
-      ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
+    hwPost("/api/messages",{
+      name:MY_NAME, text:t, channel:"room", deviceId:DEVICE_ID
     }).catch(function(e){
       sysLine("Send failed: "+(e.message||"permission denied")+" — try rejoining.");
       msg.value=t;
@@ -323,7 +350,7 @@ function updateAmbientStatus(snap){
   var voiceBtn=$("voiceBtn");
   function toggleVoice(){
     if(_recording){ stopVoice(); return; }
-    if(!MY_NAME||!db){ return; }
+    if(!MY_NAME){ return; }
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
       sysLine("Voice not supported on this device."); return;
     }
@@ -338,11 +365,10 @@ function updateAmbientStatus(snap){
         var reader=new FileReader();
         reader.onloadend=function(){
           var b64=reader.result.split(",")[1];
-          db.collection("highway_messages").add({
-            name:MY_NAME, text:"🎤 voice message", deviceId:DEVICE_ID, reactions:{},
-            audio:b64, audioType:_recorder.mimeType,
-            ts:firebase.firestore.FieldValue.serverTimestamp(),tsNum:Date.now()
-          });
+          hwPost("/api/messages",{
+            name:MY_NAME, text:"🎤 voice message", channel:"room", deviceId:DEVICE_ID,
+            audio:b64, audioType:_recorder.mimeType
+          }).catch(function(e){ sysLine("Voice send failed: "+(e.message||e)); });
           sysLine("Voice message sent.");
         };
         reader.readAsDataURL(blob);
@@ -382,7 +408,7 @@ function updateAmbientStatus(snap){
 
   /* ================= FILE ATTACHMENTS (Cloudinary via bridge) =================
      📎 button → native file picker → preview bar → upload with progress →
-     Firestore message with attachments[] → inline render.
+     Message with attachments[] → inline render.
      Uploads go through the bridge POST /upload (per-user widget JWT auth,
      minted server-side at login); the Cloudinary API secret never touches
      the browser. No dashboard upload preset needed. */
@@ -439,9 +465,9 @@ function updateAmbientStatus(snap){
 
     // H-125: POST /upload authenticates with the H-8 per-user widget JWT minted
     // server-side at login (same verifier as DM reads). The raw WIDGET_TOKEN
-    // secret NEVER enters the browser, and Firebase ID tokens are rejected by
+    // secret NEVER enters the browser, and legacy ID tokens are rejected by
     // the bridge (it no longer verifies them) — uploads never go through
-    // Firebase auth. Hook point for the login flow (H-124): the login flow
+    // the old auth. Hook point for the login flow (H-124): the login flow
     // sets the token via window.HW_setWidgetJwt(token) once it mints
     // per-user JWTs. Until then no client token exists and uploads fail with
     // a clear message instead of a 401.
@@ -510,10 +536,9 @@ function updateAmbientStatus(snap){
           uploaded_by:MY_NAME, uploaded_at:Date.now()
         };
         var text=(caption&&caption.trim())?caption.trim():("📎 "+f.name);
-        return db.collection("highway_messages").add({
-          name:MY_NAME, text:text, deviceId:DEVICE_ID, reactions:{},
-          attachments:[att],
-          ts:firebase.firestore.FieldValue.serverTimestamp(), tsNum:Date.now()
+        return hwPost("/api/messages",{
+          name:MY_NAME, text:text, channel:"room", deviceId:DEVICE_ID,
+          attachments:[att]
         });
       }).then(function(){
         clearPending();
@@ -545,43 +570,28 @@ function updateAmbientStatus(snap){
     stopHeartbeat(); _yielded=false; doBeat(); kickDuplicates();
     _hbTimer=setInterval(doBeat,HB_MS); }
   document.addEventListener("visibilitychange", function(){
-    if(!db||!MY_NAME||_yielded) return;
+    if(!MY_NAME||_yielded) return;
     if(document.hidden) stopHeartbeat(); else if(!_hbTimer){ doBeat(); _hbTimer=setInterval(doBeat,HB_MS); }
   });
   function kickDuplicates(){
-    if(!db||!MY_NAME||_yielded) return;
-    db.collection("highway_presence").where("name","==",MY_NAME).get().then(function(snap){ meter("kick",snap);
-      snap.forEach(function(d){
-        if(d.id===DEVICE_ID) return;
-        var s=d.data()||{};
-        if((s.session||0) < TAB_SESSION) d.ref.delete().catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
-      });
-    }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+    // Presence is server-held now: this device re-claims its own
+    // presence row on every beat (same DEVICE_ID), and other sessions'
+    // rows age out of the online window on their own. There is no
+    // client delete for presence — by design.
   }
   function doBeat(){
-    if(!db||!MY_NAME||_yielded) return;
-    var myRef=db.collection("highway_presence").doc(DEVICE_ID);
-    // New session takes over: claim presence, old tabs will see their doc gone and go quiet
-    myRef.set({name:MY_NAME, platform:PLATFORM, ts:firebase.firestore.FieldValue.serverTimestamp(), session:TAB_SESSION}, {merge:true}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+    if(!MY_NAME||_yielded) return;
+    // Claim presence for this device; the server stamps the time.
+    hwPost("/api/presence",{id:DEVICE_ID, name:MY_NAME, platform:PLATFORM, session:String(TAB_SESSION)}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
   }
-  // A newer session deleted our presence doc (seen via the presence snapshot): go idle silently.
-  function onPresenceChanges(s){
-    if(_yielded) return;
-    s.docChanges().forEach(function(c){
-      if(c.type==="removed" && c.doc.id===DEVICE_ID && !c.doc.metadata.hasPendingWrites){ _yielded=true; stopHeartbeat(); }
-    });
-  }
-  window.addEventListener("beforeunload", function(){
-    if(db) db.collection("highway_presence").doc(DEVICE_ID).delete().catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
-  });
+  // No presence delete on unload: the row ages out of the online
+  // window server-side (there is no client presence-delete route).
 
   /* ================= TYPING INDICATORS ================= */
   var typingTimer=null;
   function setTyping(on){
-    if(!db||!MY_NAME) return;
-    db.collection("highway_typing").doc(DEVICE_ID).set({
-      name:MY_NAME, typing:!!on, ts:firebase.firestore.FieldValue.serverTimestamp()
-    }, {merge:true});
+    if(!MY_NAME) return;
+    hwPost("/api/typing",{id:DEVICE_ID, name:MY_NAME, typing:!!on}).catch(function(){});
   }
 
   /* ================= TASKS ================= */
@@ -595,20 +605,18 @@ function updateAmbientStatus(snap){
       '<button class="tdel">×</button>';
     el.querySelector(".tcheck").addEventListener("change", function(e){
       if(e.target.checked){ el.classList.add("completing"); setTimeout(function(){el.classList.remove("completing");},650); }
-      db.collection("highway_tasks").doc(doc.id).update({done:e.target.checked});
-      if(db && MY_NAME){
+      hwPost("/api/tasks/"+encodeURIComponent(doc.id),{done:!!e.target.checked}).catch(function(){});
+      if(MY_NAME){
         var action = e.target.checked ? "completed quest" : "reopened quest";
-        db.collection("highway_activity").add({text:action+": "+(t.text||"").slice(0,200), by:MY_NAME,
-          ts:firebase.firestore.FieldValue.serverTimestamp()});
+        hwPost("/api/activity",{by:MY_NAME, text:action+": "+(t.text||"").slice(0,200)}).catch(function(){});
       }
     });
     el.querySelector(".tdel").addEventListener("click", function(){
       if(confirm("Abandon this quest?")){
         var taskText = (t.text||"").slice(0,200);
-        db.collection("highway_tasks").doc(doc.id).delete();
-        if(db && MY_NAME){
-          db.collection("highway_activity").add({text:"abandoned quest: "+taskText, by:MY_NAME,
-            ts:firebase.firestore.FieldValue.serverTimestamp()});
+        hwPost("/api/tasks/"+encodeURIComponent(doc.id)+"/delete",{}).catch(function(){});
+        if(MY_NAME){
+          hwPost("/api/activity",{by:MY_NAME, text:"abandoned quest: "+taskText}).catch(function(){});
         }
       }
     });
@@ -618,32 +626,19 @@ function updateAmbientStatus(snap){
   /* ================= NOTES (shared live doc) ================= */
   var notesTimer=null, notesFocused=false, lastNotesTs=null;
   function saveNotes(){
-    if(!db||!MY_NAME) return;
-    db.collection("highway_notes").doc("shared").set({
-      content:$("notes").value.slice(0,20000),
-      updatedBy:MY_NAME, ts:firebase.firestore.FieldValue.serverTimestamp()
-    }, {merge:true});
+    if(!MY_NAME) return;
+    hwPost("/api/notes",{content:$("notes").value.slice(0,20000), updatedBy:MY_NAME}).catch(function(){});
   }
 
   /* ================= ACTIVITY FEED ================= */
   function logActivity(){
-    var t=$("actin").value.trim(); if(!t||!db||!MY_NAME) return;
+    var t=$("actin").value.trim(); if(!t||!MY_NAME) return;
     $("actin").value="";
-    db.collection("highway_activity").add({
-      text:t.slice(0,300), by:MY_NAME,
-      ts:firebase.firestore.FieldValue.serverTimestamp()
-    });
+    hwPost("/api/activity",{by:MY_NAME, text:t.slice(0,300)}).catch(function(){});
   }
 
   /* ================= GO LIVE ================= */
   function goLive(){
-    try{
-      firebase.initializeApp(FIREBASE_CONFIG);
-      // Sign in anonymously for authenticated Firestore access
-      db=firebase.firestore();
-    }
-    catch(e){ sub.textContent="config error"; return; }
-
     dot.classList.remove("off"); sub.textContent="live";
     sysLine("Connected — chat, presence, tasks, notes & activity all sync live.");
 
@@ -791,6 +786,8 @@ function updateAmbientStatus(snap){
   function join(){
     var n=nameIn.value.trim().slice(0,24);
     if(!n){ err.textContent="Pick a name first."; return; }
+    // A still-valid session token skips the account step entirely.
+    if(HW_JWT && hwJwtExp(HW_JWT)>Date.now()+5000){ completeJoin(n,true); return; }
     // First click: reveal the account fields. Second click: sign in.
     if(!authShown){
       authShown=true;
@@ -803,20 +800,20 @@ function updateAmbientStatus(snap){
     var pw=$("password").value;
     if(!email||!pw){ err.textContent="Enter your email and password."; return; }
     err.textContent="Verifying...";
-    try{ firebase.initializeApp(FIREBASE_CONFIG); }catch(e){}
-    firebase.auth().signInWithEmailAndPassword(email,pw).then(function(cred){
-      // Name must match the account's allowed name (enforced server-side too)
+    hwLogin(email,pw).then(function(){
+      // The bridge verified the account and minted the session JWT;
+      // the display name is bound to it server-side too.
       completeJoin(n,true);
     }).catch(function(e){
       var msg="Sign-in failed.";
-      if(e&&e.code==="auth/user-not-found") msg="No account for that email.";
-      else if(e&&e.code==="auth/wrong-password") msg="Wrong password.";
-      else if(e&&e.code==="auth/invalid-email") msg="That email looks invalid.";
+      if(e&&e.status===401) msg="Wrong password, or no account for that email.";
+      else if(e&&e.status===429) msg="Too many attempts — wait a minute.";
+      else if(e&&e.status===503) msg="Login is unavailable right now.";
       err.textContent=msg+" Try again.";
     });
   }
   function completeJoin(n,verified){
-    try{ firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL); }catch(e){}
+    if(window.HW_setWidgetJwt) window.HW_setWidgetJwt(HW_JWT);
     MY_NAME=n;
     try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); }catch(e){}
     mebadge.textContent=n+(verified?" ✓":"");
@@ -884,16 +881,21 @@ function updateAmbientStatus(snap){
 
   sendBtn.addEventListener("click", sendMsg);
   $("clear").addEventListener("click", function(){
-    if(!db||!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
-    db.collection("highway_messages").get().then(function(s){ meter("other",s);
-      var docs=[]; s.forEach(function(d){ docs.push(d.ref); });
-      function next(){
-        if(!docs.length) return Promise.resolve();
-        var b=db.batch();
-        docs.splice(0,450).forEach(function(r){ b.delete(r); });
-        return b.commit().then(next);
-      }
-      return next();
+    if(!MY_NAME||!isOwner(MY_NAME)||!confirm("Clear ALL chat messages for everyone? This cannot be undone.")) return;
+    // Message delete is owner-only on the bridge: re-prove ownership
+    // with the account password to mint the single-purpose owner token.
+    var pw=prompt("Owner password to clear the room:");
+    if(!pw) return;
+    var email=HW_LOGIN_EMAIL||hwJwtEmail()||"";
+    fetch(HW_BRIDGE+"/api/auth/owner",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email,password:pw})}).then(function(r){
+      return r.json().then(function(j){ if(!r.ok||!j||!j.ok) throw new Error((j&&j.error)||("api "+r.status)); return j.ownerToken; });
+    }).then(function(ownerToken){
+      return hwGet("/api/messages?channel=room&limit=500").then(function(body){
+        var ids=(body.messages||[]).map(function(m){ return m.id; });
+        var chain=Promise.resolve();
+        ids.forEach(function(id){ chain=chain.then(function(){ return hwDelete("/api/messages/"+encodeURIComponent(id),ownerToken).catch(function(){}); }); });
+        return chain;
+      });
     }).then(function(){ sysLine("Chat cleared — fresh highway."); })
     .catch(function(e){ sysLine("Clear failed: "+(e.message||e)); });
   });
@@ -910,12 +912,10 @@ function updateAmbientStatus(snap){
   });
 
   $("taskadd").addEventListener("click", function(){
-    var t=$("taskin").value.trim(); if(!t||!db||!MY_NAME) return;
+    var t=$("taskin").value.trim(); if(!t||!MY_NAME) return;
     $("taskin").value="";
-    db.collection("highway_tasks").add({text:t.slice(0,300),done:false,createdBy:MY_NAME,
-      ts:firebase.firestore.FieldValue.serverTimestamp()});
-    db.collection("highway_activity").add({text:"started quest: "+t.slice(0,200), by:MY_NAME,
-      ts:firebase.firestore.FieldValue.serverTimestamp()});
+    hwPost("/api/tasks",{text:t.slice(0,300),done:false}).catch(function(){});
+    hwPost("/api/activity",{by:MY_NAME, text:"started quest: "+t.slice(0,200)}).catch(function(){});
   });
   $("taskin").addEventListener("keydown", function(e){ if(e.key==="Enter") $("taskadd").click(); });
 
@@ -1034,17 +1034,13 @@ function updateAmbientStatus(snap){
       var btn = document.getElementById('pushbell');
       if (btn) { btn.textContent = '\uD83D\uDD14'; btn.title = 'Notifications on'; }
       var subJson = sub.toJSON();
-      if (typeof db !== 'undefined' && db) {
-        var myName = 'anon';
-        try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
-        db.collection('highway_push_subs').doc(btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').substring(0,60)).set({
-          endpoint: sub.endpoint,
-          keys: subJson.keys,
-          name: myName,
-          platform: navigator.platform || 'unknown',
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      }
+      var myName = 'anon';
+      try { myName = sessionStorage.getItem('hw_name') || localStorage.getItem('hw_name') || 'anon'; } catch(e){}
+      (function(){
+        var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
+        if(!t) return;
+        fetch("https://highway-chat-mcp.onrender.com/api/push/subscribe",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({subscription:{endpoint:sub.endpoint, keys:subJson.keys}, name:myName})}).catch(function(e){ console.warn('push save failed', e); });
+      })();
     }).catch(function(err){ console.warn('push subscribe failed', err); });
   }
 
@@ -1242,14 +1238,9 @@ setInterval(applyMood, 600000);
 // Team-only image posting, public viewing.
 // Images stored as data URLs in highway_dm. Sin + agents can post.
 (function initNexus(){
-  var checkReady = setInterval(function(){
-    if (typeof firebase === 'undefined' || !firebase.firestore) return;
-    clearInterval(checkReady);
-    setupNexus();
-  }, 500);
+  setupNexus();
 
   function setupNexus(){
-    var db = firebase.firestore();
     var nexusChat = document.getElementById('nexus-chat');
     var nexusFoot = document.getElementById('nexus-foot');
     var nexusReadonly = document.getElementById('nexus-readonly');
@@ -1267,11 +1258,13 @@ setInterval(applyMood, 600000);
 
     var _dmSeen={};
     function pullNexus(){
-      hwGet("/api/messages?channel=dm&limit=50").then(function(body){
+      var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
+      if(!t) return;
+      fetch("https://highway-chat-mcp.onrender.com/api/messages?channel=dm&limit=50",{headers:{Authorization:"Bearer "+t}}).then(function(r){ return r.json(); }).then(function(body){
         (body.messages||[]).slice().reverse().forEach(function(m){
           if(_dmSeen[m.id]) return;
           _dmSeen[m.id]=1;
-          renderNexusImg(asDoc(m));
+          renderNexusImg({id:m.id, data:function(){ return m; }});
         });
         nexusChat.scrollTop = nexusChat.scrollHeight;
       }).catch(function(){});
@@ -1313,12 +1306,12 @@ setInterval(applyMood, 600000);
           canvas.height = img.height * scale;
           canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
           var compressed = canvas.toDataURL('image/jpeg', 0.7);
-          db.collection("highway_dm").add({
-            name: myName,
-            image: compressed,
-            ts: new Date().toISOString(),
-            tsNum: Date.now(),
-          }).catch(function(e){ console.error('Nexus image failed:', e.message); });
+          (function(){
+            var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
+            if(!t){ console.error('Nexus image failed: not signed in'); return; }
+            var email=""; try{ email=JSON.parse(atob(t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))).email||""; }catch(e){}
+            fetch("https://highway-chat-mcp.onrender.com/api/messages",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({channel:"dm", image:compressed, recipientId:"widget:"+email})}).then(function(r){ if(!r.ok) throw new Error("api "+r.status); }).catch(function(e){ console.error('Nexus image failed:', e.message); });
+          })();
         };
         img.src = dataUrl;
       };
