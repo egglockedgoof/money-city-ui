@@ -10,7 +10,7 @@
 // stored ONLY in this phone's localStorage. It never ships in the repo.
 import { startListening } from './ear.js';
 
-var BRIDGE = 'https://highway-chat-mcp.onrender.com';
+var BRIDGE = 'https://phantomway-door.tail0a8095.ts.net';
 var LINK_KEY = 'hw_ear_link';
 
 var strip = null, statusEl = null, rec = null, starting = false, wantStop = false;

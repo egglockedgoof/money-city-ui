@@ -393,7 +393,7 @@
 (function () {
   if (typeof window === "undefined" || typeof document === "undefined" || !window.HighwayLive) return;
   var L = window.HighwayLive;
-  var HW_BRIDGE = "https://highway-chat-mcp.onrender.com";
+  var HW_BRIDGE = "https://phantomway-door.tail0a8095.ts.net";
   var AC = window.AudioContext || window.webkitAudioContext, actx = null;
   var env = {
     getCtx: function () { if (!actx && AC) { try { actx = new AC(); } catch (e) { return null; } } return actx; },

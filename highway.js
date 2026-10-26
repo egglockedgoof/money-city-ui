@@ -63,7 +63,7 @@ function flushReads(){
     var counts=_reads, any=false; for(var k in counts){ if(counts[k]){ any=true; break; } } if(!any) return;
     _reads={};
     hwToken().then(function(t){
-      return fetch("https://highway-chat-mcp.onrender.com/metrics/reads",{method:"POST",keepalive:true,
+      return fetch("https://phantomway-door.tail0a8095.ts.net/metrics/reads",{method:"POST",keepalive:true,
         headers:{"Content-Type":"application/json","Authorization":"Bearer "+t},
         body:JSON.stringify({tab:_readsTab,counts:counts})});
     }).catch(function(){});
@@ -76,7 +76,7 @@ window.addEventListener("pagehide", flushReads);
    minted by POST /api/auth/login (see join()): kept in localStorage so
    a reload can resume, and re-minted silently while this tab still
    holds the login in memory (the JWT itself lives 15 minutes). */
-var HW_BRIDGE="https://highway-chat-mcp.onrender.com";
+var HW_BRIDGE="https://phantomway-door.tail0a8095.ts.net";
 var HW_JWT=null, HW_LOGIN_EMAIL=null, HW_LOGIN_PW=null;
 try{ HW_JWT=localStorage.getItem("hw_jwt")||null; }catch(e){}
 function hwJwtExp(t){
@@ -414,7 +414,7 @@ function updateAmbientStatus(snap){
      the browser. No dashboard upload preset needed. */
   window.HW_uploading=false;
   (function(){
-    var BRIDGE_URL="https://highway-chat-mcp.onrender.com";
+    var BRIDGE_URL="https://phantomway-door.tail0a8095.ts.net";
     var MAX_BYTES=10*1024*1024; // 10 MB cap — bridge enforces per-type limits
     var pendingFile=null, objectUrl=null;
 
@@ -850,7 +850,7 @@ function updateAmbientStatus(snap){
   setTimeout(moveGlider, 300);
 
   /* ============ NEWS FEED (money moves: crypto + stocks + macro) ============ */
-  var NEWS_URL="https://highway-chat-mcp.onrender.com/news";
+  var NEWS_URL="https://phantomway-door.tail0a8095.ts.net/news";
   var newsLoadedAt=0;
   function loadNews(){
     var list=$("newslist"); if(!list) return;
@@ -1039,7 +1039,7 @@ function updateAmbientStatus(snap){
       (function(){
         var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
         if(!t) return;
-        fetch("https://highway-chat-mcp.onrender.com/api/push/subscribe",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({subscription:{endpoint:sub.endpoint, keys:subJson.keys}, name:myName})}).catch(function(e){ console.warn('push save failed', e); });
+        fetch("https://phantomway-door.tail0a8095.ts.net/api/push/subscribe",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({subscription:{endpoint:sub.endpoint, keys:subJson.keys}, name:myName})}).catch(function(e){ console.warn('push save failed', e); });
       })();
     }).catch(function(err){ console.warn('push subscribe failed', err); });
   }
@@ -1260,7 +1260,7 @@ setInterval(applyMood, 600000);
     function pullNexus(){
       var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
       if(!t) return;
-      fetch("https://highway-chat-mcp.onrender.com/api/messages?channel=dm&limit=50",{headers:{Authorization:"Bearer "+t}}).then(function(r){ return r.json(); }).then(function(body){
+      fetch("https://phantomway-door.tail0a8095.ts.net/api/messages?channel=dm&limit=50",{headers:{Authorization:"Bearer "+t}}).then(function(r){ return r.json(); }).then(function(body){
         (body.messages||[]).slice().reverse().forEach(function(m){
           if(_dmSeen[m.id]) return;
           _dmSeen[m.id]=1;
@@ -1310,7 +1310,7 @@ setInterval(applyMood, 600000);
             var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
             if(!t){ console.error('Nexus image failed: not signed in'); return; }
             var email=""; try{ email=JSON.parse(atob(t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))).email||""; }catch(e){}
-            fetch("https://highway-chat-mcp.onrender.com/api/messages",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({channel:"dm", image:compressed, recipientId:"widget:"+email})}).then(function(r){ if(!r.ok) throw new Error("api "+r.status); }).catch(function(e){ console.error('Nexus image failed:', e.message); });
+            fetch("https://phantomway-door.tail0a8095.ts.net/api/messages",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({channel:"dm", image:compressed, recipientId:"widget:"+email})}).then(function(r){ if(!r.ok) throw new Error("api "+r.status); }).catch(function(e){ console.error('Nexus image failed:', e.message); });
           })();
         };
         img.src = dataUrl;
