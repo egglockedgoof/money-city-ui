@@ -43,8 +43,13 @@
   // One definition only (a later duplicate used to shadow this and return "#").
   function safeUrl(u){
     try{
-      var p=new URL(String(u||""), location.href);
-      if(p.protocol!=="http:" && p.protocol!=="https:") return "";
+      var raw=String(u||"").trim();
+      if(!raw||raw.length>4000) return "";
+      if(/[\u0000-\u001F\u007F]/.test(raw)) return "";
+      var p=new URL(raw, location.href);
+      var proto=String(p.protocol||"").toLowerCase();
+      if(proto!=="http:" && proto!=="https:") return "";
+      if(p.username||p.password) return "";
       return p.href;
     }catch(e){ return ""; }
   }
@@ -120,12 +125,15 @@ function hwToken(){
   if(HW_LOGIN_EMAIL&&HW_LOGIN_PW) return hwLogin(HW_LOGIN_EMAIL,HW_LOGIN_PW).then(function(){ return HW_JWT; });
   return Promise.reject(new Error("no auth"));
 }
-function hwLogin(email,pw){
+function hwLogin(email,pw,displayName){
   // Hard timeout: a hung TLS/CORS/fetch must never leave the gate on "Verifying...".
+  // displayName is minted into the JWT name claim so REST writes bind to it.
   var LOGIN_MS=12000;
   var ctrl=typeof AbortController!=="undefined"?new AbortController():null;
   var timer=ctrl?setTimeout(function(){ try{ctrl.abort();}catch(e){} }, LOGIN_MS):null;
-  var opts={method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email,password:pw})};
+  var body={email:email,password:pw};
+  if(displayName) body.displayName=String(displayName).trim().slice(0,40);
+  var opts={method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)};
   if(ctrl) opts.signal=ctrl.signal;
   return fetch(HW_BRIDGE+"/api/auth/login",opts).then(function(r){
     return r.text().then(function(raw){
@@ -904,7 +912,7 @@ function updateAmbientStatus(snap){
     joining=true;
     joinBtn.disabled=true;
     err.textContent="Verifying...";
-    hwLogin(email,pw).then(function(){
+    hwLogin(email,pw,n).then(function(){
       completeJoin(n,true);
     }).catch(function(e){
       var msg="Sign-in failed.";
