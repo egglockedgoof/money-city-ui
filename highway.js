@@ -128,7 +128,7 @@ function hwToken(){
 function hwLogin(email,pw,displayName){
   // Hard timeout: a hung TLS/CORS/fetch must never leave the gate on "Verifying...".
   // displayName is minted into the JWT name claim so REST writes bind to it.
-  var LOGIN_MS=12000;
+  var LOGIN_MS=8000;
   var ctrl=typeof AbortController!=="undefined"?new AbortController():null;
   var timer=ctrl?setTimeout(function(){ try{ctrl.abort();}catch(e){} }, LOGIN_MS):null;
   var body={email:email,password:pw};
@@ -856,16 +856,18 @@ function updateAmbientStatus(snap){
       body.classList.remove("auth-pw","auth-account","auth-live");
       body.classList.add(stage==="live"?"auth-live":(stage==="account"?"auth-account":"auth-pw"));
     }
-    if(pwEl){
-      pwEl.style.display = stage==="pw" ? "flex" : "none";
-      pwEl.setAttribute("aria-hidden", stage==="pw" ? "false" : "true");
-      if(stage!=="pw") pwEl.style.pointerEvents="none"; else pwEl.style.pointerEvents="";
+    function applyGate(el, on){
+      if(!el) return;
+      el.style.setProperty("display", on ? "flex" : "none", "important");
+      el.style.setProperty("visibility", on ? "visible" : "hidden", "important");
+      el.style.setProperty("pointer-events", on ? "auto" : "none", "important");
+      el.setAttribute("aria-hidden", on ? "false" : "true");
+      if("hidden" in el) el.hidden = !on;
     }
-    if(gEl){
-      gEl.style.display = stage==="account" ? "flex" : "none";
-      gEl.setAttribute("aria-hidden", stage==="account" ? "false" : "true");
-      if(stage!=="account") gEl.style.pointerEvents="none"; else gEl.style.pointerEvents="";
-    }
+    applyGate(pwEl, stage==="pw");
+    applyGate(gEl, stage==="account");
+    if(stage==="live" && pwEl){ pwEl.style.zIndex="-1"; }
+    else if(pwEl){ pwEl.style.zIndex=""; }
   }
   function tryPw(){
     if($("pw").value===_PW){
@@ -945,6 +947,15 @@ function updateAmbientStatus(snap){
     if(sessionStorage.getItem("hw_pw")==="1") enterAccountOrLive();
     else setAuthStage("pw");
   }catch(e){ setAuthStage("pw"); }
+  try{
+    if(navigator.serviceWorker){
+      navigator.serviceWorker.getRegistration().then(function(reg){
+        if(!reg) return;
+        reg.update();
+        if(reg.waiting) try{ reg.waiting.postMessage({type:"SKIP_WAITING"}); }catch(e){}
+      }).catch(function(){});
+    }
+  }catch(e){}
 
   /* Tab glider: slides to the active tab */
   function moveGlider(){
