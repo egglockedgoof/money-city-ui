@@ -43,8 +43,13 @@
   // One definition only (a later duplicate used to shadow this and return "#").
   function safeUrl(u){
     try{
-      var p=new URL(String(u||""), location.href);
-      if(p.protocol!=="http:" && p.protocol!=="https:") return "";
+      var raw=String(u||"").trim();
+      if(!raw||raw.length>4000) return "";
+      if(/[\u0000-\u001F\u007F]/.test(raw)) return "";
+      var p=new URL(raw, location.href);
+      var proto=String(p.protocol||"").toLowerCase();
+      if(proto!=="http:" && proto!=="https:") return "";
+      if(p.username||p.password) return "";
       return p.href;
     }catch(e){ return ""; }
   }
@@ -120,12 +125,15 @@ function hwToken(){
   if(HW_LOGIN_EMAIL&&HW_LOGIN_PW) return hwLogin(HW_LOGIN_EMAIL,HW_LOGIN_PW).then(function(){ return HW_JWT; });
   return Promise.reject(new Error("no auth"));
 }
-function hwLogin(email,pw){
+function hwLogin(email,pw,displayName){
   // Hard timeout: a hung TLS/CORS/fetch must never leave the gate on "Verifying...".
-  var LOGIN_MS=12000;
+  // displayName is minted into the JWT name claim so REST writes bind to it.
+  var LOGIN_MS=8000;
   var ctrl=typeof AbortController!=="undefined"?new AbortController():null;
   var timer=ctrl?setTimeout(function(){ try{ctrl.abort();}catch(e){} }, LOGIN_MS):null;
-  var opts={method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email,password:pw})};
+  var body={email:email,password:pw};
+  if(displayName) body.displayName=String(displayName).trim().slice(0,40);
+  var opts={method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)};
   if(ctrl) opts.signal=ctrl.signal;
   return fetch(HW_BRIDGE+"/api/auth/login",opts).then(function(r){
     return r.text().then(function(raw){
@@ -848,16 +856,18 @@ function updateAmbientStatus(snap){
       body.classList.remove("auth-pw","auth-account","auth-live");
       body.classList.add(stage==="live"?"auth-live":(stage==="account"?"auth-account":"auth-pw"));
     }
-    if(pwEl){
-      pwEl.style.display = stage==="pw" ? "flex" : "none";
-      pwEl.setAttribute("aria-hidden", stage==="pw" ? "false" : "true");
-      if(stage!=="pw") pwEl.style.pointerEvents="none"; else pwEl.style.pointerEvents="";
+    function applyGate(el, on){
+      if(!el) return;
+      el.style.setProperty("display", on ? "flex" : "none", "important");
+      el.style.setProperty("visibility", on ? "visible" : "hidden", "important");
+      el.style.setProperty("pointer-events", on ? "auto" : "none", "important");
+      el.setAttribute("aria-hidden", on ? "false" : "true");
+      if("hidden" in el) el.hidden = !on;
     }
-    if(gEl){
-      gEl.style.display = stage==="account" ? "flex" : "none";
-      gEl.setAttribute("aria-hidden", stage==="account" ? "false" : "true");
-      if(stage!=="account") gEl.style.pointerEvents="none"; else gEl.style.pointerEvents="";
-    }
+    applyGate(pwEl, stage==="pw");
+    applyGate(gEl, stage==="account");
+    if(stage==="live" && pwEl){ pwEl.style.zIndex="-1"; }
+    else if(pwEl){ pwEl.style.zIndex=""; }
   }
   function tryPw(){
     if($("pw").value===_PW){
@@ -904,7 +914,7 @@ function updateAmbientStatus(snap){
     joining=true;
     joinBtn.disabled=true;
     err.textContent="Verifying...";
-    hwLogin(email,pw).then(function(){
+    hwLogin(email,pw,n).then(function(){
       completeJoin(n,true);
     }).catch(function(e){
       var msg="Sign-in failed.";
@@ -937,6 +947,15 @@ function updateAmbientStatus(snap){
     if(sessionStorage.getItem("hw_pw")==="1") enterAccountOrLive();
     else setAuthStage("pw");
   }catch(e){ setAuthStage("pw"); }
+  try{
+    if(navigator.serviceWorker){
+      navigator.serviceWorker.getRegistration().then(function(reg){
+        if(!reg) return;
+        reg.update();
+        if(reg.waiting) try{ reg.waiting.postMessage({type:"SKIP_WAITING"}); }catch(e){}
+      }).catch(function(){});
+    }
+  }catch(e){}
 
   /* Tab glider: slides to the active tab */
   function moveGlider(){

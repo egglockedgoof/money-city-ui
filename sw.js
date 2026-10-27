@@ -17,7 +17,7 @@
  * cache:"reload" so a new version never snapshots a stale HTTP-cached copy (GitHub Pages
  * sends max-age=600).
  */
-var CACHE_VERSION = "phantomway-shell-v19";
+var CACHE_VERSION = "phantomway-shell-v21";
 var HTML_TIMEOUT_MS = 4000;
 var SHELL = [
   "./",
@@ -115,8 +115,24 @@ self.addEventListener("fetch", function (event) {
     return;
   }
 
+  var pathName = url.pathname || "";
+  var base = pathName.split("/").pop() || "";
+  var critical = /^(index\.html|highway\.js|highway\.css|sw\.js|manifest\.json)$/i.test(base) || pathName.endsWith("/");
   if (isShellRequest(req, url)) {
-    // cache-first
+    if (critical) {
+      event.respondWith(
+        fetch(req, { cache: "no-cache", credentials: "same-origin" }).then(function (res) {
+          if (res && res.ok) {
+            var copy = res.clone();
+            caches.open(CACHE_VERSION).then(function (c) { c.put(req, copy); });
+          }
+          return res;
+        }).catch(function () {
+          return caches.match(req, { ignoreSearch: true }).then(function (hit) { return hit || Response.error(); });
+        })
+      );
+      return;
+    }
     event.respondWith(
       caches.match(req, { ignoreSearch: true }).then(function (hit) {
         if (hit) return hit;
@@ -172,4 +188,8 @@ self.addEventListener("notificationclick", function (event) {
       return self.clients.openWindow(target);
     })
   );
+});
+
+self.addEventListener("message", function (event) {
+  if (event && event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
