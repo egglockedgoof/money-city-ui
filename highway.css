@@ -649,7 +649,7 @@ input, textarea, select, button{
   white-space:pre-wrap;
 }
 
-/* === Gate login inputs: match Highway flow === */
+/* === Gate login inputs: match PhantomWay flow === */
 #email, #password{
   width:100%; max-width:280px;
   background:#0a0e14;

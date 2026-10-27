@@ -102,6 +102,32 @@
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', boot); else boot();
   setTimeout(boot, 800);
 
+
+  /* ---------- PhantomWay wordmark: every UI occurrence gets the ethereal treatment ---------- */
+  var SKIP = 'script,style,textarea,input,select,option,.pw,.bubble,#notes,#tasklist,#actlist,#newslist,[contenteditable]';
+  var NAME = /PhantomWay/g, wmQueued = false;
+  function wrapName(rootEl) {
+    var w = d.createTreeWalker(rootEl || d.body, NodeFilter.SHOW_TEXT, null), hits = [], n;
+    while ((n = w.nextNode())) {
+      if (n.nodeValue.indexOf('PhantomWay') < 0) continue;
+      var p = n.parentElement; if (!p || p.closest(SKIP)) continue;
+      hits.push(n);
+    }
+    hits.forEach(function (node) {
+      var parts = node.nodeValue.split(NAME), frag = d.createDocumentFragment();
+      parts.forEach(function (txt, i) {
+        if (txt) frag.appendChild(d.createTextNode(txt));
+        if (i < parts.length - 1) { var s = d.createElement('span'); s.className = 'pw'; s.setAttribute('data-text', 'PhantomWay'); s.setAttribute('aria-label', 'PhantomWay'); s.innerHTML = 'PhantomWay'.split('').map(function (ch, n) { return '<i class="pwl" style="--i:' + n + '">' + ch + '</i>'; }).join(''); frag.appendChild(s); }
+      });
+      node.parentNode.replaceChild(frag, node);
+    });
+  }
+  function queueWrap() { if (wmQueued) return; wmQueued = true; requestAnimationFrame(function () { wmQueued = false; wrapName(); }); }
+  new MutationObserver(function (muts) {
+    for (var i = 0; i < muts.length; i++) { var t = muts[i].target; if (!(t.closest && t.closest('.pw'))) { queueWrap(); return; } }
+  }).observe(d.documentElement, { childList: true, subtree: true, characterData: true });
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', queueWrap); else queueWrap();
+
   /* ---------- pointer ripple ---------- */
   function ripple(e) {
     var b = e.target.closest && e.target.closest('button, .tab, .hs-btn');

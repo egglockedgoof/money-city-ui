@@ -31,7 +31,7 @@
   var MY_NAME=null, seen={};
   var VOICE_REG={}; /* docId -> {b64, type} : voice audio out of the DOM */
   var EMOJIS=["🔥","❤️","👍","😂","💯","👀"];
-  var OWNERS=["sin","grim"]; // co-owners of the Highway — case-insensitive
+  var OWNERS=["sin","grim"]; // co-owners of PhantomWay — case-insensitive
   function isOwner(n){ return OWNERS.indexOf(String(n||"").toLowerCase())>=0; }
   function crownHtml(n){ return isOwner(n)?'<span class="crown" title="Owner">👑</span>':""; }
   function pingify(s){ return esc(s).replace(/@([a-z0-9_]+)/gi,'<span class="ping">@$1</span>'); }
@@ -77,6 +77,7 @@ window.addEventListener("pagehide", flushReads);
    a reload can resume, and re-minted silently while this tab still
    holds the login in memory (the JWT itself lives 15 minutes). */
 var HW_BRIDGE="https://phantomway-door.tail0a8095.ts.net";
+window.PHANTOM_BRIDGE=HW_BRIDGE; // single source of truth for the link-telemetry ping (phantom-physics.js)
 var HW_JWT=null, HW_LOGIN_EMAIL=null, HW_LOGIN_PW=null;
 try{ HW_JWT=localStorage.getItem("hw_jwt")||null; }catch(e){}
 function hwJwtExp(t){
@@ -155,7 +156,7 @@ function loadQuests(){
         +'<div style="font-size:12px;color:var(--muted);">by '+esc(d.createdBy||"unknown")+'</div></div>';
     });
     el.innerHTML=h+'</div>';
-  }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+  }).catch(function(e){ if(window.console&&console.warn) console.warn("[phantomway]", e&&e.message||e); });
 }
 function loadWins(){
   var el=document.getElementById("winlist"); if(!el) return;
@@ -170,7 +171,7 @@ function loadWins(){
     });
     if(!found) h+='<p style="color:var(--muted);">No wins yet. Go get one.</p>';
     el.innerHTML=h+'</div>';
-  }).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+  }).catch(function(e){ if(window.console&&console.warn) console.warn("[phantomway]", e&&e.message||e); });
 }
 // Fed by /api/activity pull in goLive.
 function updateAmbientStatus(snap){
@@ -178,7 +179,7 @@ function updateAmbientStatus(snap){
   var h="";
   snap.docs.slice(0,5).forEach(function(doc){ var d=doc.data()||{};
     h+='<span style="margin-right:12px;">'+esc(d.by||"")+': '+esc((d.text||"").slice(0,40))+'</span>'; });
-  el.innerHTML=h||'<span style="color:var(--muted);">Quiet on the Highway...</span>';
+  el.innerHTML=h||'<span style="color:var(--muted);">Quiet on PhantomWay...</span>';
 }
   function scrollDown(el){ requestAnimationFrame(function(){ el.scrollTop = el.scrollHeight; }); }
   function sysLine(t){
@@ -323,7 +324,7 @@ function updateAmbientStatus(snap){
       return;
     }
     // The bridge toggles the reaction for the token's identity server-side.
-    hwPost("/api/messages/"+encodeURIComponent(id)+"/reactions",{emoji:emoji}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+    hwPost("/api/messages/"+encodeURIComponent(id)+"/reactions",{emoji:emoji}).catch(function(e){ if(window.console&&console.warn) console.warn("[phantomway]", e&&e.message||e); });
   }
   function sendMsg(){
     var t=msg.value.trim();
@@ -582,7 +583,7 @@ function updateAmbientStatus(snap){
   function doBeat(){
     if(!MY_NAME||_yielded) return;
     // Claim presence for this device; the server stamps the time.
-    hwPost("/api/presence",{id:DEVICE_ID, name:MY_NAME, platform:PLATFORM, session:String(TAB_SESSION)}).catch(function(e){ if(window.console&&console.warn) console.warn("[highway]", e&&e.message||e); });
+    hwPost("/api/presence",{id:DEVICE_ID, name:MY_NAME, platform:PLATFORM, session:String(TAB_SESSION)}).catch(function(e){ if(window.console&&console.warn) console.warn("[phantomway]", e&&e.message||e); });
   }
   // No presence delete on unload: the row ages out of the online
   // window server-side (there is no client presence-delete route).
@@ -793,7 +794,7 @@ function updateAmbientStatus(snap){
       authShown=true;
       $("authfields").style.display="block";
       $("email").focus();
-      err.textContent="Sign in with your Highway account.";
+      err.textContent="Sign in with your PhantomWay account.";
       return;
     }
     var email=$("email").value.trim();
@@ -896,7 +897,7 @@ function updateAmbientStatus(snap){
         ids.forEach(function(id){ chain=chain.then(function(){ return hwDelete("/api/messages/"+encodeURIComponent(id),ownerToken).catch(function(){}); }); });
         return chain;
       });
-    }).then(function(){ sysLine("Chat cleared — fresh highway."); })
+    }).then(function(){ sysLine("Chat cleared — fresh PhantomWay."); })
     .catch(function(e){ sysLine("Clear failed: "+(e.message||e)); });
   });
   msg.addEventListener("keydown", function(e){
@@ -996,7 +997,7 @@ function updateAmbientStatus(snap){
 })();
 
 
-/* Highway Chat push notifications */
+/* PhantomWay push notifications */
 (function(){
   var VAPID_PUBLIC = "BEm8B9zNCKOVR7_nvgrVOrBiVUJTnWTdLkn23Wk---Y03oqTXMDjXwvTliytNJBN412Z8gU7O29YGPpTke0Papk";
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -1027,7 +1028,7 @@ function updateAmbientStatus(snap){
   }
 
   function enablePush(){
-    if (Notification.permission === 'denied') { alert('Notifications blocked. Enable them in Settings > Highway Chat.'); return; }
+    if (Notification.permission === 'denied') { alert('Notifications blocked. Enable them in Settings > PhantomWay.'); return; }
     navigator.serviceWorker.ready.then(function(reg){
       return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
     }).then(function(sub){
@@ -1048,7 +1049,7 @@ function updateAmbientStatus(snap){
 })();
 
 
-/* Highway ambient: procedural Web Audio (rain+pad+chords). */
+/* PhantomWay ambient: procedural Web Audio (rain+pad+chords). */
 (function(){
   var ctx = null, master = null, started = false;
 
@@ -1411,7 +1412,7 @@ setInterval(applyMood, 600000);
 })();
 
 
-/* ============ HIGHWAY PWA (Phase 1) ============
+/* ============ PHANTOMWAY PWA (Phase 1) ============
    Makes "Add to Home Screen" on iOS 16.4+ Safari install a standalone app.
    index.html lives in money-city-ui, so the tags are ensured from JS here
    (idempotent: skipped if index.html already carries them; see site/README.md
@@ -1436,7 +1437,7 @@ setInterval(applyMood, 600000);
   ensureMeta("apple-mobile-web-app-capable", "yes");
   ensureMeta("mobile-web-app-capable", "yes");
   ensureMeta("apple-mobile-web-app-status-bar-style", "black-translucent");
-  ensureMeta("apple-mobile-web-app-title", "Highway");
+  ensureMeta("apple-mobile-web-app-title", "PhantomWay");
   ensureMeta("theme-color", "#c1121f");
   // viewport-fit=cover: extend the existing viewport meta rather than adding a second one.
   var vp = document.querySelector('meta[name="viewport"]');
@@ -1468,7 +1469,7 @@ setInterval(applyMood, 600000);
       location.reload();
     });
     window.addEventListener("load", function(){
-      navigator.serviceWorker.register("sw.js").catch(function(e){ console.warn("[highway] sw register failed", e); });
+      navigator.serviceWorker.register("sw.js").catch(function(e){ console.warn("[phantomway] sw register failed", e); });
     });
   }
 })();

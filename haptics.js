@@ -1,5 +1,5 @@
 /*
- * Highway Face — unified output contract + haptic rendering
+ * PhantomWay Face — unified output contract + haptic rendering
  *
  * Contract: the Loom's state arrives as ONE object
  *   {"text": "...", "haptic": "purr", "intensity": 0.8}

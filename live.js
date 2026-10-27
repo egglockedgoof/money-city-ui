@@ -1,4 +1,4 @@
-/* Highway live layer: socket client + haptic touch engine + gesture registry.
+/* PhantomWay live layer: socket client + haptic touch engine + gesture registry.
  *
  * EXPERIMENTAL: this renders sound through Web Audio, i.e. the SPEAKER.
  * First real-device test (Oct 24 2026, sin's iPhone): heartbeat clearly heard; the purr
@@ -472,7 +472,7 @@
     dot.style.cssText = "background:none;border:1px solid #c1121f;color:#c1121f;border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;margin-left:8px;opacity:.45;";
     dot.onclick = function () {
       var cur = getToken() || "";
-      var t = window.prompt("Highway live socket token (experimental haptics). Blank to disconnect.", cur);
+      var t = window.prompt("PhantomWay live socket token (experimental haptics). Blank to disconnect.", cur);
       if (t === null) return;
       try { if (t.trim()) localStorage.setItem(TK, t.trim()); else localStorage.removeItem(TK); } catch (e) { /* ignore */ }
       sock.stop(); if (t.trim()) sock.start();

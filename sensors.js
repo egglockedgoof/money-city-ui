@@ -1,5 +1,5 @@
 /*
- * Highway Face — PWA Sensory Manager (Trinity, Step 1)
+ * PhantomWay Face — PWA Sensory Manager (Trinity, Step 1)
  *
  * Local-first. Only computed FEATURES and deliberate captures leave the phone.
  * Every permission is requested from a tap, never on load.

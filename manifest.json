@@ -1,7 +1,7 @@
 {
-  "name": "Highway",
-  "short_name": "Highway",
-  "description": "The Highway room, installed.",
+  "name": "PhantomWay",
+  "short_name": "PhantomWay",
+  "description": "The PhantomWay room, installed.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -4,14 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
 <meta name="format-detection" content="telephone=no" />
-<title>Highway Chat — Real-Time Team Room</title>
+<title>PhantomWay — Real-Time Team Room</title>
 
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#c1121f" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Highway Chat" />
+<meta name="apple-mobile-web-app-title" content="PhantomWay" />
 <link rel="apple-touch-icon" sizes="180x180" href="highway-icons/icon-180.png" />
 <link rel="icon" type="image/png" sizes="192x192" href="highway-icons/icon-192.png" />
 <link rel="icon" type="image/png" sizes="512x512" href="highway-icons/icon-512.png" />
@@ -31,7 +31,7 @@
     <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAAvAEADASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAABQcABAYDAQL/xAAvEAACAQMDAwIEBQUAAAAAAAABAgMABBEFEjEGIVETQTJhcYEHIlLB8BUWkbHR/8QAFwEBAQEBAAAAAAAAAAAAAAAAAQADAv/EABkRAQEAAwEAAAAAAAAAAAAAAAABAhEhEv/aAAwDAQACEQMRAD8AYFSpUqSV5XtDdZvDbQxwxttlnbap8D3P880W6m04at1Np+luYnZ5phzHCuSPqeBQqP8AEDTzJtmtbqJf1YVsfYGiB6etngxgbyM5rHdR6Kltuf1UTHwqeW84H71x7u+wmLYahaalbieznSaPglfY+CParVJnQNXm0bUkuY2JjziVM9nX3H18U44pEmiSWM7kdQynyDWgcL69SxWOSb8sLNtZ/wBJPBPyqwjK6hkYMp7gg5BrjfWkd9ZS20udsi4yOR4P2rAw6xcaBevY6lG4ZDjfGxXcPY44OaLbEYcsscMZklcIg5JOKxWpXrXd+98+5IIxshB7Ejz96uxaxpFwBKTJK3sJGzQHqHVDdkLHGEiThRWOWfrhgpD1DqTW2V9NTnaC0BOB5BDUGvruA3DpfPLK7x7WkVQW5zgDhck8+BQmTVrh7dbYy7Y0OQAKq30lwJ/UuS/qOAQW7HAGB2HypktvU4zxPbzNG6MhB4YYOKbnSbs/TGnls59EDv8ALtSkjWfULtEBaWaVgi57kk9hTq0+1Wx0+3tU+GGNUz5wK2CzQzW9Ds9btvSukw6/BKvxIf57USqVIqdV6V1fSHZoka4gHEkIz2+a8ig7Xk2CrjJHmndVW60ywvMm5tIJSfdkBP8Ami4ynZJEsx4r7gtp7qZYoYnllbsFUZJpuf2roe7P9Oiz9T/2iNrY2lku21t4oQediAZpDM9H9JnSyL6/AN2R+SMdxED+/wDqtbUqVJ//2Q==" class="moon m4" alt="" />
   </div>
   <div class="card">
-    <h2>🔒 Highway Chat</h2>
+    <h2>🔒 <span class="pw" data-text="PhantomWay" aria-label="PhantomWay"><i class="pwl" style="--i:0">P</i><i class="pwl" style="--i:1">h</i><i class="pwl" style="--i:2">a</i><i class="pwl" style="--i:3">n</i><i class="pwl" style="--i:4">t</i><i class="pwl" style="--i:5">o</i><i class="pwl" style="--i:6">m</i><i class="pwl" style="--i:7">W</i><i class="pwl" style="--i:8">a</i><i class="pwl" style="--i:9">y</i></span></h2>
     <p>This room is locked.<br/>Enter the password to continue.</p>
     <input id="pw" type="password" placeholder="Password" autocomplete="off" />
     <button id="pwjoin">Unlock</button>
@@ -40,14 +40,14 @@
 </div>
 <div id="gate" style="display:none">
   <div class="card">
-    <h2>🛣️ Highway Chat</h2>
+    <h2>👁 <span class="pw" data-text="PhantomWay" aria-label="PhantomWay"><i class="pwl" style="--i:0">P</i><i class="pwl" style="--i:1">h</i><i class="pwl" style="--i:2">a</i><i class="pwl" style="--i:3">n</i><i class="pwl" style="--i:4">t</i><i class="pwl" style="--i:5">o</i><i class="pwl" style="--i:6">m</i><i class="pwl" style="--i:7">W</i><i class="pwl" style="--i:8">a</i><i class="pwl" style="--i:9">y</i></span></h2>
     <p>Choose your verified display name.<br/>It will be badged on everything you do.</p>
     <input id="name" maxlength="24" placeholder="e.g. whisper" autocomplete="off" />
     <div id="authfields" style="display:none">
-      <input id="email" type="email" placeholder="Highway account email" autocomplete="email" />
+      <input id="email" type="email" placeholder="PhantomWay account email" autocomplete="email" />
       <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
     </div>
-    <button id="join">Enter the highway</button>
+    <button id="join">Enter PhantomWay</button>
     <div id="err"></div>
   </div>
 </div>
@@ -56,7 +56,7 @@
   <div class="head">
     <div class="head-top">
       <span class="dot off" id="livedot"></span>
-      <h1>Highway Chat<small id="sub">connecting…</small></h1>
+      <h1><span class="pw" data-text="PhantomWay" aria-label="PhantomWay"><i class="pwl" style="--i:0">P</i><i class="pwl" style="--i:1">h</i><i class="pwl" style="--i:2">a</i><i class="pwl" style="--i:3">n</i><i class="pwl" style="--i:4">t</i><i class="pwl" style="--i:5">o</i><i class="pwl" style="--i:6">m</i><i class="pwl" style="--i:7">W</i><i class="pwl" style="--i:8">a</i><i class="pwl" style="--i:9">y</i></span><small id="sub">connecting…</small></h1>
       <span class="me" id="mebadge">—</span>
       <span id="devbadge" style="font-size:9px;opacity:.5;margin-left:6px"></span>
     </div>
@@ -127,12 +127,16 @@
     <div class="face-hero">
       <div class="face-orb" aria-hidden="true"><i></i><i></i><i></i></div>
       <h2>The Face</h2>
-      <p>Give Highway senses. Everything is read on your phone, and only computed features or a photo you tap ever leave it.</p>
+      <p>Give PhantomWay senses. Everything is read on your phone, and only computed features or a photo you tap ever leave it.</p>
     </div>
     <div id="sense" data-build="v9"></div>
-    <div class="face-card"><h3>On the highway</h3><div id="ambient"></div></div>
+    <div class="face-card" id="face-link" data-link="measuring"><h3>Link to the Loom</h3>
+      <div class="pl-row"><span class="pl-ms" id="pl-ms">—</span><span class="pl-label" id="pl-label">Measuring</span></div>
+      <svg id="pl-spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline points="" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+      <div class="pl-note" id="pl-note"></div></div>
+    <div class="face-card"><h3>On <span class="pw" data-text="PhantomWay" aria-label="PhantomWay"><i class="pwl" style="--i:0">P</i><i class="pwl" style="--i:1">h</i><i class="pwl" style="--i:2">a</i><i class="pwl" style="--i:3">n</i><i class="pwl" style="--i:4">t</i><i class="pwl" style="--i:5">o</i><i class="pwl" style="--i:6">m</i><i class="pwl" style="--i:7">W</i><i class="pwl" style="--i:8">a</i><i class="pwl" style="--i:9">y</i></span></h3><div id="ambient"></div></div>
     <div class="face-card"><h3>Room</h3><div id="face-room"></div></div>
-    <div class="face-stamp">realm v9</div>
+    <div class="face-stamp">PhantomWay realm v16</div>
   </div>
 
   <div id="huddlebanner" class="huddle-banner" style="display:none;">🔥 HUDDLE MODE — focus up</div>
@@ -141,6 +145,9 @@
 <script src="haptics.js"></script>
 <script src="sensors.js"></script>
 <script src="realm.js"></script>
+<script src="phantom-profile.js"></script>
+<script src="phantom-physics.js"></script>
+<script src="phantom-aether.js"></script>
 <script>
   // Trinity Face: mount the sensory manager (Listen / Look / Tilt / Place + status line).
   // Sensors never break the app, but a failure must be VISIBLE, not silent.

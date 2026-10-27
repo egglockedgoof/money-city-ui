@@ -1,1 +1,1 @@
-# Highway Chat — Real-time team chat for sin's crew. Live at https://egglockedgoof.github.io/money-city-ui/
+# PhantomWay — Real-time team chat for sin's crew. Live at https://egglockedgoof.github.io/money-city-ui/

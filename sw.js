@@ -1,4 +1,4 @@
-/* Highway service worker.
+/* PhantomWay service worker.
  *
  * - HTML / navigations: NETWORK-FIRST (short timeout), falling back to the cached shell when
  *   offline or slow. A stale cached index.html can therefore never pin an installed PWA.
@@ -17,7 +17,7 @@
  * cache:"reload" so a new version never snapshots a stale HTTP-cached copy (GitHub Pages
  * sends max-age=600).
  */
-var CACHE_VERSION = "highway-shell-v13-phone-heart";
+var CACHE_VERSION = "phantomway-shell-v16";
 var HTML_TIMEOUT_MS = 4000;
 var SHELL = [
   "./",
@@ -25,6 +25,9 @@ var SHELL = [
   "highway.css",
   "realm.css",
   "realm.js",
+  "phantom-profile.js",
+  "phantom-physics.js",
+  "phantom-aether.js",
   "wallpaper.jpg",
   "highway.js",
   "live.js",
@@ -56,7 +59,7 @@ self.addEventListener("activate", function (event) {
   event.waitUntil(
     caches.keys().then(function (keys) {
       return Promise.all(keys.filter(function (k) {
-        return k.indexOf("highway-shell-") === 0 && k !== CACHE_VERSION;
+        return (k.indexOf("highway-shell-") === 0 || k.indexOf("phantomway-shell-") === 0) && k !== CACHE_VERSION;
       }).map(function (k) { return caches.delete(k); }));
     }).then(function () { return self.clients.claim(); })
   );
@@ -147,7 +150,7 @@ self.addEventListener("fetch", function (event) {
 
 /* ---- Web Push (carried over so installing this worker does not drop notifications) ---- */
 self.addEventListener("push", function (event) {
-  var data = { title: "Highway", body: "" };
+  var data = { title: "PhantomWay", body: "" };
   try { if (event.data) data = Object.assign(data, event.data.json()); }
   catch (e) { try { data.body = event.data.text(); } catch (_) { /* ignore */ } }
   event.waitUntil(self.registration.showNotification(data.title, {

@@ -1,4 +1,4 @@
-# Highway UI Firebase→Bridge API Migration — 2026-10-10
+# PhantomWay UI Firebase→Bridge API Migration — 2026-10-10
 
 ## What was changed
 
