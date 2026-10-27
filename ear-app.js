@@ -93,10 +93,17 @@ async function end() {
   say('Sending to the Ear\u2026');
   try {
     var reply = await r.stop();
-    if (reply && reply.error) { say('The Ear said: ' + reply.error); return; }
+    if (reply && reply.error) {
+      // Silence / honest absence — never a fake LLM_UNAVAILABLE placeholder.
+      var er = String(reply.error);
+      if (/model_unavailable|LLM_UNAVAILABLE/i.test(er)) { say('The Ear is quiet right now.'); return; }
+      if (/didn.?t catch|result_timeout|socket/i.test(er)) { say("Didn't catch that — hold Talk and try once more."); return; }
+      say('The Ear said: ' + er);
+      return;
+    }
     if (reply) forward(reply);
   } catch (e) {
-    say('The Ear link dropped: ' + ((e && e.message) || e));
+    say("Didn't catch that — the link dropped before an answer.");
   }
 }
 

@@ -693,3 +693,32 @@ input, textarea, select, button{
 .shell > #sense::after{ content:"face " attr(data-build); position:absolute; right:12px; bottom:2px; font-size:9px; opacity:.35; pointer-events:none; }
 .hs-s[data-state="error"]::before{ background:#c1121f; }
 .hs-s[data-state="no-login"]::before{ background:#b8860b; }
+
+
+/* === Auth stage exclusivity (Unlock-on-chat killer) === */
+body.auth-live #pwgate,
+body.auth-live #gate,
+body.auth-account #pwgate,
+body.auth-pw #gate{
+  display:none !important;
+  pointer-events:none !important;
+  visibility:hidden !important;
+}
+body.auth-pw #pwgate,
+body.auth-account #gate{
+  display:flex !important;
+  pointer-events:auto !important;
+  visibility:visible !important;
+}
+/* Autofill was painting cream/yellow over the crimson gate — force theme colors */
+#email:-webkit-autofill,
+#password:-webkit-autofill,
+#name:-webkit-autofill,
+#pw:-webkit-autofill{
+  -webkit-text-fill-color: var(--txt) !important;
+  caret-color: var(--txt);
+  transition: background-color 99999s ease-out;
+  box-shadow: 0 0 0 1000px #0a0e14 inset !important;
+}
+
+#join:disabled,#pwjoin:disabled{opacity:.55;cursor:wait;}

@@ -38,12 +38,23 @@
 
   function fmtTime(m){var n=m.tsNum||0;if(!n)return"";var d=new Date(n),h=d.getHours(),a=h>=12?"PM":"AM";return(h%12||12)+":"+("0"+d.getMinutes()).slice(-2)+" "+a;}
   // H-93: allowlist http(s) at the render sink. esc() HTML-escapes but does NOT
-// neutralize javascript:/data:/vbscript: URLs in <a href> -- pre-fix persisted
-// rows may still carry them. Returns "" for anything unsafe (row renders no link).
-function safeUrl(u){var s=String(u||"").replace(/^\s+/,"").toLowerCase();return (s.indexOf("http://")===0||s.indexOf("https://")===0)?String(u):"";}
-function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
+  // neutralize javascript:/data:/vbscript: URLs in <a href> — pre-fix persisted
+  // rows may still carry them. Returns "" for anything unsafe (row renders no link).
+  // One definition only (a later duplicate used to shadow this and return "#").
+  function safeUrl(u){
+    try{
+      var raw=String(u||"").trim();
+      if(!raw||raw.length>4000) return "";
+      if(/[\u0000-\u001F\u007F]/.test(raw)) return "";
+      var p=new URL(raw, location.href);
+      var proto=String(p.protocol||"").toLowerCase();
+      if(proto!=="http:" && proto!=="https:") return "";
+      if(p.username||p.password) return "";
+      return p.href;
+    }catch(e){ return ""; }
+  }
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
-  function safeUrl(u){ try{ var p=new URL(u,location.href); return (p.protocol==="http:"||p.protocol==="https:")?p.href:"#"; }catch(e){ return "#"; } }
 
 /* ============ READ METER ============
    Counts documents each listener/read delivers (cache hits and local echoes
@@ -76,7 +87,19 @@ window.addEventListener("pagehide", flushReads);
    minted by POST /api/auth/login (see join()): kept in localStorage so
    a reload can resume, and re-minted silently while this tab still
    holds the login in memory (the JWT itself lives 15 minutes). */
-var HW_BRIDGE="https://phantomway-door.tail0a8095.ts.net";
+/* Bridge base URL: prefer same-origin when the shell is served from the
+   phone heart / door itself. Hardcoding only the door broke login when TLS
+   to the door flaked from the client — fetch hung with no timeout and the
+   gate stuck on "Verifying...". Relative/same-origin keeps auth on the live
+   heart and stays portable when the substrate moves off Git/Pages. */
+var HW_BRIDGE=(function(){
+  try{
+    var o=location.origin||"";
+    if(/phantomway-door\.tail0a8095\.ts\.net$/.test(location.host||"")) return o;
+    if(/^(100\.77\.206\.103|127\.0\.0\.1|localhost)(:\d+)?$/.test(location.host||"")) return o;
+  }catch(e){}
+  return "https://phantomway-door.tail0a8095.ts.net";
+})();
 window.PHANTOM_BRIDGE=HW_BRIDGE; // single source of truth for the link-telemetry ping (phantom-physics.js)
 var HW_JWT=null, HW_LOGIN_EMAIL=null, HW_LOGIN_PW=null;
 try{ HW_JWT=localStorage.getItem("hw_jwt")||null; }catch(e){}
@@ -102,15 +125,29 @@ function hwToken(){
   if(HW_LOGIN_EMAIL&&HW_LOGIN_PW) return hwLogin(HW_LOGIN_EMAIL,HW_LOGIN_PW).then(function(){ return HW_JWT; });
   return Promise.reject(new Error("no auth"));
 }
-function hwLogin(email,pw){
-  return fetch(HW_BRIDGE+"/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email,password:pw})}).then(function(r){
-    return r.json().then(function(j){
+function hwLogin(email,pw,displayName){
+  // Hard timeout: a hung TLS/CORS/fetch must never leave the gate on "Verifying...".
+  // displayName is minted into the JWT name claim so REST writes bind to it.
+  var LOGIN_MS=12000;
+  var ctrl=typeof AbortController!=="undefined"?new AbortController():null;
+  var timer=ctrl?setTimeout(function(){ try{ctrl.abort();}catch(e){} }, LOGIN_MS):null;
+  var body={email:email,password:pw};
+  if(displayName) body.displayName=String(displayName).trim().slice(0,40);
+  var opts={method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)};
+  if(ctrl) opts.signal=ctrl.signal;
+  return fetch(HW_BRIDGE+"/api/auth/login",opts).then(function(r){
+    return r.text().then(function(raw){
+      var j=null;
+      try{ j=raw?JSON.parse(raw):null; }catch(e){ var pe=new Error("login returned non-JSON"); pe.status=r.status||0; throw pe; }
       if(!r.ok||!j||!j.ok){ var er=new Error((j&&j.error)||("api "+r.status)); er.status=r.status; throw er; }
       HW_LOGIN_EMAIL=email; HW_LOGIN_PW=pw;
       hwSetJwt(j.token);
       return j;
     });
-  });
+  }).catch(function(e){
+    if(e&&e.name==="AbortError"){ var te=new Error("Login timed out — check the link and try again."); te.status=0; te.code="timeout"; throw te; }
+    throw e;
+  }).finally(function(){ if(timer) clearTimeout(timer); });
 }
 function hwGet(path){
   return hwToken().then(function(t){
@@ -741,50 +778,122 @@ function updateAmbientStatus(snap){
     setInterval(pullAll, 8000);
     setInterval(renderPresence,15000);
     setInterval(renderTyping,5000);
-    hwToken().then(function(t){
-      return fetch(HW_BRIDGE+"/api/stream",{headers:{Authorization:"Bearer "+t}}).then(function(res){
-        if(!res.body||!res.body.getReader) return;
-        var reader=res.body.getReader(), dec=new TextDecoder(), buf="";
-        function pump(){
-          return reader.read().then(function(x){
-            if(x.done) return;
-            buf+=dec.decode(x.value,{stream:true});
-            var parts=buf.split("\n\n"); buf=parts.pop();
-            parts.forEach(function(block){
-              var line=block.split("\n").filter(function(l){ return l.indexOf("data:")===0; })[0];
-              if(!line) return;
-              try{ var ev=JSON.parse(line.slice(5).trim()); if(ev&&ev.type==="messages") pullMessages(); if(ev&&ev.type==="tasks") pullTasks(); }catch(e){}
-            });
-            return pump();
-          });
+    /* SSE with reconnect + Last-Event-ID: a dead stream must heal itself
+       (chat feed freeze). Poll every 8s stays as the authoritative floor. */
+    var _sseLastId="", _sseBackoff=1000, _sseAlive=true;
+    function openStream(){
+      if(!_sseAlive) return;
+      hwToken().then(function(t){
+        var headers={Authorization:"Bearer "+t, Accept:"text/event-stream"};
+        if(_sseLastId) headers["Last-Event-ID"]=String(_sseLastId);
+        var ctrl=typeof AbortController!=="undefined"?new AbortController():null;
+        var deadTimer=null;
+        function armWatchdog(){
+          if(deadTimer) clearTimeout(deadTimer);
+          // Two missed 30s heartbeats ≈ stream dead (bridge contract).
+          deadTimer=setTimeout(function(){ try{ if(ctrl) ctrl.abort(); }catch(e){} }, 75000);
         }
-        return pump();
+        var opts={headers:headers};
+        if(ctrl) opts.signal=ctrl.signal;
+        return fetch(HW_BRIDGE+"/api/stream?channel=room",opts).then(function(res){
+          if(!res.ok) throw new Error("stream "+res.status);
+          if(!res.body||!res.body.getReader) return;
+          _sseBackoff=1000;
+          armWatchdog();
+          var reader=res.body.getReader(), dec=new TextDecoder(), buf="";
+          function pump(){
+            return reader.read().then(function(x){
+              if(x.done) throw new Error("stream ended");
+              armWatchdog();
+              buf+=dec.decode(x.value,{stream:true});
+              var parts=buf.split("\n\n"); buf=parts.pop();
+              parts.forEach(function(block){
+                var idLine=block.split("\n").filter(function(l){ return l.indexOf("id:")===0; })[0];
+                if(idLine){ var id=idLine.slice(3).trim(); if(id) _sseLastId=id; }
+                var line=block.split("\n").filter(function(l){ return l.indexOf("data:")===0; })[0];
+                if(!line) return;
+                try{
+                  var ev=JSON.parse(line.slice(5).trim());
+                  if(!ev) return;
+                  if(ev.type==="messages"||ev.type==="message") pullMessages();
+                  if(ev.type==="tasks"||ev.type==="task") pullTasks();
+                  if(ev.type==="_hb"||ev.type==="hb"){ /* heartbeat — watchdog already armed */ }
+                }catch(e){}
+              });
+              return pump();
+            });
+          }
+          return pump();
+        }).catch(function(){
+          if(deadTimer) clearTimeout(deadTimer);
+          pullMessages(); // heal immediately on drop
+          var wait=_sseBackoff;
+          _sseBackoff=Math.min(_sseBackoff*2, 30000);
+          setTimeout(openStream, wait);
+        });
+      }).catch(function(){
+        var wait=_sseBackoff;
+        _sseBackoff=Math.min(_sseBackoff*2, 30000);
+        setTimeout(openStream, wait);
       });
-    }).catch(function(){});
+    }
+    openStream();
 
     startHeartbeat();
   }
 
-  /* ================= PASSWORD GATE ================= */
+  /* ================= AUTH STAGES (exclusive) =================
+     One stage at a time: pw → account → live. Never stack #pwgate over
+     the shell (the Unlock-on-chat bug). Stages are a seam for Horizon 2
+     drivers — same state, different shells later. */
   var _PW="TheEnd";
-  try{ if(sessionStorage.getItem("hw_pw")==="1"){ $("pwgate").style.display="none"; $("gate").style.display="flex"; } }catch(e){}
+  var authShown=false;
+  var joining=false;
+  function setAuthStage(stage){
+    var pwEl=$("pwgate"), gEl=$("gate");
+    var body=document.body;
+    if(body){
+      body.classList.remove("auth-pw","auth-account","auth-live");
+      body.classList.add(stage==="live"?"auth-live":(stage==="account"?"auth-account":"auth-pw"));
+    }
+    if(pwEl){
+      pwEl.style.display = stage==="pw" ? "flex" : "none";
+      pwEl.setAttribute("aria-hidden", stage==="pw" ? "false" : "true");
+      if(stage!=="pw") pwEl.style.pointerEvents="none"; else pwEl.style.pointerEvents="";
+    }
+    if(gEl){
+      gEl.style.display = stage==="account" ? "flex" : "none";
+      gEl.setAttribute("aria-hidden", stage==="account" ? "false" : "true");
+      if(stage!=="account") gEl.style.pointerEvents="none"; else gEl.style.pointerEvents="";
+    }
+  }
   function tryPw(){
     if($("pw").value===_PW){
       try{ sessionStorage.setItem("hw_pw","1"); }catch(e){}
-      $("pwgate").style.display="none";
-      $("gate").style.display="flex";
-      $("name").focus();
+      enterAccountOrLive();
     } else {
       $("pwerr").textContent="Wrong password.";
       $("pw").value=""; $("pw").focus();
     }
   }
+  function enterAccountOrLive(){
+    var saved="";
+    try{ saved=(sessionStorage.getItem("hw_name")||localStorage.getItem("hw_name")||"").trim().slice(0,24); }catch(e){}
+    if(saved && nameIn && !nameIn.value) nameIn.value=saved;
+    // Valid session → skip the account card entirely (no stacked gates, no re-verify loop).
+    if(HW_JWT && hwJwtExp(HW_JWT)>Date.now()+5000 && saved){
+      completeJoin(saved,true);
+      return;
+    }
+    setAuthStage("account");
+    if(nameIn) nameIn.focus();
+  }
   $("pwjoin").addEventListener("click", tryPw);
   $("pw").addEventListener("keydown", function(e){ if(e.key==="Enter") tryPw(); });
 
   /* ================= UI EVENTS ================= */
-  var authShown=false;
   function join(){
+    if(joining) return;
     var n=nameIn.value.trim().slice(0,24);
     if(!n){ err.textContent="Pick a name first."; return; }
     // A still-valid session token skips the account step entirely.
@@ -800,31 +909,42 @@ function updateAmbientStatus(snap){
     var email=$("email").value.trim();
     var pw=$("password").value;
     if(!email||!pw){ err.textContent="Enter your email and password."; return; }
+    joining=true;
+    joinBtn.disabled=true;
     err.textContent="Verifying...";
-    hwLogin(email,pw).then(function(){
-      // The bridge verified the account and minted the session JWT;
-      // the display name is bound to it server-side too.
+    hwLogin(email,pw,n).then(function(){
       completeJoin(n,true);
     }).catch(function(e){
       var msg="Sign-in failed.";
-      if(e&&e.status===401) msg="Wrong password, or no account for that email.";
+      if(e&&e.code==="timeout") msg="Login timed out — the link may be strained. Try again.";
+      else if(e&&e.status===401) msg="Wrong password, or no account for that email.";
       else if(e&&e.status===429) msg="Too many attempts — wait a minute.";
       else if(e&&e.status===503) msg="Login is unavailable right now.";
-      err.textContent=msg+" Try again.";
+      else if(e&&e.message&&/Failed to fetch|NetworkError|network/i.test(e.message)) msg="Could not reach the heart — check Tailscale/door and try again.";
+      err.textContent=msg;
+    }).finally(function(){
+      joining=false;
+      joinBtn.disabled=false;
     });
   }
   function completeJoin(n,verified){
     if(window.HW_setWidgetJwt) window.HW_setWidgetJwt(HW_JWT);
     MY_NAME=n;
-    try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); }catch(e){}
+    try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); sessionStorage.setItem("hw_pw","1"); }catch(e){}
     mebadge.textContent=n+(verified?" ✓":"");
-    gate.style.display="none";
+    setAuthStage("live"); // hides BOTH gates — Unlock never stacks on chat
     kickDuplicates();
     sysLine("You joined as "+n+" — verified on everything you do.");
     goLive(); msg.focus();
   }
   joinBtn.addEventListener("click", join);
   nameIn.addEventListener("keydown", function(e){ if(e.key==="Enter") join(); });
+
+  // Boot stage: restore the right exclusive surface.
+  try{
+    if(sessionStorage.getItem("hw_pw")==="1") enterAccountOrLive();
+    else setAuthStage("pw");
+  }catch(e){ setAuthStage("pw"); }
 
   /* Tab glider: slides to the active tab */
   function moveGlider(){
