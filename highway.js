@@ -764,26 +764,66 @@ function updateAmbientStatus(snap){
     setInterval(pullAll, 8000);
     setInterval(renderPresence,15000);
     setInterval(renderTyping,5000);
-    hwToken().then(function(t){
-      return fetch(HW_BRIDGE+"/api/stream",{headers:{Authorization:"Bearer "+t}}).then(function(res){
-        if(!res.body||!res.body.getReader) return;
-        var reader=res.body.getReader(), dec=new TextDecoder(), buf="";
-        function pump(){
-          return reader.read().then(function(x){
-            if(x.done) return;
-            buf+=dec.decode(x.value,{stream:true});
-            var parts=buf.split("\n\n"); buf=parts.pop();
-            parts.forEach(function(block){
-              var line=block.split("\n").filter(function(l){ return l.indexOf("data:")===0; })[0];
-              if(!line) return;
-              try{ var ev=JSON.parse(line.slice(5).trim()); if(ev&&ev.type==="messages") pullMessages(); if(ev&&ev.type==="tasks") pullTasks(); }catch(e){}
-            });
-            return pump();
-          });
+    /* SSE with reconnect + Last-Event-ID: a dead stream must heal itself
+       (chat feed freeze). Poll every 8s stays as the authoritative floor. */
+    var _sseLastId="", _sseBackoff=1000, _sseAlive=true;
+    function openStream(){
+      if(!_sseAlive) return;
+      hwToken().then(function(t){
+        var headers={Authorization:"Bearer "+t, Accept:"text/event-stream"};
+        if(_sseLastId) headers["Last-Event-ID"]=String(_sseLastId);
+        var ctrl=typeof AbortController!=="undefined"?new AbortController():null;
+        var deadTimer=null;
+        function armWatchdog(){
+          if(deadTimer) clearTimeout(deadTimer);
+          // Two missed 30s heartbeats ≈ stream dead (bridge contract).
+          deadTimer=setTimeout(function(){ try{ if(ctrl) ctrl.abort(); }catch(e){} }, 75000);
         }
-        return pump();
+        var opts={headers:headers};
+        if(ctrl) opts.signal=ctrl.signal;
+        return fetch(HW_BRIDGE+"/api/stream?channel=room",opts).then(function(res){
+          if(!res.ok) throw new Error("stream "+res.status);
+          if(!res.body||!res.body.getReader) return;
+          _sseBackoff=1000;
+          armWatchdog();
+          var reader=res.body.getReader(), dec=new TextDecoder(), buf="";
+          function pump(){
+            return reader.read().then(function(x){
+              if(x.done) throw new Error("stream ended");
+              armWatchdog();
+              buf+=dec.decode(x.value,{stream:true});
+              var parts=buf.split("\n\n"); buf=parts.pop();
+              parts.forEach(function(block){
+                var idLine=block.split("\n").filter(function(l){ return l.indexOf("id:")===0; })[0];
+                if(idLine){ var id=idLine.slice(3).trim(); if(id) _sseLastId=id; }
+                var line=block.split("\n").filter(function(l){ return l.indexOf("data:")===0; })[0];
+                if(!line) return;
+                try{
+                  var ev=JSON.parse(line.slice(5).trim());
+                  if(!ev) return;
+                  if(ev.type==="messages"||ev.type==="message") pullMessages();
+                  if(ev.type==="tasks"||ev.type==="task") pullTasks();
+                  if(ev.type==="_hb"||ev.type==="hb"){ /* heartbeat — watchdog already armed */ }
+                }catch(e){}
+              });
+              return pump();
+            });
+          }
+          return pump();
+        }).catch(function(){
+          if(deadTimer) clearTimeout(deadTimer);
+          pullMessages(); // heal immediately on drop
+          var wait=_sseBackoff;
+          _sseBackoff=Math.min(_sseBackoff*2, 30000);
+          setTimeout(openStream, wait);
+        });
+      }).catch(function(){
+        var wait=_sseBackoff;
+        _sseBackoff=Math.min(_sseBackoff*2, 30000);
+        setTimeout(openStream, wait);
       });
-    }).catch(function(){});
+    }
+    openStream();
 
     startHeartbeat();
   }
