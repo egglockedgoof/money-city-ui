@@ -17,7 +17,7 @@
  * cache:"reload" so a new version never snapshots a stale HTTP-cached copy (GitHub Pages
  * sends max-age=600).
  */
-var CACHE_VERSION = "phantomway-shell-v18";
+var CACHE_VERSION = "phantomway-shell-v19";
 var HTML_TIMEOUT_MS = 4000;
 var SHELL = [
   "./",

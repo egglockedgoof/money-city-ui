@@ -720,3 +720,5 @@ body.auth-account #gate{
   transition: background-color 99999s ease-out;
   box-shadow: 0 0 0 1000px #0a0e14 inset !important;
 }
+
+#join:disabled,#pwjoin:disabled{opacity:.55;cursor:wait;}

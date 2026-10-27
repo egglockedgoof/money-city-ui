@@ -38,12 +38,18 @@
 
   function fmtTime(m){var n=m.tsNum||0;if(!n)return"";var d=new Date(n),h=d.getHours(),a=h>=12?"PM":"AM";return(h%12||12)+":"+("0"+d.getMinutes()).slice(-2)+" "+a;}
   // H-93: allowlist http(s) at the render sink. esc() HTML-escapes but does NOT
-// neutralize javascript:/data:/vbscript: URLs in <a href> -- pre-fix persisted
-// rows may still carry them. Returns "" for anything unsafe (row renders no link).
-function safeUrl(u){var s=String(u||"").replace(/^\s+/,"").toLowerCase();return (s.indexOf("http://")===0||s.indexOf("https://")===0)?String(u):"";}
-function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
+  // neutralize javascript:/data:/vbscript: URLs in <a href> — pre-fix persisted
+  // rows may still carry them. Returns "" for anything unsafe (row renders no link).
+  // One definition only (a later duplicate used to shadow this and return "#").
+  function safeUrl(u){
+    try{
+      var p=new URL(String(u||""), location.href);
+      if(p.protocol!=="http:" && p.protocol!=="https:") return "";
+      return p.href;
+    }catch(e){ return ""; }
+  }
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
-  function safeUrl(u){ try{ var p=new URL(u,location.href); return (p.protocol==="http:"||p.protocol==="https:")?p.href:"#"; }catch(e){ return "#"; } }
 
 /* ============ READ METER ============
    Counts documents each listener/read delivers (cache hits and local echoes
