@@ -1,4 +1,6 @@
 // ear.js: hold-to-talk client for hear_node. Raw PCM s16le @16 kHz over WebSocket.
+// Face ↔ Ear v3: rid per Talk, ignore pending ticks, wait for final:true,
+// and on drop poll GET /result so a frozen feed heals instead of reading as silence.
 // const rec = await startListening("http://host:8421", token);   // on press
 // const affect = await rec.stop();                                // on release
 
@@ -25,17 +27,108 @@ class Pcm extends AudioWorkletProcessor {
 }
 registerProcessor("pcm", Pcm);`;
 
-export async function startListening(host, token = "") {
-  const q = token ? `?t=${encodeURIComponent(token)}` : "";
-  const ws = new WebSocket(host.replace(/^http/, "ws") + "/hear" + q);  // opening it also prewarms
-  ws.binaryType = "arraybuffer";
+function newRid() {
+  try {
+    if (crypto && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, "");
+  } catch (e) {}
+  var s = "", i, a = new Uint8Array(16);
+  try { crypto.getRandomValues(a); } catch (e) { for (i = 0; i < 16; i++) a[i] = (Math.random() * 256) | 0; }
+  for (i = 0; i < 16; i++) s += ("0" + a[i].toString(16)).slice(-2);
+  return s;
+}
 
-  const pending = [];                                       // buffer until the socket opens: no lost words
-  const send = (m) => (ws.readyState === 1 ? ws.send(m) : pending.push(m));
-  ws.onopen = () => { pending.splice(0).forEach((m) => ws.send(m)); };
-  const reply = new Promise((ok, fail) => {
-    ws.onmessage = (e) => ok(JSON.parse(e.data));
-    ws.onerror = ws.onclose = () => fail(new Error("socket closed before reply"));
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+async function pollResult(host, token, rid, deadline) {
+  var base = host.replace(/\/$/, "");
+  var q = "?t=" + encodeURIComponent(token) + "&rid=" + encodeURIComponent(rid);
+  while (Date.now() < deadline) {
+    var r;
+    try {
+      r = await fetch(base + "/result" + q, { cache: "no-store" });
+    } catch (e) {
+      await sleep(2500);
+      continue;
+    }
+    if (r.status === 200) {
+      try { return await r.json(); } catch (e) { return { error: "parse_failure" }; }
+    }
+    if (r.status === 202) { await sleep(2500); continue; }
+    if (r.status === 404) return { error: "didn't_catch_that" };
+    if (r.status === 400) return { error: "bad_rid" };
+    await sleep(2500);
+  }
+  return { error: "result_timeout" };
+}
+
+async function openHear(host, token, rid) {
+  var q = "?t=" + encodeURIComponent(token) + "&rid=" + encodeURIComponent(rid);
+  var url = host.replace(/^http/, "ws") + "/hear" + q;
+  return await new Promise(function (ok, fail) {
+    var ws = new WebSocket(url);
+    ws.binaryType = "arraybuffer";
+    var opened = false;
+    var timer = setTimeout(function () {
+      try { ws.close(); } catch (e) {}
+      fail(new Error("ear connect timeout"));
+    }, 8000);
+    ws.onopen = function () { opened = true; clearTimeout(timer); ok(ws); };
+    ws.onerror = function () {
+      if (opened) return;
+      clearTimeout(timer);
+      fail(new Error("ear connect failed"));
+    };
+    ws.onclose = function (ev) {
+      if (opened) return;
+      clearTimeout(timer);
+      // 503 busy is conveyed as a close before open in some stacks; surface it.
+      var err = new Error(ev && ev.code === 1013 ? "busy" : "ear connect closed");
+      err.code = ev && ev.code;
+      fail(err);
+    };
+  });
+}
+
+export async function startListening(host, token = "") {
+  var rid = newRid();
+  var ws;
+  try {
+    ws = await openHear(host, token, rid);
+  } catch (e) {
+    if (e && (e.message === "busy" || e.code === 1013)) {
+      await sleep(2000);
+      rid = newRid();
+      ws = await openHear(host, token, rid);
+    } else {
+      throw e;
+    }
+  }
+
+  var pending = [];
+  var send = function (m) { if (ws.readyState === 1) ws.send(m); else pending.push(m); };
+  // If already open (usual), flush immediately; else wait once.
+  if (ws.readyState === 1) pending.splice(0).forEach(function (m) { ws.send(m); });
+  else ws.onopen = function () { pending.splice(0).forEach(function (m) { ws.send(m); }); };
+
+  var gotFinal = false;
+  var reply = new Promise(function (ok, fail) {
+    ws.onmessage = function (e) {
+      var j;
+      try { j = JSON.parse(typeof e.data === "string" ? e.data : ""); } catch (err) { return; }
+      if (!j || j.pending === true) return; // ticks — ignore
+      if (j.final === true || j.error || j.words || j.language) {
+        gotFinal = true;
+        ok(j);
+      }
+    };
+    ws.onerror = function () {
+      if (gotFinal) return;
+      fail(new Error("socket_error"));
+    };
+    ws.onclose = function () {
+      if (gotFinal) return;
+      fail(new Error("socket_closed"));
+    };
   });
 
   // Prosody is the signal, so switch off every browser "enhancement".
@@ -46,17 +139,29 @@ export async function startListening(host, token = "") {
   await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLET], { type: "text/javascript" })));
   const src = ctx.createMediaStreamSource(stream);
   const node = new AudioWorkletNode(ctx, "pcm");
-  node.port.onmessage = (e) => send(e.data);                // Int16Array is little-endian on every real device
+  node.port.onmessage = (e) => send(e.data);
   src.connect(node);
 
   return {
+    rid: rid,
     async stop() {
       stream.getTracks().forEach((t) => t.stop());
       src.disconnect();
       node.disconnect();
       await ctx.close();
       send("end");
-      return reply;                                         // { language, words, sound, affect_vector } | { error }
+      try {
+        return await reply;
+      } catch (e) {
+        // Drop before final: heal via /result (Face ↔ Ear v3). Never treat as Loom silence.
+        try { ws.close(); } catch (err) {}
+        var deadline = Date.now() + 5 * 60 * 1000;
+        var recovered = await pollResult(host, token, rid, deadline);
+        if (recovered && recovered.error === "didn't_catch_that") {
+          return { error: "didn't catch that" };
+        }
+        return recovered;
+      }
     },
   };
 }
