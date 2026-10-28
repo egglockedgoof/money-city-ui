@@ -150,11 +150,17 @@ function hwLogin(email,pw,displayName){
   }).finally(function(){ if(timer) clearTimeout(timer); });
 }
 function hwGet(path){
+  // Hard timeout: a hung fetch (iOS resume, dead link) must fail fast so the next poll can heal the feed.
+  var GET_MS=12000;
   return hwToken().then(function(t){
-    return fetch(HW_BRIDGE+path,{headers:{Authorization:"Bearer "+t}}).then(function(r){
+    var ctrl=typeof AbortController!=="undefined"?new AbortController():null;
+    var timer=ctrl?setTimeout(function(){ try{ctrl.abort();}catch(e){} }, GET_MS):null;
+    var opts={headers:{Authorization:"Bearer "+t}};
+    if(ctrl) opts.signal=ctrl.signal;
+    return fetch(HW_BRIDGE+path,opts).then(function(r){
       if(!r.ok) throw new Error("api "+r.status);
       return r.json();
-    });
+    }).finally(function(){ if(timer) clearTimeout(timer); });
   });
 }
 function hwPost(path,body){
@@ -676,27 +682,29 @@ function updateAmbientStatus(snap){
   }
 
   /* ================= GO LIVE ================= */
+  var _liveStarted=false;
   function goLive(){
+    if(_liveStarted) return; _liveStarted=true;
     dot.classList.remove("off"); sub.textContent="live";
     sysLine("Connected — chat, presence, tasks, notes & activity all sync live.");
 
-    var _msgWatermark=0, _presReady=false, _presItems=[], _typeItems=[], _actItems=[];
-    function pullMessages(){
-      var q="/api/messages?channel=room&limit=50";
-      if(_msgWatermark) q+="&since_ts="+_msgWatermark;
-      hwGet(q).then(function(body){
-        var rows=(body.messages||[]).slice().reverse();
-        rows.forEach(function(m){
-          if(m.ts>_msgWatermark) _msgWatermark=m.ts;
-          var id=m.id;
-          if(seen[id]){
-            var old=document.querySelector('[data-id="'+id+'"]');
-            if(old){ delete seen[id]; old.remove(); }
-          }
-          renderMsg(asDoc(m));
-        });
-      }).catch(function(){});
-    }
+    var _presReady=false, _presItems=[], _typeItems=[], _actItems=[];
+    /* Feed sync (feedsync.js): overlap window + per-id signature + one flight + full resync floor.
+       The old strict since_ts watermark dropped late-stamped replies until reopen (Oct 26 freeze). */
+    var _feed=window.HighwayFeedSync.createFeedSync({
+      fetchMessages:function(since){
+        var q="/api/messages?channel=room&limit=50";
+        if(since) q+="&since_ts="+since;
+        return hwGet(q);
+      },
+      render:function(m){ renderMsg(asDoc(m)); },
+      remove:function(id){
+        delete seen[id];
+        var old=document.querySelector('[data-id="'+id+'"]');
+        if(old) old.remove();
+      }
+    });
+    function pullMessages(){ return _feed.pull(); }
     window.hwPullMessages=pullMessages; /* live socket (live.js) calls this when a room message lands */
     function renderPresence(){
       if(!presenceEl) return;
@@ -779,14 +787,26 @@ function updateAmbientStatus(snap){
     setInterval(renderPresence,15000);
     setInterval(renderTyping,5000);
     /* SSE with reconnect + Last-Event-ID: a dead stream must heal itself
-       (chat feed freeze). Poll every 8s stays as the authoritative floor. */
-    var _sseLastId="", _sseBackoff=1000, _sseAlive=true;
+       (chat feed freeze). Poll every 8s stays as the authoritative floor.
+       _sseGen makes exactly one stream live: a kick (resume/online) bumps it,
+       aborts the old reader, and any late callback from a stale stream is ignored. */
+    var _sseLastId="", _sseBackoff=1000, _sseAlive=true, _sseGen=0, _sseAbort=null, _sseTimer=null;
+    function sseWait(){
+      var w=_sseBackoff*(0.8+Math.random()*0.4);
+      _sseBackoff=Math.min(_sseBackoff*2, 30000);
+      return w;
+    }
     function openStream(){
       if(!_sseAlive) return;
+      var gen=++_sseGen;
+      if(_sseTimer){ clearTimeout(_sseTimer); _sseTimer=null; }
+      function retry(){ if(gen!==_sseGen) return; _sseTimer=setTimeout(openStream, sseWait()); }
       hwToken().then(function(t){
+        if(gen!==_sseGen) return;
         var headers={Authorization:"Bearer "+t, Accept:"text/event-stream"};
         if(_sseLastId) headers["Last-Event-ID"]=String(_sseLastId);
         var ctrl=typeof AbortController!=="undefined"?new AbortController():null;
+        _sseAbort=ctrl;
         var deadTimer=null;
         function armWatchdog(){
           if(deadTimer) clearTimeout(deadTimer);
@@ -800,9 +820,11 @@ function updateAmbientStatus(snap){
           if(!res.body||!res.body.getReader) return;
           _sseBackoff=1000;
           armWatchdog();
+          pullMessages(); // anything sent while the stream was down
           var reader=res.body.getReader(), dec=new TextDecoder(), buf="";
           function pump(){
             return reader.read().then(function(x){
+              if(gen!==_sseGen) return;
               if(x.done) throw new Error("stream ended");
               armWatchdog();
               buf+=dec.decode(x.value,{stream:true});
@@ -823,20 +845,30 @@ function updateAmbientStatus(snap){
               return pump();
             });
           }
-          return pump();
+          return pump().finally(function(){ if(deadTimer) clearTimeout(deadTimer); });
         }).catch(function(){
           if(deadTimer) clearTimeout(deadTimer);
+          if(gen!==_sseGen) return;   // superseded by a kick: the new stream owns recovery
           pullMessages(); // heal immediately on drop
-          var wait=_sseBackoff;
-          _sseBackoff=Math.min(_sseBackoff*2, 30000);
-          setTimeout(openStream, wait);
+          retry();
         });
-      }).catch(function(){
-        var wait=_sseBackoff;
-        _sseBackoff=Math.min(_sseBackoff*2, 30000);
-        setTimeout(openStream, wait);
-      });
+      }).catch(retry);
     }
+    /* Resume / reconnect: iOS suspends the PWA and freezes timers and streams. On return
+       (visible, pageshow from bfcache, network back) do a FULL resync and restart the stream
+       immediately instead of waiting for a watchdog or the next 8s tick. */
+    function kickFeed(){
+      if(!MY_NAME) return;
+      _sseBackoff=1000;
+      try{ if(_sseAbort) _sseAbort.abort(); }catch(e){}
+      _feed.resume();
+      pullTasks();
+      openStream();
+      if(window.hwKickSocket) try{ window.hwKickSocket(); }catch(e){}
+    }
+    document.addEventListener("visibilitychange", function(){ if(!document.hidden) kickFeed(); });
+    window.addEventListener("pageshow", function(ev){ if(ev&&ev.persisted) kickFeed(); });
+    window.addEventListener("online", kickFeed);
     openStream();
 
     startHeartbeat();

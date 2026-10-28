@@ -17,7 +17,7 @@
  * cache:"reload" so a new version never snapshots a stale HTTP-cached copy (GitHub Pages
  * sends max-age=600).
  */
-var CACHE_VERSION = "phantomway-shell-v22";
+var CACHE_VERSION = "phantomway-shell-v23";
 var HTML_TIMEOUT_MS = 4000;
 var SHELL = [
   "./",
@@ -29,6 +29,7 @@ var SHELL = [
   "phantom-physics.js",
   "phantom-aether.js",
   "wallpaper.jpg",
+  "feedsync.js",
   "highway.js",
   "live.js",
   "haptics.js",
