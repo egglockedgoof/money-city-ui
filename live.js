@@ -378,6 +378,14 @@
     }
     return {
       start: function () { stopped = false; retry = 1000; connect(); },
+      /* Resume/online: iOS freezes a socket without firing close. Drop it quietly and reconnect now. */
+      kick: function () {
+        if (stopped || !WS) return;
+        if (timer) { clrT(timer); timer = null; }
+        clearPing();
+        if (ws) { ws.onclose = null; ws.onmessage = null; try { ws.close(); } catch (e) { /* ignore */ } ws = null; }
+        retry = 1000; connect();
+      },
       stop: function () { stopped = true; clearPing(); if (timer) clrT(timer); try { if (ws) ws.close(); } catch (e) { /* ignore */ } setStatus("stopped"); },
       status: function () { return status; }
     };
@@ -465,6 +473,7 @@
     onLoomState: function (s) { loomStateToTouch(s); },
     onMessage: function () { if (typeof window.hwPullMessages === "function") window.hwPullMessages(); }
   });
+  window.hwKickSocket = function () { sock.kick(); };   // called by highway.js on resume/online
   function addControl() {
     var header = document.querySelector(".head-top") || document.body;
     dot = document.createElement("button");
