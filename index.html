@@ -18,6 +18,7 @@
 
 <link rel="stylesheet" href="highway.css">
 <link rel="stylesheet" href="realm.css">
+<link rel="stylesheet" href="phantom-ui.css">
 <!-- Auth + data on the bridge REST API (Supabase-backed) since 2026-10-10 -->
 </head>
 <body>
@@ -35,7 +36,7 @@
     <p>This room is locked.<br/>Enter the password to continue.</p>
     <input id="pw" type="password" placeholder="Password" autocomplete="off" />
     <button id="pwjoin">Unlock</button>
-    <div style="margin-top:10px;font-size:10px;opacity:.45">shell-v22</div>
+    <div style="margin-top:10px;font-size:10px;opacity:.45">shell-v23</div>
     <div id="pwerr"></div>
   </div>
 </div>
@@ -49,7 +50,7 @@
       <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
     </div>
     <button id="join">Enter PhantomWay</button>
-    <div id="shellbuild" style="margin-top:10px;font-size:10px;opacity:.45">shell-v22</div>
+    <div id="shellbuild" style="margin-top:10px;font-size:10px;opacity:.45">shell-v23</div>
     <div id="err"></div>
   </div>
 </div>
@@ -150,6 +151,7 @@
 <script src="phantom-profile.js"></script>
 <script src="phantom-physics.js"></script>
 <script src="phantom-aether.js"></script>
+<script src="phantom-ui.js"></script>
 <script>
   // Trinity Face: mount the sensory manager (Listen / Look / Tilt / Place + status line).
   // Sensors never break the app, but a failure must be VISIBLE, not silent.

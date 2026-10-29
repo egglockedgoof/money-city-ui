@@ -1,0 +1,179 @@
+/* =====================================================================
+   PHANTOM LAYER — loaded LAST (after highway.css + realm.css).
+   Goals: room to breathe, one fluid motion language, reactions that work.
+   Style kit, taken from the reference GIFs (looks, not artwork):
+     BARS   — hard red vertical scan-bars on black   (GIF 1)
+     ALARM  — pure red field, black soft-edged mass   (GIF 2)
+     DITHER — red pixel dither smeared horizontally   (GIF 3)
+   Motion stays always-on. Nothing here switches an animation off.
+   ===================================================================== */
+:root{
+  --alarm:#ff1414; --alarm-d:#b30b0b; --ink:#0b0708; --ink-2:#140a0c;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px;
+  --ease-liquid:cubic-bezier(.22,1,.36,1); --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  /* BARS: vertical scan-bars */
+  --bars:repeating-linear-gradient(90deg,var(--alarm) 0 2px,transparent 2px 6px);
+  /* DITHER: horizontally smeared red speckle (low x-freq, high y-smear) */
+  --dither:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85 .05' numOctaves='2' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .06 0 0 0 0 .08 0 0 0 9 -5.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------------------------------------------------------------------
+   1 · ATMOSPHERE — a faint living dither + bar texture over the void
+   --------------------------------------------------------------------- */
+.ph-grain{ position:fixed; inset:-30%; z-index:1; pointer-events:none; opacity:.075;
+  background:var(--dither); background-size:240px 240px;
+  animation:ph-grain 1.4s steps(7) infinite; }
+@keyframes ph-grain{
+  0%{ transform:translate3d(0,0,0); } 14%{ transform:translate3d(-6%,3%,0); } 28%{ transform:translate3d(4%,-5%,0); }
+  42%{ transform:translate3d(-3%,6%,0); } 57%{ transform:translate3d(7%,2%,0); } 71%{ transform:translate3d(-5%,-3%,0); }
+  85%{ transform:translate3d(2%,5%,0); } 100%{ transform:translate3d(0,0,0); } }
+
+/* BARS as a header underline: a signal strip that breathes */
+.head{ position:relative; }
+.head::after{ content:""; position:absolute; left:18px; right:18px; bottom:-1px; height:7px; pointer-events:none;
+  background:var(--bars); opacity:.55;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
+  animation:ph-bars 3.2s ease-in-out infinite; transform-origin:bottom; }
+@keyframes ph-bars{ 0%,100%{ opacity:.35; transform:scaleY(.55); } 50%{ opacity:.8; transform:scaleY(1); } }
+
+/* ---------------------------------------------------------------------
+   2 · BREATHING ROOM — header, tabs, chat, composer
+   --------------------------------------------------------------------- */
+.head{ padding:14px 16px 12px !important; margin:10px 10px 0 !important; }
+.tabs{ margin:10px 10px 0 !important; padding:6px !important; }
+/* presence: one calm scrolling line instead of a wrapping block */
+#presence{ flex-wrap:nowrap !important; overflow-x:auto; gap:8px !important; margin-top:10px !important; padding-bottom:2px;
+  scrollbar-width:none; -webkit-overflow-scrolling:touch;
+  -webkit-mask-image:linear-gradient(90deg,#000 88%,transparent); mask-image:linear-gradient(90deg,#000 88%,transparent); }
+#presence::-webkit-scrollbar{ display:none; }
+#presence > *{ flex:none; }
+.p-chip{ padding:5px 11px !important; font-size:12px !important; }
+
+#view-chat{ position:relative; }
+#chat{ gap:14px !important; padding:20px 12px 26px !important; margin:10px 8px 0 !important; }
+.bwrap{ max-width:84% !important; }
+.who{ margin:0 6px 6px !important; }
+.bubble{ padding:13px 17px !important; }
+#typing{ padding:6px 18px 0 !important; min-height:22px; }
+.foot{ margin:10px 10px calc(10px + env(safe-area-inset-bottom,0px)) !important; gap:8px !important; padding:7px !important; }
+
+/* consecutive messages from the same person tuck together */
+.row.grouped{ margin-top:-9px; }
+.row.grouped .who{ display:none !important; }
+.row.grouped.them-row .bubble{ border-top-left-radius:22px !important; }
+.row.grouped.me-row .bubble{ border-top-right-radius:22px !important; }
+
+/* lists + panes get real padding */
+#tasklist,#actlist,#newslist{ padding:18px 16px 28px !important; }
+#hangout-chat{ padding:20px 14px 24px !important; display:flex; flex-direction:column; gap:14px; }
+.trow{ margin-bottom:12px !important; padding:14px 16px !important; }
+.arow{ margin-bottom:8px !important; padding:12px 14px 12px 18px !important; }
+#view-notes{ padding:16px 14px 14px !important; }
+#hangout-note{ padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px)) !important; font-size:12px !important; letter-spacing:.2px; }
+
+/* ---------------------------------------------------------------------
+   3 · TABS — the active tab opens up and names itself (phones)
+   --------------------------------------------------------------------- */
+@media (max-width:820px),(pointer:coarse){
+  .tabs .tab{ display:flex !important; align-items:center; justify-content:center; gap:7px; flex:1 1 0 !important; min-width:0 !important;
+    white-space:nowrap; overflow:hidden; letter-spacing:.2px;
+    transition:flex-grow .55s var(--ease-liquid), color .25s, filter .25s, font-size .3s !important; }
+  .tabs .tab.active{ flex-grow:2.7 !important; font-size:12.5px !important; font-weight:700; }
+}
+.tab-glider{ transition:none !important; } /* phantom-ui.js drives it per frame so it rides the expanding tab */
+
+/* ---------------------------------------------------------------------
+   4 · REACTIONS — big targets, instant feedback
+   --------------------------------------------------------------------- */
+.reacts{ display:flex; flex-wrap:wrap; gap:6px !important; margin:8px 4px 0 !important; align-items:center; }
+.row.me-row .reacts{ justify-content:flex-end; }
+.rx{ -webkit-appearance:none; appearance:none; display:inline-flex; align-items:center; gap:6px; height:30px; min-width:30px; padding:0 11px !important;
+  font:600 13px/1 -apple-system,system-ui,sans-serif; color:#ffe9eb; cursor:pointer; border-radius:999px;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,120,135,.22);
+  transition:transform .3s var(--ease-spring), background .2s, border-color .2s, box-shadow .25s; }
+.rx .rx-e{ font-size:15px; line-height:1; }
+.rx .rx-n{ font-variant-numeric:tabular-nums; opacity:.85; }
+.rx:active{ transform:scale(.9) !important; }
+.rx.mine{ background:linear-gradient(180deg,rgba(255,20,20,.34),rgba(120,5,12,.42)); border-color:rgba(255,110,120,.75);
+  box-shadow:0 0 16px rgba(255,20,40,.35), inset 0 1px 0 rgba(255,210,215,.3); color:#fff; }
+.rx.pop{ animation:rx-pop .55s var(--ease-spring); }
+@keyframes rx-pop{ 0%{ transform:scale(.6); box-shadow:0 0 0 0 rgba(255,20,40,.8); } 55%{ transform:scale(1.22); } 100%{ transform:scale(1); box-shadow:0 0 0 14px rgba(255,20,40,0); } }
+.rx-add{ padding:0 9px !important; opacity:.55; background:transparent; border-style:dashed; }
+.rx-add svg{ width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.rx-add i{ font-style:normal; font-size:12px; margin-left:-1px; }
+.rx-add.rx-active,.rx-add:hover{ opacity:1; border-color:rgba(255,110,120,.7); }
+@media (hover:hover){ .row:not(:hover) .rx-add{ opacity:.28; } }
+
+/* the picker: a dark glass tray that opens out of the + button */
+#emoji-picker{ z-index:9999; padding:10px !important; gap:6px !important; border-radius:22px !important; max-width:none !important;
+  grid-template-columns:repeat(4,48px) !important;
+  background:linear-gradient(180deg,rgba(30,6,11,.96),rgba(10,2,5,.98)) !important;
+  border:1px solid rgba(255,100,115,.34) !important;
+  box-shadow:0 18px 60px rgba(0,0,0,.75), 0 0 40px rgba(255,20,40,.22), inset 0 1px 0 rgba(255,170,180,.2) !important;
+  -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+  animation:none !important; }
+#emoji-picker.open{ display:grid !important; animation:ph-picker .32s var(--ease-spring) both !important; }
+@keyframes ph-picker{ from{ opacity:0; transform:scale(.55); } to{ opacity:1; transform:scale(1); } }
+#emoji-picker button{ width:48px !important; height:48px !important; font-size:26px !important; border-radius:16px !important;
+  background:rgba(255,255,255,.05) !important; transition:transform .25s var(--ease-spring), background .15s !important; }
+#emoji-picker button:hover,#emoji-picker button:focus-visible{ background:rgba(255,20,40,.3) !important; transform:scale(1.18); outline:none; }
+#emoji-picker button:active{ transform:scale(.9) !important; background:var(--alarm) !important; }
+
+/* ---------------------------------------------------------------------
+   5 · ALARM style (GIF 2): hard red, soft black edge — toasts, jump pill
+   --------------------------------------------------------------------- */
+.ph-toast,.ph-jump{
+  background:var(--alarm); color:var(--ink); font:800 14px/1 -apple-system,system-ui,sans-serif; letter-spacing:.2px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.2), inset 0 0 22px 4px rgba(0,0,0,.55), 0 10px 40px rgba(255,20,20,.55); }
+.ph-toast{ position:fixed; left:50%; bottom:calc(112px + env(safe-area-inset-bottom,0px)); z-index:99999; padding:13px 20px; border-radius:999px; max-width:86vw;
+  text-align:center; pointer-events:none; opacity:0; transform:translate(-50%,16px) scale(.92);
+  transition:opacity .25s, transform .45s var(--ease-spring); }
+.ph-toast.on{ opacity:1; transform:translate(-50%,0) scale(1); }
+.ph-jump{ position:absolute; right:16px; z-index:6; display:flex; align-items:center; gap:8px; height:40px; padding:0 16px 0 14px; border-radius:999px; border:0; cursor:pointer;
+  opacity:0; transform:translateY(14px) scale(.9); pointer-events:none; transition:opacity .3s, transform .45s var(--ease-spring); }
+.ph-jump.show{ opacity:1; transform:none; pointer-events:auto; }
+.ph-jump:active{ transform:scale(.92); }
+.ph-jump svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
+.ph-jump .n{ min-width:20px; height:20px; padding:0 6px; border-radius:99px; background:var(--ink); color:var(--alarm); font-size:12px; line-height:20px; text-align:center; display:none; }
+.ph-jump.has-n .n{ display:block; }
+
+/* ---------------------------------------------------------------------
+   6 · GLITCH TEAR (GIF 3) — a 0.4s red dither smear on every tab change
+   --------------------------------------------------------------------- */
+#ph-tear{ position:fixed; inset:0; z-index:9000; pointer-events:none; overflow:hidden; }
+#ph-tear i{ position:absolute; left:-4%; right:-4%; top:var(--y); height:var(--h); opacity:0;
+  background:var(--dither), linear-gradient(90deg,transparent,rgba(255,20,20,.9) 30%,rgba(255,20,20,.9) 70%,transparent);
+  background-size:240px 240px, 100% 100%; }
+#ph-tear.on i{ animation:ph-tear .42s steps(3,end) both; animation-delay:var(--d); }
+@keyframes ph-tear{
+  0%{ opacity:0; transform:translateX(var(--dx)); }
+  18%{ opacity:.9; }
+  55%{ opacity:.55; transform:translateX(calc(var(--dx) * -.7)); }
+  100%{ opacity:0; transform:translateX(0); } }
+
+/* ---------------------------------------------------------------------
+   7 · BARS on surfaces — send, me-bubbles, gate
+   --------------------------------------------------------------------- */
+.row.me-row .bubble{
+  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 5px),
+                   linear-gradient(155deg,#ff2d44 0%,#b80f22 38%,#5d0610 100%) !important; }
+#send{ background:var(--alarm) !important; color:var(--ink) !important; border:0 !important;
+  box-shadow:inset 0 0 18px 2px rgba(0,0,0,.5), 0 6px 26px rgba(255,20,20,.55) !important; }
+#send:active{ transform:scale(.92) !important; filter:brightness(1.2); }
+#pwgate::before,#gate::before{ content:""; position:absolute; inset:0; pointer-events:none; opacity:.14; background:var(--bars);
+  -webkit-mask-image:radial-gradient(60% 60% at 50% 50%,#000,transparent 75%); mask-image:radial-gradient(60% 60% at 50% 50%,#000,transparent 75%); }
+#pwjoin,#join{ background:var(--alarm) !important; color:var(--ink) !important;
+  box-shadow:inset 0 0 22px 3px rgba(0,0,0,.5), 0 8px 30px rgba(255,20,20,.5) !important; }
+
+/* empty state */
+.ph-empty{ margin:auto; text-align:center; padding:40px 24px; color:#d9aab1; font-size:14px; line-height:1.5; }
+.ph-empty b{ display:block; color:#fff; font-size:16px; margin-bottom:6px; }
+.ph-empty::before{ content:""; display:block; width:84px; height:26px; margin:0 auto 16px; background:var(--bars); opacity:.7;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 25%,#000 75%,transparent); mask-image:linear-gradient(90deg,transparent,#000 25%,#000 75%,transparent);
+  animation:ph-bars 2.6s ease-in-out infinite; }
+
+/* focus is always visible for keyboard users */
+button:focus-visible,.tab:focus-visible{ outline:2px solid var(--alarm); outline-offset:2px; }
+
+@media (max-width:360px){ .head{ padding:12px 12px 10px !important; margin:8px 6px 0 !important; } #chat{ gap:12px !important; } }

@@ -30,7 +30,7 @@
       presenceEl=$("presence"), typingEl=$("typing");
   var MY_NAME=null, seen={};
   var VOICE_REG={}; /* docId -> {b64, type} : voice audio out of the DOM */
-  var EMOJIS=["🔥","❤️","👍","😂","💯","👀"];
+  var EMOJIS=["🔥","❤️","👍","😂","💯","👀","💀","🩸"];
   var OWNERS=["sin","grim"]; // co-owners of PhantomWay — case-insensitive
   function isOwner(n){ return OWNERS.indexOf(String(n||"").toLowerCase())>=0; }
   function crownHtml(n){ return isOwner(n)?'<span class="crown" title="Owner">👑</span>':""; }
@@ -180,6 +180,13 @@ function asDoc(row){
   return {id:row.id,data:function(){ return data; }};
 }
 
+/* Small public handle so the UI layer (phantom-ui.js) can reuse auth + helpers. */
+window.HW_api={
+  get:function(p){ return hwGet(p); }, post:function(p,b){ return hwPost(p,b); },
+  name:function(){ return MY_NAME; }, device:DEVICE_ID,
+  esc:esc, pingify:pingify, fmtTime:fmtTime, isOwner:isOwner, crown:crownHtml
+};
+
 /* ============ QUESTS / WINS / AMBIENT (inside IIFE - needs esc/fmtTime) ============ */
 function loadQuests(){
   var el=document.getElementById("questlist"); if(!el) return;
@@ -243,19 +250,18 @@ function updateAmbientStatus(snap){
     }
     if(m.audio){ VOICE_REG[doc.id]={b64:m.audio, type:m.audioType||'audio/webm'}; }
     var mine=(m.deviceId===DEVICE_ID);
+    // Only follow the conversation if the reader is already at the bottom (or sent it).
+    // Before: every poll yanked you to the bottom while you were reading history.
+    var _stick=mine||(_batchStick!==null?_batchStick:(chat.scrollHeight-chat.scrollTop-chat.clientHeight<160));
     var row=document.createElement("div");
     row.className="row "+(mine?"me-row":"them-row");
     // Canonical sort key: numeric tsNum, doc ID as tie-breaker. Fixes voice/text ordering.
     var _tsn = Number(m.tsNum) || 0;
     row.setAttribute("data-ts", String(_tsn));
     row.setAttribute("data-id", doc.id);
-    var rxHtml="";
-    var rx=m.reactions||{};
-    Object.keys(rx).forEach(function(e){
-      var users=rx[e]||[];
-      rxHtml+='<span class="rx'+(users.indexOf(MY_NAME)>=0?" mine":"")+'" data-id="'+doc.id+'" data-e="'+esc(e)+'">'+esc(e)+' '+(users.length||"")+'</span>';
-    });
-    rxHtml+='<span class="rx rx-add" data-id="'+doc.id+'" data-e="__pick__">＋</span>';
+    RX_STATE[doc.id]=cloneRx(m.reactions);
+    MSG_SIG[doc.id]=msgSig(m);
+    var rxHtml=rxBarHtml(doc.id, RX_STATE[doc.id]);
     // Long messages: the doc carries the FULL text (no split, no attachment).
     // Collapse beyond 1000 chars for readability — tap-to-expand reveals the
     // rest inline from already-loaded data, no fetch needed.
@@ -305,9 +311,6 @@ function updateAmbientStatus(snap){
     })();
     /* Crimson pulse on new arrival: the room breathes */
     if(!mine){ row.classList.add("arrived"); setTimeout(function(){row.classList.remove("arrived");},1200); }
-    row.querySelectorAll(".rx").forEach(function(el){
-      el.addEventListener("click", function(ev){ ev.stopPropagation(); toggleReaction(el.getAttribute("data-id"), el.getAttribute("data-e")); });
-    });
     row.querySelectorAll("[data-voice]").forEach(function(btn){
       btn.addEventListener("click", function(){ window.playVoice(btn.getAttribute("data-voice"), btn); });
     });
@@ -326,43 +329,135 @@ function updateAmbientStatus(snap){
         }
       });
     });
-    scrollDown(chat);
+    if(_stick) scrollDown(chat);
+    else if(!mine&&window.HW_unread) window.HW_unread();
   }
-  var _pickerFor=null;
+  /* ================= REACTIONS =================
+     Root cause of "reactions don't work": the POST went out but nothing ever
+     redrew the message (renderMsg skips ids it has already seen, and the poll
+     only asks for messages newer than the watermark). Now: optimistic toggle,
+     server reconcile, in-place patching, and a background sync so other
+     people's reactions show up too. One delegated listener, no per-row wiring. */
+  var RX_STATE={}, MSG_SIG={};
+  var _batchStick=null; /* decided once per poll batch: a burst of rows must not flip "at bottom" mid-render */
+  function cloneRx(rx){
+    var out={}; rx=rx||{};
+    Object.keys(rx).forEach(function(e){ if(Array.isArray(rx[e])&&rx[e].length) out[e]=rx[e].slice(); });
+    return out;
+  }
+  function msgSig(m){ return String(m.text||"")+"|"+((m.attachments&&m.attachments.length)||0)+"|"+(m.audio?1:0); }
+  function rxBarHtml(id, rx){
+    var h="";
+    Object.keys(rx||{}).forEach(function(e){
+      var users=rx[e]||[]; if(!users.length) return;
+      var mine=users.indexOf(MY_NAME)>=0;
+      h+='<button type="button" class="rx'+(mine?" mine":"")+'" data-id="'+esc(id)+'" data-e="'+esc(e)+'" aria-pressed="'+(mine?"true":"false")+'" title="'+esc(users.join(", "))+'">'+
+         '<span class="rx-e">'+esc(e)+'</span><span class="rx-n">'+users.length+'</span></button>';
+    });
+    h+='<button type="button" class="rx rx-add" data-id="'+esc(id)+'" data-e="__pick__" aria-label="Add reaction"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.2c.9 1.2 2.1 1.8 3.5 1.8s2.6-.6 3.5-1.8M9 9.6h.01M15 9.6h.01"/></svg><i>+</i></button>';
+    return h;
+  }
+  function rowById(id){
+    var rows=chat.querySelectorAll(".row");
+    for(var i=0;i<rows.length;i++) if(rows[i].getAttribute("data-id")===String(id)) return rows[i];
+    return null;
+  }
+  function patchReactions(id, rx){
+    var prev=RX_STATE[id]||{}; RX_STATE[id]=cloneRx(rx);
+    var row=rowById(id); if(!row) return;
+    var bar=row.querySelector(".reacts"); if(!bar) return;
+    bar.innerHTML=rxBarHtml(id, RX_STATE[id]);
+    Object.keys(RX_STATE[id]).forEach(function(e){
+      if((RX_STATE[id][e].length)>((prev[e]||[]).length)){
+        var el=bar.querySelector('.rx[data-e="'+(window.CSS&&CSS.escape?CSS.escape(e):e)+'"]');
+        if(el){ el.classList.add("pop"); setTimeout(function(){ el.classList.remove("pop"); },600); }
+      }
+    });
+  }
+  function rxBuzz(){ try{ if(window.HighwayHaptics&&HighwayHaptics.tap) HighwayHaptics.tap(); else if(navigator.vibrate) navigator.vibrate(8); }catch(e){} }
+
+  var _pickerFor=null, _pickerAnchor=null;
+  function pickerEl(){ return document.getElementById("emoji-picker"); }
+  function closePicker(){
+    var p=pickerEl(); if(!p) return;
+    p.classList.remove("open"); _pickerFor=null;
+    if(_pickerAnchor){ _pickerAnchor.classList.remove("rx-active"); _pickerAnchor=null; }
+  }
   function buildPicker(){
-    var p=document.getElementById("emoji-picker");
-    if(p.children.length) return;
+    var p=pickerEl(); if(!p||p.children.length) return;
+    p.setAttribute("role","menu");
     EMOJIS.forEach(function(e){
       var b=document.createElement("button");
-      b.textContent=e;
-      b.onclick=function(ev){ ev.stopPropagation(); pickEmoji(e); };
+      b.type="button"; b.textContent=e; b.setAttribute("aria-label","React "+e);
+      b.addEventListener("click", function(ev){ ev.stopPropagation(); pickEmoji(e); });
       p.appendChild(b);
     });
-    document.addEventListener("click", function(){ p.classList.remove("open"); });
+    // Any outside tap, scroll of the chat, Escape, or a resize closes it.
+    document.addEventListener("click", function(ev){ if(!p.contains(ev.target)) closePicker(); });
+    document.addEventListener("keydown", function(ev){ if(ev.key==="Escape") closePicker(); });
+    chat.addEventListener("scroll", closePicker, {passive:true});
+    window.addEventListener("resize", closePicker);
   }
   function showPicker(id, anchorEl){
     buildPicker();
-    _pickerFor=id;
-    var p=document.getElementById("emoji-picker");
-    var r=anchorEl.getBoundingClientRect();
-    p.style.left=Math.max(8, Math.min(window.innerWidth-290, r.left-100))+"px";
-    p.style.top=Math.max(8, r.top-220)+"px";
-    p.classList.remove("open"); void p.offsetWidth; p.classList.add("open");
+    var p=pickerEl(); if(!p) return;
+    if(_pickerAnchor) _pickerAnchor.classList.remove("rx-active");
+    _pickerFor=id; _pickerAnchor=anchorEl; if(anchorEl&&anchorEl.classList) anchorEl.classList.add("rx-active");
+    p.classList.remove("open"); p.style.visibility="hidden"; p.classList.add("open");
+    var r=anchorEl.getBoundingClientRect(), pw=p.offsetWidth, ph=p.offsetHeight, vw=window.innerWidth, vh=(window.visualViewport?window.visualViewport.height:window.innerHeight);
+    var left=Math.max(10, Math.min(vw-pw-10, r.left+r.width/2-pw/2));
+    var above=r.top-ph-10, below=r.bottom+10;
+    var top=above>=10?above:(below+ph<=vh-10?below:Math.max(10,(vh-ph)/2));
+    p.style.left=left+"px"; p.style.top=top+"px";
+    p.style.transformOrigin=(above>=10?"bottom":"top")+" "+Math.round(r.left+r.width/2-left)+"px";
+    p.style.visibility="";
+    void p.offsetWidth; p.classList.remove("open"); void p.offsetWidth; p.classList.add("open");
   }
   function pickEmoji(e){
-    document.getElementById("emoji-picker").classList.remove("open");
-    if(_pickerFor&&e) toggleReaction(_pickerFor, e.trim().slice(0,4));
-    _pickerFor=null;
+    var id=_pickerFor; closePicker();
+    if(id&&e) toggleReaction(id, String(e).trim().slice(0,8));
   }
   function toggleReaction(id, emoji){
     if(emoji==="__pick__"){
-      var els=document.querySelectorAll('.rx-add[data-id="'+id+'"]');
-      showPicker(id, els.length?els[0]:document.body);
+      var els=chat.querySelectorAll('.rx-add'), el=null;
+      for(var i=0;i<els.length;i++) if(els[i].getAttribute("data-id")===String(id)){ el=els[i]; break; }
+      if(_pickerFor===id&&pickerEl().classList.contains("open")){ closePicker(); return; }
+      showPicker(id, el||document.body);
       return;
     }
-    // The bridge toggles the reaction for the token's identity server-side.
-    hwPost("/api/messages/"+encodeURIComponent(id)+"/reactions",{emoji:emoji}).catch(function(e){ if(window.console&&console.warn) console.warn("[phantomway]", e&&e.message||e); });
+    if(!MY_NAME) return;
+    rxBuzz();
+    var before=cloneRx(RX_STATE[id]), next=cloneRx(RX_STATE[id]);
+    var users=next[emoji]||[], at=users.indexOf(MY_NAME);
+    if(at>=0) users.splice(at,1); else users.push(MY_NAME);
+    if(users.length) next[emoji]=users; else delete next[emoji];
+    patchReactions(id, next);                      // optimistic: feels instant
+    hwPost("/api/messages/"+encodeURIComponent(id)+"/reactions",{emoji:emoji}).then(function(res){
+      var srv=res&&(res.reactions||(res.message&&res.message.reactions));
+      if(srv&&typeof srv==="object") patchReactions(id, srv); else syncReactions();
+    }).catch(function(e){
+      patchReactions(id, before);                  // roll back, and say why
+      if(window.HW_toast) window.HW_toast("Reaction failed — "+((e&&e.message)||"try again"));
+      if(window.console&&console.warn) console.warn("[phantomway] reaction", e&&e.message||e);
+    });
   }
+  chat.addEventListener("click", function(ev){
+    var b=ev.target.closest&&ev.target.closest(".rx"); if(!b||!chat.contains(b)) return;
+    ev.stopPropagation();
+    toggleReaction(b.getAttribute("data-id"), b.getAttribute("data-e"));
+  });
+  var _rxSyncing=false;
+  function syncReactions(){
+    if(_rxSyncing||!MY_NAME) return; _rxSyncing=true;
+    hwGet("/api/messages?channel=room&limit=50").then(function(body){
+      (body.messages||[]).forEach(function(m){
+        if(!seen[m.id]) return;
+        var a=JSON.stringify(cloneRx(m.reactions)), b=JSON.stringify(RX_STATE[m.id]||{});
+        if(a!==b) patchReactions(m.id, m.reactions);
+      });
+    }).catch(function(){}).then(function(){ _rxSyncing=false; });
+  }
+  window.HW_syncReactions=syncReactions;
   function sendMsg(){
     var t=msg.value.trim();
     // Attachment flow: staged file uploads to Cloudinary first, then the
@@ -686,16 +781,21 @@ function updateAmbientStatus(snap){
       if(_msgWatermark) q+="&since_ts="+_msgWatermark;
       hwGet(q).then(function(body){
         var rows=(body.messages||[]).slice().reverse();
+        _batchStick=!chat.querySelector(".row")||(chat.scrollHeight-chat.scrollTop-chat.clientHeight<160);
         rows.forEach(function(m){
           if(m.ts>_msgWatermark) _msgWatermark=m.ts;
           var id=m.id;
           if(seen[id]){
-            var old=document.querySelector('[data-id="'+id+'"]');
-            if(old){ delete seen[id]; old.remove(); }
+            // Already on screen: never tear the row down (that replayed the arrival
+            // animation and jumped the scroll). Patch reactions; redraw only if the text changed.
+            if(MSG_SIG[id]===msgSig(m)){ if(JSON.stringify(cloneRx(m.reactions))!==JSON.stringify(RX_STATE[id]||{})) patchReactions(id, m.reactions); return; }
+            var old=rowById(id);
+            if(old){ delete seen[id]; old.remove(); } else return;
           }
           renderMsg(asDoc(m));
         });
-      }).catch(function(){});
+        _batchStick=null;
+      }).catch(function(){ _batchStick=null; });
     }
     window.hwPullMessages=pullMessages; /* live socket (live.js) calls this when a room message lands */
     function renderPresence(){
@@ -734,8 +834,18 @@ function updateAmbientStatus(snap){
       hwGet("/api/tasks?limit=100").then(function(body){
         var list=$("tasklist"); if(!list) return;
         var items=body.tasks||[];
+        // Only rebuild when something changed, and never replay the entrance
+        // animation on rows that were already there (the 8s poll made them flash).
+        var sig=JSON.stringify(items.map(function(t){ return [t.id,!!t.done,t.text,t.createdBy]; }));
+        if(list._sig===sig) return; list._sig=sig;
+        var known=list._known||(list._known={}), top=list.scrollTop;
         list.innerHTML="";
-        items.slice().reverse().forEach(function(t){ var el=renderTask(asDoc(t)); if(el) list.appendChild(el); });
+        items.slice().reverse().forEach(function(t){
+          var el=renderTask(asDoc(t)); if(!el) return;
+          if(known[t.id]) el.style.animation="none"; known[t.id]=1;
+          list.appendChild(el);
+        });
+        list.scrollTop=top;
         if(!items.length) list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--muted);">'
           +'<div style="font-size:32px;margin-bottom:12px;">⚔️</div>'
           +'<div style="font-size:15px;font-weight:600;color:var(--txt);margin-bottom:6px;">No quests on the board</div>'
@@ -757,9 +867,13 @@ function updateAmbientStatus(snap){
       _actItems=items||[];
       updateAmbientStatus({docs:_actItems.slice(0,5).map(function(a){ return asDoc(a); })});
       var list=$("actlist"); if(!list) return;
+      var sig=Math.floor(Date.now()/60000)+JSON.stringify(_actItems.map(function(a){ return [a.ts,a.by,a.text]; }));
+      if(list._sig===sig) return; list._sig=sig;
+      var known=list._known||(list._known={}), top=list.scrollTop;
       list.innerHTML="";
       _actItems.forEach(function(a){
         var el=document.createElement("div"); el.className="arow";
+        var k=a.ts+"|"+a.by+"|"+a.text; if(known[k]) el.style.animation="none"; known[k]=1;
         el.innerHTML="<b>"+esc(a.by||"")+"</b> "+esc(a.text||"")+"<time>"+fmtTs({toDate:function(){return new Date(a.ts||0);}})+"</time>";
         list.appendChild(el);
       });
@@ -772,7 +886,7 @@ function updateAmbientStatus(snap){
       hwGet("/api/activity?limit=30").then(function(body){ paintActivity(body.items||[]); }).catch(function(){});
     }
     function pullAll(){
-      pullMessages(); pullPresence(); pullTyping(); pullTasks(); pullNotes(); pullActivity();
+      pullMessages(); pullPresence(); pullTyping(); pullTasks(); pullNotes(); pullActivity(); syncReactions();
     }
     pullAll();
     setInterval(pullAll, 8000);
