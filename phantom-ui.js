@@ -37,8 +37,8 @@
     }
     return eq;
   }
-  var head = d.querySelector('.head'); if (head) head.appendChild(makeEq(64, 3));
-  ['pwgate', 'gate'].forEach(function (id, i) { var g = $(id); if (g) g.insertBefore(makeEq(70, 11 + i), g.firstChild); });
+  var head = d.querySelector('.head'); if (head) head.appendChild(makeEq(30, 3));
+  ['pwgate', 'gate'].forEach(function (id, i) { var g = $(id); if (g) g.insertBefore(makeEq(34, 11 + i), g.firstChild); });
 
   /* ---------- glitch tear on tab change ---------- */
   var tear = d.createElement('div'); tear.id = 'ph-tear'; tear.setAttribute('aria-hidden', 'true');
