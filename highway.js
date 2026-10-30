@@ -376,46 +376,83 @@ function updateAmbientStatus(snap){
   }
   function rxBuzz(){ try{ if(window.HighwayHaptics&&HighwayHaptics.tap) HighwayHaptics.tap(); else if(navigator.vibrate) navigator.vibrate(8); }catch(e){} }
 
-  var _pickerFor=null, _pickerAnchor=null;
+  var _pickerFor=null, _pickerAnchor=null, _scrim=null;
+  /* Emoji tray: scrollable, grouped, with recents. Bottom sheet on phones, popover on desktop. */
+  var EMOJI_GROUPS=[
+    ["Hype",["🔥","💯","⚡","🚀","💥","✨","🎉","👑","🏆","💎","🎯","🌟","💫","🥇","📈","💰"]],
+    ["Hands",["👍","👎","👏","🙌","🙏","💪","🤝","👊","✊","🤞","✌️","🤟","👌","🤙","👋","🫶"]],
+    ["Faces",["😂","🤣","😭","😍","🥵","😎","🤯","😈","😤","🥶","😳","🤔","🙃","😮","😴","🤡","😅","😬","🥲","😏","🤩","😇","🫠","😡"]],
+    ["Dark",["🩸","🖤","❤️","💔","💀","☠️","👁️","👀","🌑","🌙","👻","🦇","🕷️","⛓️","🔮","🕯️","👹","👺","🥀","🌹"]]
+  ];
+  var RECENT_KEY="hw_rx_recent";
+  function getRecent(){ try{ var r=JSON.parse(localStorage.getItem(RECENT_KEY)||"[]"); return Array.isArray(r)?r.slice(0,8):[]; }catch(e){ return []; } }
+  function pushRecent(e){ try{ var r=getRecent().filter(function(x){ return x!==e; }); r.unshift(e); localStorage.setItem(RECENT_KEY, JSON.stringify(r.slice(0,8))); }catch(x){} }
   function pickerEl(){ return document.getElementById("emoji-picker"); }
+  function isSheet(){ return !!(window.matchMedia&&window.matchMedia("(pointer:coarse), (max-width:820px)").matches); }
   function closePicker(){
     var p=pickerEl(); if(!p) return;
     p.classList.remove("open"); _pickerFor=null;
+    if(_scrim) _scrim.classList.remove("on");
+    document.documentElement.classList.remove("ep-open");
     if(_pickerAnchor){ _pickerAnchor.classList.remove("rx-active"); _pickerAnchor=null; }
   }
-  function buildPicker(){
-    var p=pickerEl(); if(!p||p.children.length) return;
-    p.setAttribute("role","menu");
-    EMOJIS.forEach(function(e){
-      var b=document.createElement("button");
-      b.type="button"; b.textContent=e; b.setAttribute("aria-label","React "+e);
-      b.addEventListener("click", function(ev){ ev.stopPropagation(); pickEmoji(e); });
-      p.appendChild(b);
+  function emojiBtn(e){
+    var b=document.createElement("button");
+    b.type="button"; b.textContent=e; b.setAttribute("aria-label","React "+e);
+    b.addEventListener("click", function(ev){ ev.stopPropagation(); pickEmoji(e); });
+    return b;
+  }
+  function fillPicker(){
+    var p=pickerEl(); if(!p) return;
+    var sc=p.querySelector(".ep-scroll"); sc.innerHTML="";
+    var groups=EMOJI_GROUPS.slice(), rec=getRecent();
+    if(rec.length) groups.unshift(["Recent",rec]);
+    groups.forEach(function(g){
+      var h=document.createElement("div"); h.className="ep-title"; h.textContent=g[0]; sc.appendChild(h);
+      var grid=document.createElement("div"); grid.className="ep-grid";
+      g[1].forEach(function(e){ grid.appendChild(emojiBtn(e)); });
+      sc.appendChild(grid);
     });
-    // Any outside tap, scroll of the chat, Escape, or a resize closes it.
+    sc.scrollTop=0;
+  }
+  function buildPicker(){
+    var p=pickerEl(); if(!p||p.__built) return; p.__built=1;
+    p.setAttribute("role","dialog"); p.setAttribute("aria-label","Pick a reaction");
+    p.innerHTML='<div class="ep-handle" aria-hidden="true"></div><div class="ep-head"><b>React</b><button type="button" class="ep-x" aria-label="Close">✕</button></div><div class="ep-scroll"></div>';
+    p.querySelector(".ep-x").addEventListener("click", function(ev){ ev.stopPropagation(); closePicker(); });
+    _scrim=document.createElement("div"); _scrim.id="emoji-scrim"; document.body.appendChild(_scrim);
+    _scrim.addEventListener("click", closePicker);
+    // Outside tap, Escape or a resize closes it. Scrolling INSIDE the tray never does.
     document.addEventListener("click", function(ev){ if(!p.contains(ev.target)) closePicker(); });
     document.addEventListener("keydown", function(ev){ if(ev.key==="Escape") closePicker(); });
-    chat.addEventListener("scroll", closePicker, {passive:true});
-    window.addEventListener("resize", closePicker);
+    window.addEventListener("resize", function(){ if(p.classList.contains("open")&&!isSheet()) closePicker(); });
   }
   function showPicker(id, anchorEl){
     buildPicker();
     var p=pickerEl(); if(!p) return;
     if(_pickerAnchor) _pickerAnchor.classList.remove("rx-active");
     _pickerFor=id; _pickerAnchor=anchorEl; if(anchorEl&&anchorEl.classList) anchorEl.classList.add("rx-active");
+    fillPicker();
+    var sheet=isSheet();
+    p.classList.toggle("sheet", sheet);
+    p.style.left=p.style.top=p.style.transformOrigin="";
     p.classList.remove("open"); p.style.visibility="hidden"; p.classList.add("open");
-    var r=anchorEl.getBoundingClientRect(), pw=p.offsetWidth, ph=p.offsetHeight, vw=window.innerWidth, vh=(window.visualViewport?window.visualViewport.height:window.innerHeight);
-    var left=Math.max(10, Math.min(vw-pw-10, r.left+r.width/2-pw/2));
-    var above=r.top-ph-10, below=r.bottom+10;
-    var top=above>=10?above:(below+ph<=vh-10?below:Math.max(10,(vh-ph)/2));
-    p.style.left=left+"px"; p.style.top=top+"px";
-    p.style.transformOrigin=(above>=10?"bottom":"top")+" "+Math.round(r.left+r.width/2-left)+"px";
+    if(sheet){
+      document.documentElement.classList.add("ep-open"); _scrim.classList.add("on");
+    } else {
+      var r=anchorEl.getBoundingClientRect(), pw=p.offsetWidth, ph=p.offsetHeight, vw=window.innerWidth, vh=window.innerHeight;
+      var left=Math.max(10, Math.min(vw-pw-10, r.left+r.width/2-pw/2));
+      var above=r.top-ph-10, below=r.bottom+10;
+      var top=above>=10?above:(below+ph<=vh-10?below:Math.max(10,(vh-ph)/2));
+      p.style.left=left+"px"; p.style.top=top+"px";
+      p.style.transformOrigin=(above>=10?"bottom":"top")+" "+Math.round(r.left+r.width/2-left)+"px";
+    }
     p.style.visibility="";
     void p.offsetWidth; p.classList.remove("open"); void p.offsetWidth; p.classList.add("open");
   }
   function pickEmoji(e){
     var id=_pickerFor; closePicker();
-    if(id&&e) toggleReaction(id, String(e).trim().slice(0,8));
+    if(id&&e){ e=String(e).trim().slice(0,12); pushRecent(e); toggleReaction(id, e); }
   }
   function toggleReaction(id, emoji){
     if(emoji==="__pick__"){
@@ -446,6 +483,12 @@ function updateAmbientStatus(snap){
     ev.stopPropagation();
     toggleReaction(b.getAttribute("data-id"), b.getAttribute("data-e"));
   });
+  /* double-tap shortcut: add-only, so a second double-tap never removes it by accident */
+  window.HW_react=function(id, emoji, addOnly){
+    if(!id||!MY_NAME) return;
+    if(addOnly&&((RX_STATE[id]||{})[emoji]||[]).indexOf(MY_NAME)>=0) return;
+    toggleReaction(id, emoji);
+  };
   var _rxSyncing=false;
   function syncReactions(){
     if(_rxSyncing||!MY_NAME) return; _rxSyncing=true;

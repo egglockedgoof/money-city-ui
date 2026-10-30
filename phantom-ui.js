@@ -18,11 +18,31 @@
 
   /* ---------- living grain (dither) ---------- */
   var grain = d.createElement('div'); grain.className = 'ph-grain'; grain.setAttribute('aria-hidden', 'true');
-  d.body.insertBefore(grain, d.body.firstChild);
+  d.body.appendChild(grain);
+
+  /* ---------- EQ bars: every bar breathes on its own clock (transform-only, GPU) ---------- */
+  function makeEq(n, seed) {
+    var eq = d.createElement('div'); eq.className = 'ph-eq'; eq.setAttribute('aria-hidden', 'true');
+    var s = seed || 1;
+    function rnd() { s = (s * 16807) % 2147483647; return s / 2147483647; }
+    for (var k = 0; k < n; k++) {
+      var env = .55 + .3 * Math.sin(k * .23 + seed) + .15 * Math.sin(k * .071 + 1.3);
+      var hi = Math.max(.32, Math.min(1, env + (rnd() - .5) * .5));
+      var b = d.createElement('i');
+      b.style.setProperty('--hi', hi.toFixed(2));
+      b.style.setProperty('--lo', (hi * (.12 + rnd() * .3)).toFixed(2));
+      b.style.setProperty('--t', (1.6 + rnd() * 2.6).toFixed(2) + 's');
+      b.style.setProperty('--d', (-rnd() * 4).toFixed(2) + 's');
+      eq.appendChild(b);
+    }
+    return eq;
+  }
+  var head = d.querySelector('.head'); if (head) head.appendChild(makeEq(64, 3));
+  ['pwgate', 'gate'].forEach(function (id, i) { var g = $(id); if (g) g.insertBefore(makeEq(70, 11 + i), g.firstChild); });
 
   /* ---------- glitch tear on tab change ---------- */
   var tear = d.createElement('div'); tear.id = 'ph-tear'; tear.setAttribute('aria-hidden', 'true');
-  for (var i = 0; i < 6; i++) tear.appendChild(d.createElement('i'));
+  for (var i = 0; i < 10; i++) tear.appendChild(d.createElement('i'));
   d.body.appendChild(tear);
   var tearT;
   function glitch() {
@@ -56,6 +76,30 @@
   });
   window.addEventListener('resize', placeGlider);
   [350, 900, 1800].forEach(function (ms) { setTimeout(placeGlider, ms); });
+
+  /* ---------- swipe left/right anywhere to change tab (phones) ---------- */
+  var sw = null;
+  function tabsList() { return [].slice.call(d.querySelectorAll('.tabs .tab')); }
+  d.addEventListener('touchstart', function (e) {
+    var t = e.target, ok = e.touches.length === 1 &&
+      !(t.closest && t.closest('input,textarea,select,audio,video,#presence,.ph-eq,#emoji-picker,#pwgate,#gate,.tabs,.hs-wrap,#notes'));
+    sw = ok ? { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() } : null;
+  }, { passive: true });
+  d.addEventListener('touchend', function (e) {
+    if (!sw) return;
+    var c = e.changedTouches[0], dx = c.clientX - sw.x, dy = c.clientY - sw.y, dt = Date.now() - sw.t; sw = null;
+    if (Math.abs(dx) < 80 || Math.abs(dy) > 46 || Math.abs(dx) < Math.abs(dy) * 2.2 || dt > 600) return;
+    var list = tabsList(), cur = list.findIndex(function (b) { return b.classList.contains('active'); });
+    var next = list[cur + (dx < 0 ? 1 : -1)];
+    if (next) next.click();
+  }, { passive: true });
+
+  /* ---------- double-tap a message to react 🔥 ---------- */
+  if (chatBox()) chatBox().addEventListener('dblclick', function (e) {
+    var b = e.target.closest && e.target.closest('.bubble'); if (!b || e.target.closest('a,button,audio,video')) return;
+    var row = b.closest('.row'); if (row && window.HW_react) window.HW_react(row.getAttribute('data-id'), '🔥', true);
+  });
+  function chatBox() { return $('chat'); }
 
   /* ---------- group consecutive messages from the same person ---------- */
   var GROUP_MS = 180000;
@@ -120,7 +164,9 @@
   function hEmpty() {
     if (!hList || hList.querySelector('.row') || hList.querySelector('.ph-empty')) return;
     var e = d.createElement('div'); e.className = 'ph-empty';
-    e.innerHTML = '<b>Quiet in the Hangout</b>Ideas, plans, late-night thoughts. Say something.';
+    e.appendChild(makeEq(26, 5));
+    var t = d.createElement('div'); t.innerHTML = '<b>Quiet in the Hangout</b>Ideas, plans, late-night thoughts. Say something.';
+    e.appendChild(t);
     hList.appendChild(e);
   }
   function hangoutPull() {

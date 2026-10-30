@@ -1,128 +1,121 @@
 /* =====================================================================
-   PHANTOM LAYER — loaded LAST (after highway.css + realm.css).
-   Goals: room to breathe, one fluid motion language, reactions that work.
-   Style kit, taken from the reference GIFs (looks, not artwork):
-     BARS   — hard red vertical scan-bars on black   (GIF 1)
-     ALARM  — pure red field, black soft-edged mass   (GIF 2)
-     DITHER — red pixel dither smeared horizontally   (GIF 3)
-   Motion stays always-on. Nothing here switches an animation off.
+   PHANTOM LAYER v2 — loaded LAST (after highway.css + realm.css).
+   Style kit, taken from the three reference GIFs (looks, not artwork):
+     EQ BARS — vertical red bars of shifting height on black      (GIF 1)
+     ALARM   — flat hard red, black soft-edged inner shadow        (GIF 2)
+     DITHER  — red pixel speckle smeared sideways, always crawling (GIF 3)
+   Motion stays always-on; nothing here switches an animation off.
    ===================================================================== */
 :root{
   --alarm:#ff1414; --alarm-d:#b30b0b; --ink:#0b0708; --ink-2:#140a0c;
-  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px;
   --ease-liquid:cubic-bezier(.22,1,.36,1); --ease-spring:cubic-bezier(.34,1.56,.64,1);
-  /* BARS: vertical scan-bars */
-  --bars:repeating-linear-gradient(90deg,var(--alarm) 0 2px,transparent 2px 6px);
-  /* DITHER: horizontally smeared red speckle (low x-freq, high y-smear) */
   --dither:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85 .05' numOctaves='2' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .06 0 0 0 0 .08 0 0 0 9 -5.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --scan:repeating-linear-gradient(90deg,rgba(255,20,20,.07) 0 1px,transparent 1px 6px);
 }
 
 /* ---------------------------------------------------------------------
-   1 · ATMOSPHERE — a faint living dither + bar texture over the void
+   1 · DITHER (GIF 3) — above the glass now, so it is actually visible
    --------------------------------------------------------------------- */
-.ph-grain{ position:fixed; inset:-30%; z-index:1; pointer-events:none; opacity:.075;
+.ph-grain{ position:fixed; inset:-30%; z-index:3; pointer-events:none; opacity:.17;
   background:var(--dither); background-size:240px 240px;
-  animation:ph-grain 1.4s steps(7) infinite; }
+  animation:ph-grain 1.2s steps(7) infinite; }
 @keyframes ph-grain{
   0%{ transform:translate3d(0,0,0); } 14%{ transform:translate3d(-6%,3%,0); } 28%{ transform:translate3d(4%,-5%,0); }
   42%{ transform:translate3d(-3%,6%,0); } 57%{ transform:translate3d(7%,2%,0); } 71%{ transform:translate3d(-5%,-3%,0); }
   85%{ transform:translate3d(2%,5%,0); } 100%{ transform:translate3d(0,0,0); } }
-
-/* BARS as a header underline: a signal strip that breathes */
-.head{ position:relative; }
-.head::after{ content:""; position:absolute; left:18px; right:18px; bottom:-1px; height:7px; pointer-events:none;
-  background:var(--bars); opacity:.55;
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
-          mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
-  animation:ph-bars 3.2s ease-in-out infinite; transform-origin:bottom; }
-@keyframes ph-bars{ 0%,100%{ opacity:.35; transform:scaleY(.55); } 50%{ opacity:.8; transform:scaleY(1); } }
+/* a dithered red smear creeping up from the floor of the chat */
+#view-chat::before{ content:""; position:absolute; left:0; right:0; bottom:0; height:38%; z-index:0; pointer-events:none; opacity:.20;
+  background:var(--dither); background-size:240px 240px;
+  -webkit-mask-image:linear-gradient(0deg,#000,transparent); mask-image:linear-gradient(0deg,#000,transparent);
+  animation:ph-smear 5s steps(9) infinite; }
+@keyframes ph-smear{ 0%{ background-position:0 0; } 100%{ background-position:240px 0; } }
 
 /* ---------------------------------------------------------------------
-   2 · BREATHING ROOM — header, tabs, chat, composer
+   2 · EQ BARS (GIF 1) — each bar breathes on its own clock
    --------------------------------------------------------------------- */
-.head{ padding:14px 16px 12px !important; margin:10px 10px 0 !important; }
-.tabs{ margin:10px 10px 0 !important; padding:6px !important; }
-/* presence: one calm scrolling line instead of a wrapping block */
+.ph-eq{ display:flex; align-items:flex-end; gap:3px; height:var(--eqh,22px); pointer-events:none; }
+.ph-eq i{ flex:1 1 0; min-width:2px; max-width:4px; height:100%; background:var(--alarm); border-radius:1px 1px 0 0;
+  transform-origin:bottom; transform:scaleY(var(--lo,.2));
+  animation:ph-eq var(--t,2.4s) ease-in-out var(--d,0s) infinite alternate; }
+@keyframes ph-eq{ to{ transform:scaleY(var(--hi,1)); } }
+.head .ph-eq{ position:absolute; left:14px; right:14px; bottom:0; --eqh:15px; opacity:.85;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent); mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent); }
+#pwgate > .ph-eq, #gate > .ph-eq{ position:absolute; left:0; right:0; bottom:0; --eqh:46vh; opacity:.30; z-index:0; gap:5px;
+  -webkit-mask-image:linear-gradient(0deg,#000,transparent 92%); mask-image:linear-gradient(0deg,#000,transparent 92%); }
+#pwgate > .ph-eq i, #gate > .ph-eq i{ max-width:7px; }
+.ph-empty .ph-eq{ --eqh:30px; width:132px; margin:0 auto 18px; opacity:.85; }
+
+/* ---------------------------------------------------------------------
+   3 · BREATHING ROOM — more air, more screen for the conversation
+   --------------------------------------------------------------------- */
 #presence{ flex-wrap:nowrap !important; overflow-x:auto; gap:8px !important; margin-top:10px !important; padding-bottom:2px;
   scrollbar-width:none; -webkit-overflow-scrolling:touch;
   -webkit-mask-image:linear-gradient(90deg,#000 88%,transparent); mask-image:linear-gradient(90deg,#000 88%,transparent); }
 #presence::-webkit-scrollbar{ display:none; }
 #presence > *{ flex:none; }
 .p-chip{ padding:5px 11px !important; font-size:12px !important; }
-
+.head{ padding:14px 16px 20px !important; margin:10px 10px 0 !important; }
+.tabs{ margin:10px 10px 0 !important; padding:6px !important; }
 #view-chat{ position:relative; }
-#chat{ gap:14px !important; padding:20px 12px 26px !important; margin:10px 8px 0 !important; }
-.bwrap{ max-width:84% !important; }
-.who{ margin:0 6px 6px !important; }
-.bubble{ padding:13px 17px !important; }
+#view-chat > *{ position:relative; z-index:1; }
+#view-chat::before{ z-index:0; }
+#chat{ gap:16px !important; padding:22px 14px 30px !important; margin:10px 8px 0 !important; }
+.bwrap{ max-width:86% !important; }
+.who{ margin:0 6px 7px !important; }
+.bubble{ padding:14px 18px !important; }
 #typing{ padding:6px 18px 0 !important; min-height:22px; }
 .foot{ margin:10px 10px calc(10px + env(safe-area-inset-bottom,0px)) !important; gap:8px !important; padding:7px !important; }
-
-/* consecutive messages from the same person tuck together */
-.row.grouped{ margin-top:-9px; }
+.row.grouped{ margin-top:-10px; }
 .row.grouped .who{ display:none !important; }
 .row.grouped.them-row .bubble{ border-top-left-radius:22px !important; }
 .row.grouped.me-row .bubble{ border-top-right-radius:22px !important; }
-
-/* lists + panes get real padding */
-#tasklist,#actlist,#newslist{ padding:18px 16px 28px !important; }
-#hangout-chat{ padding:20px 14px 24px !important; display:flex; flex-direction:column; gap:14px; }
-.trow{ margin-bottom:12px !important; padding:14px 16px !important; }
+#tasklist,#actlist,#newslist{ padding:18px 16px 30px !important; }
+#hangout-chat{ padding:22px 14px 26px !important; display:flex; flex-direction:column; gap:16px; }
+.trow{ margin-bottom:12px !important; padding:15px 16px !important; }
 .arow{ margin-bottom:8px !important; padding:12px 14px 12px 18px !important; }
 #view-notes{ padding:16px 14px 14px !important; }
-#hangout-note{ padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px)) !important; font-size:12px !important; letter-spacing:.2px; }
+#hangout-note{ padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px)) !important; font-size:12px !important; }
 
-/* ---------------------------------------------------------------------
-   3 · TABS — the active tab opens up and names itself (phones)
-   --------------------------------------------------------------------- */
+/* phones: the chrome gets slimmer and the chat goes edge to edge */
 @media (max-width:820px),(pointer:coarse){
+  .head{ padding:10px 14px 19px !important; margin:8px 10px 0 !important; border-radius:22px !important; }
+  .head-top{ min-height:34px; }
+  #presence{ margin-top:8px !important; }
+  .p-chip{ height:26px; display:inline-flex; align-items:center; padding:0 11px !important; font-size:11.5px !important; }
+  .p-chip > span:not(.crown){ display:none; }
+  .tabs{ margin:8px 10px 0 !important; padding:4px !important; }
+  .tab{ min-height:42px !important; }
+  #chat{ margin:8px 0 0 !important; border:0 !important; border-radius:26px 26px 0 0 !important; clip-path:none !important;
+         padding:20px 14px 28px !important; }
+  #hangout-chat{ padding:20px 14px 24px !important; }
+  .foot{ margin:8px 10px calc(8px + env(safe-area-inset-bottom,0px)) !important; }
   .tabs .tab{ display:flex !important; align-items:center; justify-content:center; gap:7px; flex:1 1 0 !important; min-width:0 !important;
     white-space:nowrap; overflow:hidden; letter-spacing:.2px;
     transition:flex-grow .55s var(--ease-liquid), color .25s, filter .25s, font-size .3s !important; }
-  .tabs .tab.active{ flex-grow:2.7 !important; font-size:12.5px !important; font-weight:700; }
+  .tabs .tab.active{ flex-grow:2.7 !important; font-size:12.5px !important; font-weight:800; }
 }
-.tab-glider{ transition:none !important; } /* phantom-ui.js drives it per frame so it rides the expanding tab */
+.tab-glider{ transition:none !important; }  /* phantom-ui.js drives it per frame so it rides the expanding tab */
 
 /* ---------------------------------------------------------------------
-   4 · REACTIONS — big targets, instant feedback
+   4 · ALARM (GIF 2) — flat hard red, soft black inner edge
    --------------------------------------------------------------------- */
-.reacts{ display:flex; flex-wrap:wrap; gap:6px !important; margin:8px 4px 0 !important; align-items:center; }
-.row.me-row .reacts{ justify-content:flex-end; }
-.rx{ -webkit-appearance:none; appearance:none; display:inline-flex; align-items:center; gap:6px; height:30px; min-width:30px; padding:0 11px !important;
-  font:600 13px/1 -apple-system,system-ui,sans-serif; color:#ffe9eb; cursor:pointer; border-radius:999px;
-  background:rgba(255,255,255,.06); border:1px solid rgba(255,120,135,.22);
-  transition:transform .3s var(--ease-spring), background .2s, border-color .2s, box-shadow .25s; }
-.rx .rx-e{ font-size:15px; line-height:1; }
-.rx .rx-n{ font-variant-numeric:tabular-nums; opacity:.85; }
-.rx:active{ transform:scale(.9) !important; }
-.rx.mine{ background:linear-gradient(180deg,rgba(255,20,20,.34),rgba(120,5,12,.42)); border-color:rgba(255,110,120,.75);
-  box-shadow:0 0 16px rgba(255,20,40,.35), inset 0 1px 0 rgba(255,210,215,.3); color:#fff; }
-.rx.pop{ animation:rx-pop .55s var(--ease-spring); }
-@keyframes rx-pop{ 0%{ transform:scale(.6); box-shadow:0 0 0 0 rgba(255,20,40,.8); } 55%{ transform:scale(1.22); } 100%{ transform:scale(1); box-shadow:0 0 0 14px rgba(255,20,40,0); } }
-.rx-add{ padding:0 9px !important; opacity:.55; background:transparent; border-style:dashed; }
-.rx-add svg{ width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-.rx-add i{ font-style:normal; font-size:12px; margin-left:-1px; }
-.rx-add.rx-active,.rx-add:hover{ opacity:1; border-color:rgba(255,110,120,.7); }
-@media (hover:hover){ .row:not(:hover) .rx-add{ opacity:.28; } }
-
-/* the picker: a dark glass tray that opens out of the + button */
-#emoji-picker{ z-index:9999; padding:10px !important; gap:6px !important; border-radius:22px !important; max-width:none !important;
-  grid-template-columns:repeat(4,48px) !important;
-  background:linear-gradient(180deg,rgba(30,6,11,.96),rgba(10,2,5,.98)) !important;
-  border:1px solid rgba(255,100,115,.34) !important;
-  box-shadow:0 18px 60px rgba(0,0,0,.75), 0 0 40px rgba(255,20,40,.22), inset 0 1px 0 rgba(255,170,180,.2) !important;
-  -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
-  animation:none !important; }
-#emoji-picker.open{ display:grid !important; animation:ph-picker .32s var(--ease-spring) both !important; }
-@keyframes ph-picker{ from{ opacity:0; transform:scale(.55); } to{ opacity:1; transform:scale(1); } }
-#emoji-picker button{ width:48px !important; height:48px !important; font-size:26px !important; border-radius:16px !important;
-  background:rgba(255,255,255,.05) !important; transition:transform .25s var(--ease-spring), background .15s !important; }
-#emoji-picker button:hover,#emoji-picker button:focus-visible{ background:rgba(255,20,40,.3) !important; transform:scale(1.18); outline:none; }
-#emoji-picker button:active{ transform:scale(.9) !important; background:var(--alarm) !important; }
-
-/* ---------------------------------------------------------------------
-   5 · ALARM style (GIF 2): hard red, soft black edge — toasts, jump pill
-   --------------------------------------------------------------------- */
+.tab-glider{ background:var(--alarm) !important; border:0 !important;
+  box-shadow:inset 0 0 14px 2px rgba(0,0,0,.55), 0 0 26px rgba(255,20,20,.6) !important; }
+.tab.active{ color:var(--ink) !important; text-shadow:none !important; filter:none !important; }
+.tab.active svg{ stroke-width:2.4; }
+.row.me-row .bubble{
+  background:var(--alarm) !important; color:var(--ink) !important; font-weight:600; border:0 !important;
+  box-shadow:inset 0 0 30px 7px rgba(0,0,0,.52), inset 0 0 0 1px rgba(0,0,0,.25), 0 10px 34px rgba(255,20,20,.38) !important; }
+.row.me-row .bubble a{ color:var(--ink); text-decoration-color:rgba(0,0,0,.5); }
+.row.me-row .ping{ background:rgba(0,0,0,.28); color:#fff; }
+.row.me-row .bubble::after{ background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent); }
+.row.them-row .bubble{
+  background:var(--scan), linear-gradient(160deg,#150608,#090203) !important; color:#fbeaec !important;
+  border:1px solid rgba(255,20,20,.34) !important;
+  box-shadow:0 10px 30px rgba(0,0,0,.6), inset 0 0 26px rgba(255,20,20,.07) !important; }
+#send,#pwjoin,#join{ background:var(--alarm) !important; color:var(--ink) !important; border:0 !important;
+  box-shadow:inset 0 0 18px 2px rgba(0,0,0,.5), 0 6px 26px rgba(255,20,20,.55) !important; }
+#send:active{ transform:scale(.92) !important; filter:brightness(1.2); }
 .ph-toast,.ph-jump{
   background:var(--alarm); color:var(--ink); font:800 14px/1 -apple-system,system-ui,sans-serif; letter-spacing:.2px;
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.2), inset 0 0 22px 4px rgba(0,0,0,.55), 0 10px 40px rgba(255,20,20,.55); }
@@ -137,43 +130,84 @@
 .ph-jump svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; }
 .ph-jump .n{ min-width:20px; height:20px; padding:0 6px; border-radius:99px; background:var(--ink); color:var(--alarm); font-size:12px; line-height:20px; text-align:center; display:none; }
 .ph-jump.has-n .n{ display:block; }
+#pwgate .card,#gate .card{ box-shadow:0 30px 90px rgba(0,0,0,.85), 0 0 0 1px rgba(255,20,20,.35), inset 0 0 40px rgba(255,20,20,.08) !important; }
 
 /* ---------------------------------------------------------------------
-   6 · GLITCH TEAR (GIF 3) — a 0.4s red dither smear on every tab change
+   5 · GLITCH TEAR — a red dither smear + one-frame red flash on tab change
    --------------------------------------------------------------------- */
 #ph-tear{ position:fixed; inset:0; z-index:9000; pointer-events:none; overflow:hidden; }
+#ph-tear::before{ content:""; position:absolute; inset:0; background:var(--alarm); opacity:0; }
+#ph-tear.on::before{ animation:ph-flash .42s steps(1,end) both; }
+@keyframes ph-flash{ 0%{ opacity:.0; } 8%{ opacity:.22; } 22%{ opacity:0; } 100%{ opacity:0; } }
 #ph-tear i{ position:absolute; left:-4%; right:-4%; top:var(--y); height:var(--h); opacity:0;
-  background:var(--dither), linear-gradient(90deg,transparent,rgba(255,20,20,.9) 30%,rgba(255,20,20,.9) 70%,transparent);
+  background:var(--dither), linear-gradient(90deg,transparent,rgba(255,20,20,.95) 25%,rgba(255,20,20,.95) 75%,transparent);
   background-size:240px 240px, 100% 100%; }
-#ph-tear.on i{ animation:ph-tear .42s steps(3,end) both; animation-delay:var(--d); }
+#ph-tear.on i{ animation:ph-tear .46s steps(3,end) both; animation-delay:var(--d); }
 @keyframes ph-tear{
   0%{ opacity:0; transform:translateX(var(--dx)); }
-  18%{ opacity:.9; }
-  55%{ opacity:.55; transform:translateX(calc(var(--dx) * -.7)); }
+  18%{ opacity:1; }
+  55%{ opacity:.6; transform:translateX(calc(var(--dx) * -.7)); }
   100%{ opacity:0; transform:translateX(0); } }
 
 /* ---------------------------------------------------------------------
-   7 · BARS on surfaces — send, me-bubbles, gate
+   6 · REACTIONS — big targets, instant feedback
    --------------------------------------------------------------------- */
-.row.me-row .bubble{
-  background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 5px),
-                   linear-gradient(155deg,#ff2d44 0%,#b80f22 38%,#5d0610 100%) !important; }
-#send{ background:var(--alarm) !important; color:var(--ink) !important; border:0 !important;
-  box-shadow:inset 0 0 18px 2px rgba(0,0,0,.5), 0 6px 26px rgba(255,20,20,.55) !important; }
-#send:active{ transform:scale(.92) !important; filter:brightness(1.2); }
-#pwgate::before,#gate::before{ content:""; position:absolute; inset:0; pointer-events:none; opacity:.14; background:var(--bars);
-  -webkit-mask-image:radial-gradient(60% 60% at 50% 50%,#000,transparent 75%); mask-image:radial-gradient(60% 60% at 50% 50%,#000,transparent 75%); }
-#pwjoin,#join{ background:var(--alarm) !important; color:var(--ink) !important;
-  box-shadow:inset 0 0 22px 3px rgba(0,0,0,.5), 0 8px 30px rgba(255,20,20,.5) !important; }
+.reacts{ display:flex; flex-wrap:wrap; gap:6px !important; margin:9px 4px 0 !important; align-items:center; }
+.row.me-row .reacts{ justify-content:flex-end; }
+.rx{ -webkit-appearance:none; appearance:none; display:inline-flex; align-items:center; gap:6px; height:32px; min-width:32px; padding:0 12px !important;
+  font:600 13px/1 -apple-system,system-ui,sans-serif; color:#ffe9eb; cursor:pointer; border-radius:999px;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,120,135,.24);
+  transition:transform .3s var(--ease-spring), background .2s, border-color .2s, box-shadow .25s; }
+.rx .rx-e{ font-size:16px; line-height:1; }
+.rx .rx-n{ font-variant-numeric:tabular-nums; opacity:.9; }
+.rx:active{ transform:scale(.9) !important; }
+.rx.mine{ background:var(--alarm); border-color:transparent; color:var(--ink);
+  box-shadow:inset 0 0 12px 1px rgba(0,0,0,.5), 0 0 18px rgba(255,20,20,.45); }
+.rx.pop{ animation:rx-pop .55s var(--ease-spring); }
+@keyframes rx-pop{ 0%{ transform:scale(.6); box-shadow:0 0 0 0 rgba(255,20,40,.8); } 55%{ transform:scale(1.22); } 100%{ transform:scale(1); box-shadow:0 0 0 14px rgba(255,20,40,0); } }
+.rx-add{ padding:0 10px !important; opacity:.6; background:transparent; border-style:dashed; }
+.rx-add svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.rx-add i{ font-style:normal; font-size:13px; margin-left:-1px; }
+.rx-add.rx-active,.rx-add:hover{ opacity:1; border-color:rgba(255,110,120,.8); }
+@media (hover:hover){ .row:not(:hover) .rx-add{ opacity:.3; } }
 
-/* empty state */
+/* ---- the tray: scrolls, grouped, recents on top. Bottom sheet on phones, popover on desktop ---- */
+#emoji-scrim{ position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,.6); opacity:0; pointer-events:none; transition:opacity .3s; }
+#emoji-scrim.on{ opacity:1; pointer-events:auto; }
+#emoji-picker{ position:fixed !important; z-index:10000; display:none !important; flex-direction:column;
+  width:min(340px,calc(100vw - 20px)); max-width:none !important; max-height:min(400px,62vh); padding:0 !important; overflow:hidden;
+  grid-template-columns:none !important; gap:0 !important; border-radius:24px !important;
+  background:linear-gradient(180deg,#1b080c,#0a0305) !important; border:1px solid rgba(255,20,20,.4) !important;
+  box-shadow:0 22px 70px rgba(0,0,0,.8), 0 0 40px rgba(255,20,20,.2), inset 0 1px 0 rgba(255,170,180,.18) !important;
+  -webkit-backdrop-filter:none; backdrop-filter:none; animation:none !important; }
+#emoji-picker.open{ display:flex !important; animation:ph-pop .3s var(--ease-spring) both !important; }
+@keyframes ph-pop{ from{ opacity:0; transform:scale(.6); } to{ opacity:1; transform:scale(1); } }
+#emoji-picker.sheet{ left:0 !important; right:0 !important; top:auto !important; bottom:0 !important; width:auto;
+  max-height:min(66dvh,540px); border-radius:28px 28px 0 0 !important; border-bottom:0 !important;
+  padding-bottom:env(safe-area-inset-bottom,0px) !important; transform-origin:bottom center; }
+#emoji-picker.sheet.open{ animation:ph-sheet .46s var(--ease-liquid) both !important; }
+@keyframes ph-sheet{ from{ transform:translateY(100%); } to{ transform:none; } }
+.ep-handle{ display:none; flex:none; width:46px; height:5px; border-radius:9px; background:rgba(255,255,255,.24); margin:10px auto 0; }
+#emoji-picker.sheet .ep-handle{ display:block; }
+.ep-head{ display:flex; align-items:center; justify-content:space-between; flex:none; padding:12px 18px 6px 20px; }
+.ep-head b{ font:800 12px/1 -apple-system,system-ui,sans-serif; letter-spacing:2.4px; text-transform:uppercase; color:var(--alarm); }
+#emoji-picker .ep-x{ width:38px !important; height:38px !important; border-radius:50% !important; font-size:15px !important; color:#ffc2c9;
+  background:rgba(255,255,255,.07) !important; border:0 !important; }
+#emoji-picker .ep-x:hover{ transform:none !important; background:rgba(255,20,20,.3) !important; }
+.ep-scroll{ flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; padding:0 14px 22px;
+  overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; scrollbar-width:thin; scrollbar-color:var(--alarm) transparent; }
+.ep-title{ position:sticky; top:0; z-index:1; padding:12px 6px 8px; font:700 11px/1 -apple-system,system-ui,sans-serif; letter-spacing:1.8px;
+  text-transform:uppercase; color:rgba(255,135,148,.85); background:linear-gradient(180deg,#150609 72%,transparent); }
+.ep-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(48px,1fr)); gap:6px; padding-bottom:4px; }
+#emoji-picker .ep-grid button{ width:100% !important; height:50px !important; font-size:28px !important; line-height:1; border-radius:16px !important;
+  background:rgba(255,255,255,.045) !important; border:0 !important; transition:transform .22s var(--ease-spring), background .15s !important; }
+#emoji-picker .ep-grid button:hover,#emoji-picker .ep-grid button:focus-visible{ background:rgba(255,20,20,.3) !important; transform:scale(1.14); outline:none; }
+#emoji-picker .ep-grid button:active{ transform:scale(.88) !important; background:var(--alarm) !important; }
+
+/* ---------------------------------------------------------------------
+   7 · empty states, focus, tiny phones
+   --------------------------------------------------------------------- */
 .ph-empty{ margin:auto; text-align:center; padding:40px 24px; color:#d9aab1; font-size:14px; line-height:1.5; }
 .ph-empty b{ display:block; color:#fff; font-size:16px; margin-bottom:6px; }
-.ph-empty::before{ content:""; display:block; width:84px; height:26px; margin:0 auto 16px; background:var(--bars); opacity:.7;
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 25%,#000 75%,transparent); mask-image:linear-gradient(90deg,transparent,#000 25%,#000 75%,transparent);
-  animation:ph-bars 2.6s ease-in-out infinite; }
-
-/* focus is always visible for keyboard users */
 button:focus-visible,.tab:focus-visible{ outline:2px solid var(--alarm); outline-offset:2px; }
-
-@media (max-width:360px){ .head{ padding:12px 12px 10px !important; margin:8px 6px 0 !important; } #chat{ gap:12px !important; } }
+@media (max-width:360px){ .head{ padding:10px 12px 18px !important; margin:6px 6px 0 !important; } #chat{ gap:14px !important; } }
