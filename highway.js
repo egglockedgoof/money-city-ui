@@ -74,7 +74,7 @@ function flushReads(){
     var counts=_reads, any=false; for(var k in counts){ if(counts[k]){ any=true; break; } } if(!any) return;
     _reads={};
     hwToken().then(function(t){
-      return fetch("https://phantomway-door.tail0a8095.ts.net/metrics/reads",{method:"POST",keepalive:true,
+      return fetch(HW_BRIDGE+"/metrics/reads",{method:"POST",keepalive:true,
         headers:{"Content-Type":"application/json","Authorization":"Bearer "+t},
         body:JSON.stringify({tab:_readsTab,counts:counts})});
     }).catch(function(){});
@@ -123,7 +123,7 @@ function hwSetJwt(t){
 function hwToken(){
   if(HW_JWT && hwJwtExp(HW_JWT)>Date.now()+5000) return Promise.resolve(HW_JWT);
   if(HW_LOGIN_EMAIL&&HW_LOGIN_PW) return hwLogin(HW_LOGIN_EMAIL,HW_LOGIN_PW).then(function(){ return HW_JWT; });
-  return Promise.reject(new Error("no auth"));
+  var e=new Error("no auth"); e.code="noauth"; return Promise.reject(e);
 }
 function hwLogin(email,pw,displayName){
   // Hard timeout: a hung TLS/CORS/fetch must never leave the gate on "Verifying...".
@@ -149,9 +149,11 @@ function hwLogin(email,pw,displayName){
     throw e;
   }).finally(function(){ if(timer) clearTimeout(timer); });
 }
-function hwGet(path){
+function hwGet(path, signal){
   return hwToken().then(function(t){
-    return fetch(HW_BRIDGE+path,{headers:{Authorization:"Bearer "+t}}).then(function(r){
+    var o={headers:{Authorization:"Bearer "+t},cache:"no-store"}; if(signal) o.signal=signal;
+    return fetch(HW_BRIDGE+path,o).then(function(r){
+      if(r.status===401){ var ae=new Error("signed out"); ae.code="noauth"; throw ae; }
       if(!r.ok) throw new Error("api "+r.status);
       return r.json();
     });
@@ -242,6 +244,24 @@ function updateAmbientStatus(snap){
   }
 
   /* ================= CHAT ================= */
+  var _roomReady=false; /* true after the first successful room fetch; gates arrival animations */
+  /* Room status overlay inside #chat: skeleton while the first fetch is in flight, a visible
+     retry card when it fails. The room is never a blank page. */
+  function roomState(kind, detail){
+    var el=document.getElementById("room-state");
+    if(kind==="ok"){ if(el) el.remove(); chat.classList.remove("is-loading"); return; }
+    if(!el){ el=document.createElement("div"); el.id="room-state"; el.setAttribute("role","status"); chat.appendChild(el); }
+    chat.classList.toggle("is-loading", kind==="loading");
+    if(kind==="loading"){
+      el.className="room-state loading";
+      el.innerHTML='<div class="sk-row"><i class="sk-b w60"></i></div><div class="sk-row me"><i class="sk-b w45"></i></div><div class="sk-row"><i class="sk-b w75 h2"></i></div><div class="sk-row me"><i class="sk-b w35"></i></div><div class="sk-row"><i class="sk-b w55"></i></div><div class="rs-cap">Opening the room…</div>';
+    } else {
+      el.className="room-state error";
+      el.innerHTML='<div class="rs-title">Can\u2019t reach the room</div><div class="rs-cap"></div><button type="button" class="rs-retry">Retry now</button>';
+      el.querySelector(".rs-cap").textContent=detail||"";
+      el.querySelector(".rs-retry").addEventListener("click", function(){ if(window.hwPullMessages) window.hwPullMessages(true); });
+    }
+  }
   function renderMsg(doc){
     var m=doc.data(); if(!m||seen[doc.id]) return; seen[doc.id]=1;
     var _seenKeys=Object.keys(seen);
@@ -268,7 +288,9 @@ function updateAmbientStatus(snap){
     var _msgText=m.text||"";
     var _COLLAPSE_AT=1000;
     var _isLong=_msgText.length>_COLLAPSE_AT;
-    var _shownText=_isLong?_msgText.slice(0,_COLLAPSE_AT):_msgText;
+    // Cut on a word boundary so the preview never ends mid-word ("A long messa").
+    var _shownText=_msgText;
+    if(_isLong){ var _cut=_msgText.lastIndexOf(" ",_COLLAPSE_AT); if(_cut<_COLLAPSE_AT*0.8) _cut=_COLLAPSE_AT; _shownText=_msgText.slice(0,_cut).replace(/\s+$/,"")+"…"; }
     var attHtml="";
     // File attachments (Cloudinary CDN): render inline by type.
     var _atts=(m.attachments&&m.attachments.length)?m.attachments:[];
@@ -276,22 +298,28 @@ function updateAmbientStatus(snap){
       var _u=esc(safeUrl(a.download_url)), _fn=esc(a.filename||"file"), _mt=String(a.mime_type||"");
       if(!_u) return;
       if(_mt.indexOf("image/")===0||a.is_image){
-        attHtml+='<a href="'+_u+'" target="_blank" rel="noopener"><img src="'+_u+'" alt="'+_fn+'" loading="lazy" style="max-width:100%;max-height:320px;border-radius:10px;margin-top:6px;display:block;" /></a>';
+        // Picture sits UNDER the text in normal flow. Space is reserved before the bytes land
+        // (aspect-ratio from width/height when the bridge sends them, else a 4:3 placeholder),
+        // so the chat never jumps and nothing overlaps the caption. Tap opens the viewer.
+        var _w=Number(a.width)||0, _h=Number(a.height)||0;
+        var _ar=(_w>0&&_h>0)?Math.max(0.4,Math.min(2.5,_w/_h)).toFixed(4):"1.3333";
+        attHtml+='<a class="att att-img" href="'+_u+'" target="_blank" rel="noopener" data-view="'+_u+'" style="--ar:'+_ar+'"><img src="'+_u+'" alt="'+_fn+'" decoding="async"'+(_w&&_h?' width="'+_w+'" height="'+_h+'"':'')+' /></a>';
       } else if(_mt.indexOf("audio/")===0){
         attHtml+='<audio controls preload="metadata" src="'+_u+'" style="width:100%;margin-top:6px;display:block;min-height:44px;"></audio><div style="font-size:11px;color:var(--muted);margin-top:2px;">🎵 '+_fn+'</div>';
       } else if(_mt.indexOf("video/")===0){
-        attHtml+='<video controls preload="metadata" src="'+_u+'" style="max-width:100%;max-height:320px;border-radius:10px;margin-top:6px;display:block;"></video>';
+        attHtml+='<video class="att att-video" controls playsinline preload="metadata" src="'+_u+'"></video>';
       } else {
         attHtml+='<a href="'+_u+'" target="_blank" rel="noopener" download="'+_fn+'" style="display:block;margin-top:6px;padding:10px 14px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.35);border-radius:10px;color:#fff;text-decoration:none;font-size:14px;">📎 '+_fn+'</a>';
       }
     });
+    var moreHtml="";
     if(_isLong){
-      attHtml+='<button class="fulltext-btn" style="background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:15px;cursor:pointer;margin-top:6px;display:block;">📄 long message — tap to expand</button>';
+      moreHtml='<button type="button" class="fulltext-btn">📄 long message — tap to expand</button>';
     }
     row.innerHTML='<div class="bwrap"><div class="who" style="unicode-bidi:isolate">'+esc(m.name||"anon")+
       (mine?"":'<span class="ver">VERIFIED</span>')+crownHtml(m.name)+
       '<span class=ts>'+fmtTime(m)+'</span></div>'+
-      '<div class="bubble">'+(m.audio?'<button data-voice="'+doc.id+'" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+'<span class="msg-text" style="unicode-bidi:isolate">'+pingify(_shownText)+'</span>'+attHtml+'</div>'+
+      '<div class="bubble'+(attHtml?' has-att':'')+(_isLong?' is-long':'')+'">'+(m.audio?'<button data-voice="'+doc.id+'" style="background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#fff;border-radius:20px;padding:8px 16px;font-size:16px;cursor:pointer;margin-bottom:6px;display:block;">▶ voice</button>':'')+'<span class="msg-text" style="unicode-bidi:isolate">'+pingify(_shownText)+'</span>'+moreHtml+(attHtml?'<div class="atts">'+attHtml+'</div>':'')+'</div>'+
       '<div class="reacts">'+rxHtml+'</div></div>';
     // Sorted insertion: oldest at top, newest at bottom. Numeric tsNum, doc ID tie-breaker.
     // This fixes out-of-order rendering when the store returns mixed-type or unsorted docs.
@@ -310,13 +338,18 @@ function updateAmbientStatus(snap){
       if(!inserted) chat.appendChild(row);
     })();
     /* Crimson pulse on new arrival: the room breathes */
-    if(!mine){ row.classList.add("arrived"); setTimeout(function(){row.classList.remove("arrived");},1200); }
+    if(!mine&&_roomReady){ row.classList.add("arrived"); setTimeout(function(){row.classList.remove("arrived");},1400); }
+    // A late-loading picture must not leave a reader who was at the bottom stranded above it.
+    row.querySelectorAll("img").forEach(function(im){
+      im.addEventListener("load", function(){ var a=im.closest(".att-img"); if(a) a.classList.add("loaded"); if(a&&im.naturalWidth&&im.naturalHeight) a.style.setProperty("--ar", Math.max(0.4,Math.min(2.5,im.naturalWidth/im.naturalHeight)).toFixed(4)); if(chat.scrollHeight-chat.scrollTop-chat.clientHeight<220) chat.scrollTop=chat.scrollHeight; }, {once:true});
+      im.addEventListener("error", function(){ var a=im.closest(".att-img"); if(a){ a.classList.add("att-broken"); } }, {once:true});
+    });
     row.querySelectorAll("[data-voice]").forEach(function(btn){
       btn.addEventListener("click", function(){ window.playVoice(btn.getAttribute("data-voice"), btn); });
     });
     row.querySelectorAll(".fulltext-btn").forEach(function(btn){
       btn.addEventListener("click", function(){
-        var txtSpan=btn.parentNode.querySelector(".msg-text");
+        var txtSpan=btn.closest(".bubble").querySelector(".msg-text");
         var expanded=btn.getAttribute("data-expanded")==="1";
         if(expanded){
           btn.setAttribute("data-expanded","0");
@@ -511,14 +544,38 @@ function updateAmbientStatus(snap){
       return;
     }
     if(!t||!MY_NAME) return;
-    msg.value=""; msg.style.height="auto"; setTyping(false); msg.focus();
+    msg.value=""; msg.style.height=""; setTyping(false);
     if(window.HighwayAmbient)HighwayAmbient.sendChime();
-    hwPost("/api/messages",{
-      name:MY_NAME, text:t, channel:"room", deviceId:DEVICE_ID
-    }).catch(function(e){
-      sysLine("Send failed: "+(e.message||"permission denied")+" — try rejoining.");
-      msg.value=t;
-    });
+    // Optimistic: the bubble lands instantly (dimmed until the heart confirms), like iMessage.
+    var tmpId="pending-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    renderMsg(asDoc({id:tmpId, name:MY_NAME, text:t, deviceId:DEVICE_ID, tsNum:Date.now()+1e6}));
+    var prow=rowById(tmpId); if(prow){ prow.classList.add("pending","fresh"); }
+    chat.scrollTop=chat.scrollHeight;
+    function post(){
+      return hwPost("/api/messages",{ name:MY_NAME, text:t, channel:"room", deviceId:DEVICE_ID });
+    }
+    function confirmRow(res){
+      var row=rowById(tmpId); if(!row) return;
+      var id=res&&res.id;
+      row.classList.remove("pending","failed");
+      if(id){
+        if(seen[id]&&rowById(id)&&rowById(id)!==row){ row.remove(); return; } // the poll beat us to it
+        row.setAttribute("data-id", id); row.setAttribute("data-ts", String(Date.now()));
+        seen[id]=1; MSG_SIG[id]=msgSig({text:t}); RX_STATE[id]={};
+        row.querySelectorAll(".rx[data-id]").forEach(function(x){ x.setAttribute("data-id", id); });
+      }
+    }
+    function fail(e){
+      var row=rowById(tmpId); if(!row) return;
+      row.classList.remove("pending"); row.classList.add("failed");
+      var b=row.querySelector(".bubble"); if(!b||b.querySelector(".resend")) return;
+      var btn=document.createElement("button"); btn.type="button"; btn.className="resend";
+      btn.textContent="Not sent — tap to retry";
+      btn.addEventListener("click", function(ev){ ev.stopPropagation(); btn.remove(); row.classList.remove("failed"); row.classList.add("pending"); post().then(confirmRow, fail); });
+      b.appendChild(btn);
+      if(e&&e.code==="noauth") sessionExpired();
+    }
+    post().then(confirmRow, fail);
   }
 
   /* ================= VOICE MESSAGES ================= */
@@ -590,7 +647,7 @@ function updateAmbientStatus(snap){
      the browser. No dashboard upload preset needed. */
   window.HW_uploading=false;
   (function(){
-    var BRIDGE_URL="https://phantomway-door.tail0a8095.ts.net";
+    var BRIDGE_URL=HW_BRIDGE; // same-origin when served by the heart (door TLS can be down)
     var MAX_BYTES=10*1024*1024; // 10 MB cap — bridge enforces per-type limits
     var pendingFile=null, objectUrl=null;
 
@@ -814,18 +871,69 @@ function updateAmbientStatus(snap){
   }
 
   /* ================= GO LIVE ================= */
+  /* Last-known room (stale-while-revalidate): painted instantly on launch from localStorage,
+     then reconciled with the heart. Voice audio is dropped from the cache to keep it small. */
+  var ROOM_CACHE_KEY="hw_room_cache_v1", _cacheIds=null;
+  function saveRoomCache(){
+    try{
+      var out=[], rows=chat.querySelectorAll(".row[data-id]");
+      for(var i=Math.max(0,rows.length-50);i<rows.length;i++){
+        var id=rows[i].getAttribute("data-id"); if(!id||id.indexOf("pending-")===0) continue;
+        var m=_lastMsgById[id]; if(m) out.push(m);
+      }
+      localStorage.setItem(ROOM_CACHE_KEY, JSON.stringify({by:MY_NAME, at:Date.now(), messages:out}));
+    }catch(e){}
+  }
+  var _lastMsgById={};
+  function paintRoomCache(){
+    try{
+      var c=JSON.parse(localStorage.getItem(ROOM_CACHE_KEY)||"null");
+      if(!c||!Array.isArray(c.messages)||!c.messages.length) return false;
+      _cacheIds={};
+      c.messages.forEach(function(m){ _cacheIds[m.id]=1; _lastMsgById[m.id]=m; renderMsg(asDoc(m)); });
+      chat.scrollTop=chat.scrollHeight;
+      return true;
+    }catch(e){ return false; }
+  }
+  function slimMsg(m){ var o={}; for(var k in m){ if(k!=="audio") o[k]=m[k]; } if(m.audio) o.audio=null; return o; }
+  var _isLive=false;
+  function setLink(state){
+    // One status line: live / reconnecting / signed out. The dot mirrors it.
+    if(state==="live"){ dot.classList.remove("off"); sub.textContent="live"; }
+    else { dot.classList.add("off"); sub.textContent=state==="auth"?"signed out":"reconnecting…"; }
+  }
   function goLive(){
-    dot.classList.remove("off"); sub.textContent="live";
-    sysLine("Connected — chat, presence, tasks, notes & activity all sync live.");
+    if(_isLive){ if(window.hwPullMessages) window.hwPullMessages(true); return; } // re-login: resume, never double the loops
+    _isLive=true;
+    setLink("connecting");
+    sub.textContent="connecting…";
 
     var _msgWatermark=0, _presReady=false, _presItems=[], _typeItems=[], _actItems=[];
-    function pullMessages(){
+    var _msgBusy=false, _msgFails=0, _msgRetryT=null;
+    if(!chat.querySelector(".row")){ if(paintRoomCache()){ if(window.HW_splashDone) window.HW_splashDone(); } else roomState("loading"); }
+    else if(window.HW_splashDone) window.HW_splashDone();
+    function pullMessages(force){
+      if(_msgBusy&&!force) return;
+      _msgBusy=true;
+      if(_msgRetryT){ clearTimeout(_msgRetryT); _msgRetryT=null; }
       var q="/api/messages?channel=room&limit=50";
       if(_msgWatermark) q+="&since_ts="+_msgWatermark;
-      hwGet(q).then(function(body){
+      var ctrl=typeof AbortController!=="undefined"?new AbortController():null;
+      var killT=setTimeout(function(){ try{ if(ctrl) ctrl.abort(); }catch(e){} }, 12000); // a hung fetch must not freeze the room
+      hwGet(q, ctrl&&ctrl.signal).then(function(body){
+        clearTimeout(killT); _msgBusy=false;
+        if(_msgFails||!_roomReady) setLink("live");
+        _msgFails=0;
         var rows=(body.messages||[]).slice().reverse();
         _batchStick=!chat.querySelector(".row")||(chat.scrollHeight-chat.scrollTop-chat.clientHeight<160);
-        rows.forEach(function(m){
+        // First network answer after painting the cache: drop cached rows the heart no longer has.
+        if(_cacheIds&&!_msgWatermark){
+          var live={}, oldest=Infinity; rows.forEach(function(m){ live[m.id]=1; var t=Number(m.tsNum||m.ts)||0; if(t<oldest) oldest=t; });
+          Object.keys(_cacheIds).forEach(function(id){ var m=_lastMsgById[id]; var t=m?Number(m.tsNum||m.ts)||0:0;
+            if(!live[id]&&(rows.length<50||t>=oldest)){ var r=rowById(id); if(r) r.remove(); delete seen[id]; delete _lastMsgById[id]; } });
+          _cacheIds=null;
+        }
+        rows.forEach(function(m){ _lastMsgById[m.id]=slimMsg(m);
           if(m.ts>_msgWatermark) _msgWatermark=m.ts;
           var id=m.id;
           if(seen[id]){
@@ -838,7 +946,23 @@ function updateAmbientStatus(snap){
           renderMsg(asDoc(m));
         });
         _batchStick=null;
-      }).catch(function(){ _batchStick=null; });
+        if(rows.length) saveRoomCache();
+        if(!_roomReady){
+          _roomReady=true; roomState("ok");
+          if(window.HW_splashDone) requestAnimationFrame(function(){ window.HW_splashDone(); });
+          if(!rows.length&&!chat.querySelector(".row")) sysLine("The room is quiet. Say something.");
+          chat.scrollTop=chat.scrollHeight;
+        }
+      }).catch(function(e){
+        clearTimeout(killT); _msgBusy=false; _batchStick=null; _msgFails++;
+        if(e&&e.code==="noauth"){ setLink("auth"); sessionExpired(); return; }
+        setLink("reconnecting");
+        // Fast retry with backoff (1s, 2s, 4s … 15s); the 8s poll stays as the floor.
+        var wait=Math.min(15000, 1000*Math.pow(2,_msgFails-1));
+        if(!_roomReady&&window.HW_splashDone) window.HW_splashDone();
+        if(!_roomReady) roomState("error", (e&&e.name==="AbortError"?"The heart is slow to answer.":"Link hiccup ("+((e&&e.message)||"network")+").")+" Retrying in "+Math.round(wait/1000)+"s…");
+        _msgRetryT=setTimeout(function(){ pullMessages(true); }, wait);
+      });
     }
     window.hwPullMessages=pullMessages; /* live socket (live.js) calls this when a room message lands */
     function renderPresence(){
@@ -932,7 +1056,10 @@ function updateAmbientStatus(snap){
       pullMessages(); pullPresence(); pullTyping(); pullTasks(); pullNotes(); pullActivity(); syncReactions();
     }
     pullAll();
-    setInterval(pullAll, 8000);
+    setInterval(function(){ if(!document.hidden) pullAll(); }, 8000);
+    // Coming back to the app: refresh at once instead of waiting for the next tick.
+    document.addEventListener("visibilitychange", function(){ if(!document.hidden) pullAll(); });
+    window.addEventListener("online", function(){ pullMessages(true); });
     setInterval(renderPresence,15000);
     setInterval(renderTyping,5000);
     /* SSE with reconnect + Last-Event-ID: a dead stream must heal itself
@@ -995,8 +1122,6 @@ function updateAmbientStatus(snap){
       });
     }
     openStream();
-
-    startHeartbeat();
   }
 
   /* ================= AUTH STAGES (exclusive) =================
@@ -1021,14 +1146,42 @@ function updateAmbientStatus(snap){
       el.setAttribute("aria-hidden", on ? "false" : "true");
       if("hidden" in el) el.hidden = !on;
     }
+    if(stage!=="live"&&window.HW_splashDone) window.HW_splashDone();
     applyGate(pwEl, stage==="pw");
     applyGate(gEl, stage==="account");
     if(stage==="live" && pwEl){ pwEl.style.zIndex="-1"; }
     else if(pwEl){ pwEl.style.zIndex=""; }
   }
+  /* Session expiry: the login JWT lives 15 minutes. Inside a tab we re-mint silently; after a
+     reload/relaunch we can't (the password is never stored), so instead of a room that silently
+     stops loading, bring up the sign-in card with name + email filled and say why. */
+  var _expiring=false;
+  function sessionExpired(){
+    if(_expiring) return; _expiring=true;
+    var done=function(){ _expiring=false; };
+    if(HW_LOGIN_EMAIL&&HW_LOGIN_PW){
+      hwLogin(HW_LOGIN_EMAIL,HW_LOGIN_PW,MY_NAME).then(function(){ done(); if(window.hwPullMessages) window.hwPullMessages(true); })
+        .catch(function(){ done(); showSignIn("Your session ended — sign in to keep going."); });
+      return;
+    }
+    done(); showSignIn("Your session ended — sign in to keep going.");
+  }
+  function showSignIn(why){
+    var saved=""; try{ saved=(localStorage.getItem("hw_name")||"").trim().slice(0,24); }catch(e){}
+    if(saved && nameIn && !nameIn.value) nameIn.value=saved;
+    var em=""; try{ em=localStorage.getItem("hw_email")||""; }catch(e){}
+    if(!em) em=hwJwtEmail()||"";
+    authShown=true; $("authfields").style.display="block";
+    if(em && !$("email").value) $("email").value=em;
+    setAuthStage("account");
+    err.textContent=why||"";
+    var focusEl=(nameIn&&!nameIn.value)?nameIn:(!$("email").value?$("email"):$("password"));
+    try{ focusEl.focus({preventScroll:true}); }catch(e){}
+  }
+  window.HW_sessionExpired=sessionExpired;
   function tryPw(){
     if($("pw").value===_PW){
-      try{ sessionStorage.setItem("hw_pw","1"); }catch(e){}
+      try{ sessionStorage.setItem("hw_pw","1"); localStorage.setItem("hw_pw_ok","1"); }catch(e){}
       enterAccountOrLive();
     } else {
       $("pwerr").textContent="Wrong password.";
@@ -1044,6 +1197,8 @@ function updateAmbientStatus(snap){
       completeJoin(saved,true);
       return;
     }
+    // Returning member (we know their name): go straight to email + password, prefilled.
+    if(saved){ showSignIn(HW_JWT?"Session ended — sign in again.":""); return; }
     setAuthStage("account");
     if(nameIn) nameIn.focus();
   }
@@ -1072,6 +1227,8 @@ function updateAmbientStatus(snap){
     joinBtn.disabled=true;
     err.textContent="Verifying...";
     hwLogin(email,pw,n).then(function(){
+      try{ localStorage.setItem("hw_email",email); }catch(e){}
+      $("password").value="";
       completeJoin(n,true);
     }).catch(function(e){
       var msg="Sign-in failed.";
@@ -1093,15 +1250,19 @@ function updateAmbientStatus(snap){
     mebadge.textContent=n+(verified?" ✓":"");
     setAuthStage("live"); // hides BOTH gates — Unlock never stacks on chat
     kickDuplicates();
-    sysLine("You joined as "+n+" — verified on everything you do.");
-    goLive(); msg.focus();
+    var resumed=_isLive;
+    goLive();
+    if(!resumed) startHeartbeat();
+    // No auto-focus on phones: it threw the keyboard up over the room on every open.
+    if(!window.matchMedia||!window.matchMedia("(pointer:coarse)").matches){ try{ msg.focus({preventScroll:true}); }catch(e){} }
   }
   joinBtn.addEventListener("click", join);
   nameIn.addEventListener("keydown", function(e){ if(e.key==="Enter") join(); });
+  ["email","password"].forEach(function(id){ var el=$(id); if(el) el.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); join(); } }); });
 
   // Boot stage: restore the right exclusive surface.
   try{
-    if(sessionStorage.getItem("hw_pw")==="1") enterAccountOrLive();
+    if(sessionStorage.getItem("hw_pw")==="1"||localStorage.getItem("hw_pw_ok")==="1") enterAccountOrLive();
     else setAuthStage("pw");
   }catch(e){ setAuthStage("pw"); }
   try{
@@ -1139,7 +1300,7 @@ function updateAmbientStatus(snap){
   setTimeout(moveGlider, 300);
 
   /* ============ NEWS FEED (money moves: crypto + stocks + macro) ============ */
-  var NEWS_URL="https://phantomway-door.tail0a8095.ts.net/news";
+  var NEWS_URL=HW_BRIDGE+"/news";
   var newsLoadedAt=0;
   function loadNews(){
     var list=$("newslist"); if(!list) return;
@@ -1179,17 +1340,23 @@ function updateAmbientStatus(snap){
     fetch(HW_BRIDGE+"/api/auth/owner",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email,password:pw})}).then(function(r){
       return r.json().then(function(j){ if(!r.ok||!j||!j.ok) throw new Error((j&&j.error)||("api "+r.status)); return j.ownerToken; });
     }).then(function(ownerToken){
-      return hwGet("/api/messages?channel=room&limit=500").then(function(body){
-        var ids=(body.messages||[]).map(function(m){ return m.id; });
-        var chain=Promise.resolve();
-        ids.forEach(function(id){ chain=chain.then(function(){ return hwDelete("/api/messages/"+encodeURIComponent(id),ownerToken).catch(function(){}); }); });
-        return chain;
-      });
+      // The bridge caps limit at 50 (limit=500 was a 400, so Clear never cleared). Page until empty.
+      var rounds=0;
+      function sweep(){
+        return hwGet("/api/messages?channel=room&limit=50").then(function(body){
+          var ids=(body.messages||[]).map(function(m){ return m.id; });
+          if(!ids.length||++rounds>40) return;
+          var chain=Promise.resolve();
+          ids.forEach(function(id){ chain=chain.then(function(){ return hwDelete("/api/messages/"+encodeURIComponent(id),ownerToken).catch(function(){}); }); });
+          return chain.then(sweep);
+        });
+      }
+      return sweep().then(function(){ chat.querySelectorAll(".row").forEach(function(r){ r.remove(); }); seen={}; });
     }).then(function(){ sysLine("Chat cleared — fresh PhantomWay."); })
     .catch(function(e){ sysLine("Clear failed: "+(e.message||e)); });
   });
   msg.addEventListener("keydown", function(e){
-    if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMsg(); }
+    if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); sendMsg(); }
   });
   msg.addEventListener("input", function(){
     // Auto-expand textarea as you type
@@ -1217,7 +1384,7 @@ function updateAmbientStatus(snap){
   $("actadd").addEventListener("click", logActivity);
   $("actin").addEventListener("keydown", function(e){ if(e.key==="Enter") logActivity(); });
 
-  nameIn.focus();
+  if(!window.matchMedia||!window.matchMedia("(pointer:coarse)").matches){ try{ nameIn.focus({preventScroll:true}); }catch(e){} }
 }
 
 
@@ -1328,7 +1495,7 @@ function updateAmbientStatus(snap){
       (function(){
         var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
         if(!t) return;
-        fetch("https://phantomway-door.tail0a8095.ts.net/api/push/subscribe",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({subscription:{endpoint:sub.endpoint, keys:subJson.keys}, name:myName})}).catch(function(e){ console.warn('push save failed', e); });
+        fetch((window.PHANTOM_BRIDGE||"https://phantomway-door.tail0a8095.ts.net")+"/api/push/subscribe",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({subscription:{endpoint:sub.endpoint, keys:subJson.keys}, name:myName})}).catch(function(e){ console.warn('push save failed', e); });
       })();
     }).catch(function(err){ console.warn('push subscribe failed', err); });
   }
@@ -1549,7 +1716,7 @@ setInterval(applyMood, 600000);
     function pullNexus(){
       var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
       if(!t) return;
-      fetch("https://phantomway-door.tail0a8095.ts.net/api/messages?channel=dm&limit=50",{headers:{Authorization:"Bearer "+t}}).then(function(r){ return r.json(); }).then(function(body){
+      fetch((window.PHANTOM_BRIDGE||"https://phantomway-door.tail0a8095.ts.net")+"/api/messages?channel=dm&limit=50",{headers:{Authorization:"Bearer "+t}}).then(function(r){ return r.json(); }).then(function(body){
         (body.messages||[]).slice().reverse().forEach(function(m){
           if(_dmSeen[m.id]) return;
           _dmSeen[m.id]=1;
@@ -1599,7 +1766,7 @@ setInterval(applyMood, 600000);
             var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
             if(!t){ console.error('Nexus image failed: not signed in'); return; }
             var email=""; try{ email=JSON.parse(atob(t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))).email||""; }catch(e){}
-            fetch("https://phantomway-door.tail0a8095.ts.net/api/messages",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({channel:"dm", image:compressed, recipientId:"widget:"+email})}).then(function(r){ if(!r.ok) throw new Error("api "+r.status); }).catch(function(e){ console.error('Nexus image failed:', e.message); });
+            fetch((window.PHANTOM_BRIDGE||"https://phantomway-door.tail0a8095.ts.net")+"/api/messages",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({channel:"dm", image:compressed, recipientId:"widget:"+email})}).then(function(r){ if(!r.ok) throw new Error("api "+r.status); }).catch(function(e){ console.error('Nexus image failed:', e.message); });
           })();
         };
         img.src = dataUrl;
@@ -1618,13 +1785,7 @@ setInterval(applyMood, 600000);
 // ============ iOS PREMIUM: Visual Viewport + Haptics ============
 (function(){
   // Keyboard-aware viewport
-  if (window.visualViewport) {
-    function updateViewport(){
-      document.documentElement.style.setProperty('--viewport-height', window.visualViewport.height + 'px');
-    }
-    window.visualViewport.addEventListener('resize', updateViewport);
-    updateViewport();
-  }
+  // Keyboard-aware viewport lives in realm.js (one owner for --vvh/--viewport-height).
   // Haptic feedback
   window.hapticClick = function(){
     try { if ('vibrate' in navigator) navigator.vibrate(15); } catch(e){}
@@ -1649,7 +1810,8 @@ setInterval(applyMood, 600000);
   var msgInput = document.getElementById('msg');
   if (msgInput) {
     msgInput.addEventListener('focus', function(){
-      setTimeout(scrollChatToBottom, 150);
+      var c=document.getElementById('chat');
+      if (c && c.scrollHeight - c.scrollTop - c.clientHeight < 240) setTimeout(scrollChatToBottom, 150);
     });
   }
   // Kill global rubber-banding, preserve chat scroll
@@ -1663,9 +1825,10 @@ setInterval(applyMood, 600000);
     }
     return false;
   }
-  document.body.addEventListener('touchmove', function(e){
-    if (!inScroller(e.target)) e.preventDefault();
-  }, { passive:false });
+  // Page bounce is stopped in CSS (fixed html/body + overscroll-behavior:none). The old
+  // non-passive touchmove guard walked getComputedStyle up the tree on every finger move,
+  // which blocked the compositor and made momentum scrolling stutter. Removed.
+  void inScroller;
   // Expose for new message arrivals
   window.scrollChatToBottom = scrollChatToBottom;
 })();
@@ -1739,7 +1902,7 @@ setInterval(applyMood, 600000);
   // Standalone + black-translucent draws under the status bar/notch: keep content clear of it.
   if (!document.getElementById("hw-safe-area")) {
     var st = document.createElement("style"); st.id = "hw-safe-area";
-    st.textContent = "@media all and (display-mode: standalone){body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);}}";
+    st.textContent = ""; // .shell owns the safe-area padding (realm.css); padding body too doubled the gap
     head.appendChild(st);
   }
   // Register independently of the push block: on iOS, PushManager only exists once installed,

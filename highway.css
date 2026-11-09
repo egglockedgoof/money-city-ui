@@ -455,7 +455,7 @@ filter .25s ease, background .3s ease;
 .tab svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
 .tab.active{text-shadow:0 0 12px rgba(255,60,70,.8)}
 #pushbell{box-shadow:0 0 16px rgba(255,200,60,.35);}
-#chat{clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))}
+/* (removed) #chat clip-path chamfer: it sliced the corners off bubbles/text near the chat edges and forced a full repaint of the scroller every frame. The realm border-radius frames it instead. */
 
 
 body{background:radial-gradient(120% 90% at 50% 0%,rgba(193,18,31,.14),transparent 60%),#0a0608;}
@@ -597,11 +597,7 @@ input, textarea, select, button{
   overscroll-behavior-y:contain;
   -webkit-overflow-scrolling:touch;
 }
-/* GPU acceleration for bubbles */
-.bubble, .row{
-  will-change:transform, opacity;
-  transform:translateZ(0);
-}
+/* (removed) per-bubble GPU layers: one compositor layer per message ate memory and made long rooms stutter. */
 /* Dynamic viewport for keyboard */
 .shell{
   height:var(--viewport-height, 100dvh);
@@ -637,10 +633,7 @@ input, textarea, select, button{
   -webkit-user-select:text; user-select:text; -webkit-touch-callout:default;
 }
 
-/* === Keyboard dismissal smoothing === */
-.shell{
-  transition:height .1s ease-out;
-}
+/* (removed) .shell height transition: it animated against visualViewport updates and made the composer lag the keyboard. */
 
 /* === Streaming text hardening (iOS WebKit) === */
 .bubble{

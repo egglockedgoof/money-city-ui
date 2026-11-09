@@ -4,6 +4,23 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
 <meta name="format-detection" content="telephone=no" />
+<meta name="color-scheme" content="dark" />
+<style>
+/* critical: paint black + the PhantomWay door on the very first frame (no white flash, no staggered build) */
+html,body{background:#05070c;color:#f6e8ea;margin:0}
+#hw-splash{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(90% 60% at 50% 42%,rgba(150,8,24,.28),transparent 70%),#05070c;transition:opacity .24s ease}
+#hw-splash img{width:96px;height:96px;border-radius:22px;box-shadow:0 0 60px rgba(255,30,60,.35)}
+#hw-splash b{font:600 15px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text",Roboto,sans-serif;letter-spacing:.32em;color:#ffb3bc;text-transform:uppercase;opacity:.85}
+#hw-splash.gone{opacity:0;pointer-events:none}
+</style>
+<script>
+/* Splash stays until the room can be shown all at once (cached room, first fetch, or a gate). */
+(function(){var t0=Date.now(),done=false;window.__hwT0=(window.performance&&performance.now)?0:t0;
+window.HW_splashDone=function(){if(done)return;done=true;var s=document.getElementById("hw-splash");if(!s)return;
+window.__hwReveal=(window.performance&&performance.now)?performance.now():Date.now()-t0;
+requestAnimationFrame(function(){requestAnimationFrame(function(){s.classList.add("gone");setTimeout(function(){s.remove();},320);});});};
+setTimeout(function(){window.HW_splashDone();},2500);})();
+</script>
 <title>PhantomWay — Real-Time Team Room</title>
 
 <link rel="manifest" href="manifest.json" />
@@ -19,9 +36,11 @@
 <link rel="stylesheet" href="highway.css">
 <link rel="stylesheet" href="realm.css">
 <link rel="stylesheet" href="phantom-ui.css">
+<link rel="stylesheet" href="face-polish.css">
 <!-- Auth + data on the bridge REST API (Supabase-backed) since 2026-10-10 -->
 </head>
 <body>
+<div id="hw-splash" aria-hidden="true"><img src="highway-icons/icon-192.png" alt="" width="96" height="96" /><b>PhantomWay</b></div>
 <div class="scanlines" aria-hidden="true"></div>
 
 <div id="pwgate">
@@ -36,7 +55,7 @@
     <p>This room is locked.<br/>Enter the password to continue.</p>
     <input id="pw" type="password" placeholder="Password" autocomplete="off" />
     <button id="pwjoin">Unlock</button>
-    <div style="margin-top:10px;font-size:10px;opacity:.45">shell-v25</div>
+    <div style="margin-top:10px;font-size:10px;opacity:.45">shell-v26</div>
     <div id="pwerr"></div>
   </div>
 </div>
@@ -46,11 +65,11 @@
     <p>Choose your verified display name.<br/>It will be badged on everything you do.</p>
     <input id="name" maxlength="24" placeholder="e.g. whisper" autocomplete="off" />
     <div id="authfields" style="display:none">
-      <input id="email" type="email" placeholder="PhantomWay account email" autocomplete="email" />
-      <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+      <input id="email" type="email" name="username" placeholder="PhantomWay account email" autocomplete="username" inputmode="email" autocapitalize="off" />
+      <input id="password" type="password" name="password" placeholder="Password" autocomplete="current-password" enterkeyhint="go" />
     </div>
     <button id="join">Enter PhantomWay</button>
-    <div id="shellbuild" style="margin-top:10px;font-size:10px;opacity:.45">shell-v25</div>
+    <div id="shellbuild" style="margin-top:10px;font-size:10px;opacity:.45">shell-v26</div>
     <div id="err"></div>
   </div>
 </div>
@@ -72,7 +91,7 @@
     <div id="chat"></div>
     <div id="typing"></div>
     <div class="foot">
-      <textarea id="msg" placeholder="Type a message…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" maxlength="100000" rows="1"></textarea>
+      <textarea id="msg" placeholder="Type a message…" autocomplete="off" autocorrect="on" autocapitalize="sentences" spellcheck="true" enterkeyhint="send" maxlength="100000" rows="1"></textarea>
       <input type="file" id="attachInput" accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.md" style="display:none;" />
       <button id="attachBtn" title="Attach a file" style="background:#1a1214;border:1px solid rgba(248,113,113,.4);color:var(--red);font-weight:700;border-radius:12px;padding:0 14px;font-size:18px;cursor:pointer;min-width:44px;min-height:44px;">📎</button>
       <button id="clear" title="Clear all chat messages" style="background:#1a1214;border:1px solid rgba(248,113,113,.4);color:var(--red);font-weight:700;border-radius:12px;padding:0 14px;font-size:14px;cursor:pointer;min-width:44px;min-height:44px;">🗑</button>
@@ -150,8 +169,13 @@
 <script src="realm.js"></script>
 <script src="phantom-profile.js"></script>
 <script src="phantom-physics.js"></script>
-<script src="phantom-aether.js"></script>
+<script>
+  /* The aether canvas is decoration: start it after the first content paint, never before. */
+  (function(){ function go(){ var s=document.createElement("script"); s.src="phantom-aether.js"; document.body.appendChild(s); }
+    window.addEventListener("load", function(){ setTimeout(function(){ (window.requestIdleCallback||function(f){ setTimeout(f,1); })(go, {timeout:1200}); }, 400); }); })();
+</script>
 <script src="phantom-ui.js"></script>
+<script src="face-polish.js"></script>
 <script>
   // Trinity Face: mount the sensory manager (Listen / Look / Tilt / Place + status line).
   // Sensors never break the app, but a failure must be VISIBLE, not silent.

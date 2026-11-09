@@ -69,16 +69,24 @@
   setTimeout(boot, 900);
 
   var last = performance.now(), T0 = last, ema = 1 / 60, since = 0;
+  // 60fps budget belongs to scrolling + typing: while a list is being scrolled (html.is-scrolling,
+  // set by face-polish.js) the aether holds its last frame, phones draw it at ~30fps, and
+  // reduced-motion users get ~8fps of slow drift.
+  var reduce = root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var coarse = root.matchMedia && root.matchMedia('(pointer: coarse)').matches;
+  var minGap = reduce ? 120 : (coarse ? 31 : 0), lastDraw = 0;
   function frame(now) {
     requestAnimationFrame(frame);
-    if (d.hidden) { last = now; return; }
+    if (d.hidden || d.documentElement.classList.contains('is-scrolling')) { last = now; return; }
+    if (minGap && now - lastDraw < minGap) return;
+    lastDraw = now;
     var dt = Math.min((now - last) / 1000, 1 / 20); last = now; if (dt <= 0) return;
     var t = (now - T0) / 1000;
     ema += (dt - ema) * 0.05; since += dt;
     if (since > 1.2) {                      // adapt once per ~1.2 s, never thrash
       since = 0;
-      if (ema > 1 / 48) { if (scale > 0.76) { scale = Math.max(0.75, scale - 0.125); size(); } else target = Math.max(MINP, Math.round(target * 0.85)); }
-      else if (ema < 1 / 85) { if (target < Math.min(MAXP, Math.round(W * H / 9000))) target = Math.min(MAXP, Math.round(target * 1.1) + 1); else if (scale < 1) { scale = Math.min(1, scale + 0.125); size(); } }
+      if (ema > Math.max(1 / 48, minGap / 1000 * 1.35)) { if (scale > 0.76) { scale = Math.max(0.75, scale - 0.125); size(); } else target = Math.max(MINP, Math.round(target * 0.85)); }
+      else if (ema < (minGap ? minGap / 1000 * 1.08 : 1 / 85)) { if (target < Math.min(MAXP, Math.round(W * H / 9000))) target = Math.min(MAXP, Math.round(target * 1.1) + 1); else if (scale < 1) { scale = Math.min(1, scale + 0.125); size(); } }
     }
     // pointer spring
     ps.vx += (-Kp * (ps.x - ptr.tx) - Cp * ps.vx) * dt; ps.vy += (-Kp * (ps.y - ptr.ty) - Cp * ps.vy) * dt; ps.x += ps.vx * dt; ps.y += ps.vy * dt;
