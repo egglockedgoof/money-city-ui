@@ -393,6 +393,10 @@ function updateAmbientStatus(snap){
     });
     if(_stick) scrollDown(chat);
     else if(!mine&&window.HW_unread) window.HW_unread();
+    // Android app shell: ping the phone when someone else talks while PhantomWay is in the background.
+    if(!mine&&_roomReady&&document.hidden&&window.PhantomNative&&doc.id.indexOf("pending-")!==0){
+      try{ window.PhantomNative.notify(String(m.name||"PhantomWay"), String(m.text||(m.attachments&&m.attachments.length?"📎 attachment":""))); }catch(e){}
+    }
   }
   /* ================= REACTIONS =================
      Root cause of "reactions don't work": the POST went out but nothing ever
@@ -1284,6 +1288,7 @@ function updateAmbientStatus(snap){
     if(window.HW_setWidgetJwt) window.HW_setWidgetJwt(HW_JWT);
     hwScheduleRefresh();
     MY_NAME=n;
+    try{ if(window.PhantomNative&&!window.PhantomNative.canNotify()&&!localStorage.getItem("hw_notif_asked")){ localStorage.setItem("hw_notif_asked","1"); window.PhantomNative.askNotify(); } }catch(e){}
     try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); sessionStorage.setItem("hw_pw","1"); }catch(e){}
     mebadge.textContent=n+(verified?" ✓":"");
     setAuthStage("live"); // hides BOTH gates — Unlock never stacks on chat
