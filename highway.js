@@ -119,10 +119,39 @@ function hwSetJwt(t){
   HW_JWT=t||null;
   try{ if(t) localStorage.setItem("hw_jwt",t); else localStorage.removeItem("hw_jwt"); }catch(e){}
   if(window.HW_setWidgetJwt) window.HW_setWidgetJwt(t);
+  hwScheduleRefresh();
 }
+/* Silent refresh: the bridge keeps a rotating refresh token in an HttpOnly cookie
+   (/api/auth only; page JS never sees it). One in-flight call at a time. */
+var _hwRefreshing=null, _hwRefreshTimer=null;
+function hwRefresh(){
+  if(_hwRefreshing) return _hwRefreshing;
+  var ctrl=typeof AbortController!=="undefined"?new AbortController():null;
+  var killT=ctrl?setTimeout(function(){ try{ctrl.abort();}catch(e){} }, 10000):null;
+  var o={method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:"{}"}; if(ctrl) o.signal=ctrl.signal;
+  _hwRefreshing=fetch(HW_BRIDGE+"/api/auth/refresh",o).then(function(r){
+    return r.json().catch(function(){ return null; }).then(function(j){
+      if(!r.ok||!j||!j.ok||!j.token){ var e=new Error((j&&j.error)||("refresh "+r.status)); e.status=r.status; if(r.status===401) e.code="noauth"; throw e; }
+      hwSetJwt(j.token);
+      return j;
+    });
+  }).finally(function(){ if(killT) clearTimeout(killT); _hwRefreshing=null; });
+  return _hwRefreshing;
+}
+function hwScheduleRefresh(){
+  if(_hwRefreshTimer) clearTimeout(_hwRefreshTimer);
+  if(!HW_JWT) return;
+  var wait=Math.max(5000, hwJwtExp(HW_JWT)-Date.now()-90000); // ~90s before expiry
+  _hwRefreshTimer=setTimeout(function(){ hwRefresh().catch(function(){}); }, wait);
+}
+document.addEventListener("visibilitychange", function(){
+  if(!document.hidden && HW_JWT && hwJwtExp(HW_JWT)<Date.now()+120000) hwRefresh().catch(function(){});
+});
 function hwToken(){
   if(HW_JWT && hwJwtExp(HW_JWT)>Date.now()+5000) return Promise.resolve(HW_JWT);
-  if(HW_LOGIN_EMAIL&&HW_LOGIN_PW) return hwLogin(HW_LOGIN_EMAIL,HW_LOGIN_PW).then(function(){ return HW_JWT; });
+  if(HW_LOGIN_EMAIL&&HW_LOGIN_PW) return hwRefresh().then(function(){ return HW_JWT; }, function(){ return hwLogin(HW_LOGIN_EMAIL,HW_LOGIN_PW).then(function(){ return HW_JWT; }); });
+  var _nm=""; try{ _nm=localStorage.getItem("hw_name")||""; }catch(e){}
+  if(_nm) return hwRefresh().then(function(){ return HW_JWT; });
   var e=new Error("no auth"); e.code="noauth"; return Promise.reject(e);
 }
 function hwLogin(email,pw,displayName){
@@ -1159,12 +1188,15 @@ function updateAmbientStatus(snap){
   function sessionExpired(){
     if(_expiring) return; _expiring=true;
     var done=function(){ _expiring=false; };
+    hwRefresh().then(function(){ done(); if(window.hwPullMessages) window.hwPullMessages(true); }).catch(function(){ fallback(); });
+    function fallback(){
     if(HW_LOGIN_EMAIL&&HW_LOGIN_PW){
       hwLogin(HW_LOGIN_EMAIL,HW_LOGIN_PW,MY_NAME).then(function(){ done(); if(window.hwPullMessages) window.hwPullMessages(true); })
         .catch(function(){ done(); showSignIn("Your session ended — sign in to keep going."); });
       return;
     }
     done(); showSignIn("Your session ended — sign in to keep going.");
+    }
   }
   function showSignIn(why){
     var saved=""; try{ saved=(localStorage.getItem("hw_name")||"").trim().slice(0,24); }catch(e){}
@@ -1197,8 +1229,13 @@ function updateAmbientStatus(snap){
       completeJoin(saved,true);
       return;
     }
-    // Returning member (we know their name): go straight to email + password, prefilled.
-    if(saved){ showSignIn(HW_JWT?"Session ended — sign in again.":""); return; }
+    // Returning member: refresh silently from the HttpOnly cookie (splash stays up meanwhile);
+    // only if that fails, go straight to email + password, prefilled.
+    if(saved){
+      hwRefresh().then(function(){ completeJoin(saved,true); })
+        .catch(function(){ showSignIn(HW_JWT?"Session ended — sign in again.":""); });
+      return;
+    }
     setAuthStage("account");
     if(nameIn) nameIn.focus();
   }
@@ -1245,6 +1282,7 @@ function updateAmbientStatus(snap){
   }
   function completeJoin(n,verified){
     if(window.HW_setWidgetJwt) window.HW_setWidgetJwt(HW_JWT);
+    hwScheduleRefresh();
     MY_NAME=n;
     try{ sessionStorage.setItem("hw_name",n); localStorage.setItem("hw_name",n); sessionStorage.setItem("hw_pw","1"); }catch(e){}
     mebadge.textContent=n+(verified?" ✓":"");
