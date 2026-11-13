@@ -95,6 +95,9 @@ window.addEventListener("pagehide", flushReads);
 var HW_BRIDGE=(function(){
   try{
     var o=location.origin||"";
+    // Native shell (Capacitor): the app is served from capacitor://localhost,
+    // which is the bundle, not the bridge — API calls must go to the door.
+    if(/^(capacitor|ionic):$/.test(location.protocol||"")||window.Capacitor) return "https://phantomway-door.tail0a8095.ts.net";
     if(/phantomway-door\.tail0a8095\.ts\.net$/.test(location.host||"")) return o;
     if(/^(100\.77\.206\.103|127\.0\.0\.1|localhost)(:\d+)?$/.test(location.host||"")) return o;
   }catch(e){}
