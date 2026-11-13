@@ -1,2 +1,8 @@
 assets/creator_style_ref.jpg
 *.bak*
+node_modules/
+www/
+ios/
+assets/
+build/
+*.ipa

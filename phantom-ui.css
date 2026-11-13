@@ -210,3 +210,51 @@
 .ph-empty b{ display:block; color:#fff; font-size:16px; margin-bottom:6px; }
 button:focus-visible,.tab:focus-visible{ outline:2px solid var(--alarm); outline-offset:2px; }
 @media (max-width:360px){ .head{ padding:10px 12px 18px !important; margin:6px 6px 0 !important; } #chat{ gap:14px !important; } }
+
+/* =====================================================================
+   NATIVE FEEL (Nov 13 2026) — feedback you can see, errors you can act on,
+   text you can read. Nothing here removes an effect: grain/scanlines stay
+   at full strength on Chat, Hangout and Face, and only step back on the four
+   dense-text tabs (Tasks, Notes, Activity, News) so long text stays scannable.
+   ===================================================================== */
+
+/* -- instant button feedback: spinner + label, in the same frame as the tap -- */
+.btn-spin{ display:inline-block; width:.95em; height:.95em; margin-right:.55em; vertical-align:-.12em;
+  border:2px solid currentColor; border-right-color:transparent; border-radius:50%;
+  animation:ph-spin .7s linear infinite; }
+@keyframes ph-spin{ to{ transform:rotate(360deg); } }
+button.is-busy{ opacity:.72; cursor:progress; pointer-events:none; }
+#join.is-busy,#pwjoin.is-busy{ display:flex; align-items:center; justify-content:center; }
+
+/* -- errors say so, in a colour that reads on black -- */
+#err.bad,#pwerr{ color:#ff8f9c; font-size:13px; line-height:1.4; font-weight:600; }
+.ph-note{ margin:0 0 4px; padding:10px 12px; border-radius:12px; font-size:12.5px; line-height:1.4; text-align:center;
+  color:#e9c3c8; background:rgba(20,6,9,.9); border:1px solid rgba(255,100,115,.22); }
+.ph-note.err{ color:#ffd0d5; border-color:rgba(255,100,115,.5); }
+.ph-retry{ margin-left:8px; padding:7px 14px; min-height:34px; border-radius:999px; border:1px solid rgba(255,100,115,.6);
+  background:rgba(255,20,50,.14); color:#fff; font-weight:700; font-size:12.5px; cursor:pointer; }
+.ph-retry:active{ transform:scale(.94); }
+.ph-empty.err .why{ display:block; margin:0 0 12px; color:#ffb3bc; }
+.ph-empty.err .ph-retry{ margin-left:0; }
+
+/* -- loading skeletons (transform/opacity only: GPU-cheap) -- */
+.ncard.skel{ pointer-events:none; }
+.skel-box{ background:rgba(255,255,255,.07) !important; color:transparent !important; }
+.skel-line{ display:block; height:11px; margin:7px 0; border-radius:6px; background:rgba(255,255,255,.08); }
+.ncard.skel .skel-box,.ncard.skel .skel-line{ animation:ph-skel 1.3s ease-in-out infinite; }
+@keyframes ph-skel{ 0%,100%{ opacity:.45; } 50%{ opacity:.95; } }
+
+/* -- readability: dense-text tabs get calmer overlays + solid backing -- */
+body[data-view="view-tasks"] .ph-grain,
+body[data-view="view-notes"] .ph-grain,
+body[data-view="view-activity"] .ph-grain,
+body[data-view="view-news"] .ph-grain{ opacity:.06; }
+body[data-view="view-tasks"] .scanlines,
+body[data-view="view-notes"] .scanlines,
+body[data-view="view-activity"] .scanlines,
+body[data-view="view-news"] .scanlines{ opacity:.18 !important; }
+.trow,.arow,.ncard{ background:rgba(14,4,7,.94) !important; color:#fbeaec; }
+.ncard .ntitle,.arow,.trow{ color:#fff3f4; }
+.ncard .ndesc,.ncard .nsrc,.arow time{ color:#d9aab1; }
+#notes{ color:#fff3f4; line-height:1.55; }
+#notes-meta{ color:#d9aab1; font-style:normal; font-size:12px; }

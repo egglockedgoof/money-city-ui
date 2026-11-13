@@ -13,7 +13,7 @@
   window.HW_toast = function (text) {
     if (!toastEl) { toastEl = d.createElement('div'); toastEl.className = 'ph-toast'; toastEl.setAttribute('role', 'status'); d.body.appendChild(toastEl); }
     toastEl.textContent = text; toastEl.classList.add('on');
-    clearTimeout(toastT); toastT = setTimeout(function () { toastEl.classList.remove('on'); }, 2600);
+    clearTimeout(toastT); toastT = setTimeout(function () { toastEl.classList.remove('on'); }, String(text).length > 38 ? 4200 : 2600); // errors get time to be read
   };
 
   /* ---------- living grain (dither) ---------- */
@@ -169,9 +169,26 @@
     e.appendChild(t);
     hList.appendChild(e);
   }
+  /* A failed load must NOT look like an empty room: say what failed and offer a retry. */
+  var hErrAt = 0;
+  function hErr(e) {
+    var A = api(), why = (A && A.errText) ? A.errText(e) : String((e && e.message) || 'something went wrong');
+    if (hList.querySelector('.row')) {          // already have messages: stay quiet, nudge at most once a minute
+      if (Date.now() - hErrAt > 60000) { hErrAt = Date.now(); window.HW_toast('Hangout offline — ' + why); }
+      return;
+    }
+    var old = hList.querySelectorAll('.ph-empty'); for (var i = 0; i < old.length; i++) old[i].remove();
+    var el = d.createElement('div'); el.className = 'ph-empty err'; el.setAttribute('role', 'alert');
+    var t = d.createElement('div'), b = d.createElement('b'), s = d.createElement('span'), r = d.createElement('button');
+    b.textContent = "Can't reach the Hangout"; s.className = 'why'; s.textContent = why.charAt(0).toUpperCase() + why.slice(1) + '.';
+    r.type = 'button'; r.className = 'ph-retry'; r.textContent = 'Retry';
+    r.addEventListener('click', function () { r.disabled = true; r.textContent = 'Retrying…'; hangoutPull(); });
+    t.appendChild(b); t.appendChild(s); t.appendChild(r); el.appendChild(t); hList.appendChild(el);
+  }
   function hangoutPull() {
     var A = api(); if (!A || !A.name() || !hList || d.hidden) return;
     A.get('/api/messages?channel=hangout&limit=60').then(function (body) {
+      var bad = hList.querySelector('.ph-empty.err'); if (bad) bad.remove();
       var near = hList.scrollHeight - hList.scrollTop - hList.clientHeight < 160, added = false;
       var rows = (body.messages || []).slice().sort(function (a, b) { return (Number(a.tsNum || a.ts) || 0) - (Number(b.tsNum || b.ts) || 0); });
       rows.forEach(function (m) {
@@ -182,16 +199,17 @@
       if (!hList.querySelector('.row')) hEmpty();
       if (added && (near || !hList.__painted)) requestAnimationFrame(function () { hList.scrollTop = hList.scrollHeight; });
       hList.__painted = true;
-    }).catch(function () { hEmpty(); });
+    }).catch(hErr);
   }
   function hangoutSend() {
     var A = api(); if (!A || !A.name() || hBusy) return;
     var t = (hInput.value || '').trim(); if (!t) return;
     hBusy = true; hInput.value = '';
+    hBtn.disabled = true; hBtn.classList.add('is-busy');   // instant feedback, no double-send
     A.post('/api/messages', { name: A.name(), text: t.slice(0, 2000), channel: 'hangout', deviceId: A.device })
       .then(function () { hangoutPull(); setTimeout(hangoutPull, 700); })
-      .catch(function (e) { hInput.value = t; window.HW_toast('Hangout send failed — ' + ((e && e.message) || 'try again')); })
-      .then(function () { hBusy = false; });
+      .catch(function (e) { hInput.value = t; window.HW_toast('Hangout send failed — ' + (A.errText ? A.errText(e) : ((e && e.message) || 'try again'))); })
+      .then(function () { hBusy = false; hBtn.disabled = false; hBtn.classList.remove('is-busy'); });
   }
   if (hList && hInput && hBtn) {
     hBtn.addEventListener('click', hangoutSend);

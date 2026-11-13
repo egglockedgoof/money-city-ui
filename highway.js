@@ -117,13 +117,34 @@ function hwJwtEmail(){
 }
 function hwSetJwt(t){
   HW_JWT=t||null;
+  if(t) _sessionWarned=false;
   try{ if(t) localStorage.setItem("hw_jwt",t); else localStorage.removeItem("hw_jwt"); }catch(e){}
   if(window.HW_setWidgetJwt) window.HW_setWidgetJwt(t);
+}
+/* One place that turns any failure into a sentence a person can act on. */
+function hwErrText(e){
+  var s=e&&e.status, m=String((e&&e.message)||"");
+  if(!s){ var mm=/^api (\d{3})$/.exec(m); if(mm) s=+mm[1]; }
+  if((e&&e.code==="session")||s===401||s===403) return "Session expired — sign in again.";
+  if(s===404) return "the server has no route for that yet (404)";
+  if(s===429) return "too many requests — wait a moment";
+  if(s>=500) return "server hiccup ("+s+") — try again";
+  if(e&&(e.name==="AbortError"||e.code==="timeout")) return "timed out — try again";
+  if(/Failed to fetch|NetworkError|network|Load failed/i.test(m)) return "no connection — is Tailscale on?";
+  return m||"something went wrong";
+}
+/* A pulled-out session must be VISIBLE: tell the UI once, instead of every poller failing silently. */
+var _sessionWarned=false;
+function hwSessionExpired(){
+  if(_sessionWarned||!MY_NAME) return; _sessionWarned=true;
+  try{ window.dispatchEvent(new CustomEvent("hw:session-expired")); }catch(e){}
 }
 function hwToken(){
   if(HW_JWT && hwJwtExp(HW_JWT)>Date.now()+5000) return Promise.resolve(HW_JWT);
   if(HW_LOGIN_EMAIL&&HW_LOGIN_PW) return hwLogin(HW_LOGIN_EMAIL,HW_LOGIN_PW).then(function(){ return HW_JWT; });
-  return Promise.reject(new Error("no auth"));
+  var se=new Error("no auth"); se.code="session"; se.status=401;
+  hwSessionExpired();
+  return Promise.reject(se);
 }
 function hwLogin(email,pw,displayName){
   // Hard timeout: a hung TLS/CORS/fetch must never leave the gate on "Verifying...".
@@ -152,15 +173,20 @@ function hwLogin(email,pw,displayName){
 function hwGet(path){
   return hwToken().then(function(t){
     return fetch(HW_BRIDGE+path,{headers:{Authorization:"Bearer "+t}}).then(function(r){
-      if(!r.ok) throw new Error("api "+r.status);
+      if(!r.ok) throw hwHttpErr(r);
       return r.json();
     });
   });
 }
+function hwHttpErr(r){
+  // A rejected token is dropped so the next call re-mints it (or asks for a sign-in) instead of looping on 401.
+  if(r.status===401) HW_JWT=null;
+  var er=new Error("api "+r.status); er.status=r.status; return er;
+}
 function hwPost(path,body){
   return hwToken().then(function(t){
     return fetch(HW_BRIDGE+path,{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify(body||{})}).then(function(r){
-      if(!r.ok) throw new Error("api "+r.status);
+      if(!r.ok) throw hwHttpErr(r);
       return r.json().catch(function(){ return {}; });
     });
   });
@@ -183,7 +209,7 @@ function asDoc(row){
 /* Small public handle so the UI layer (phantom-ui.js) can reuse auth + helpers. */
 window.HW_api={
   get:function(p){ return hwGet(p); }, post:function(p,b){ return hwPost(p,b); },
-  name:function(){ return MY_NAME; }, device:DEVICE_ID,
+  name:function(){ return MY_NAME; }, device:DEVICE_ID, errText:hwErrText,
   esc:esc, pingify:pingify, fmtTime:fmtTime, isOwner:isOwner, crown:crownHtml
 };
 
@@ -474,7 +500,7 @@ function updateAmbientStatus(snap){
       if(srv&&typeof srv==="object") patchReactions(id, srv); else syncReactions();
     }).catch(function(e){
       patchReactions(id, before);                  // roll back, and say why
-      if(window.HW_toast) window.HW_toast("Reaction failed — "+((e&&e.message)||"try again"));
+      if(window.HW_toast) window.HW_toast("Reaction failed — "+hwErrText(e));
       if(window.console&&console.warn) console.warn("[phantomway] reaction", e&&e.message||e);
     });
   }
@@ -800,10 +826,23 @@ function updateAmbientStatus(snap){
   }
 
   /* ================= NOTES (shared live doc) ================= */
-  var notesTimer=null, notesFocused=false, lastNotesTs=null;
+  var notesTimer=null, notesFocused=false, lastNotesTs=null, notesDirty=false, notesSaving=false, notesRetry=null;
+  function notesStatus(t){ var el=$("notes-meta"); if(el) el.textContent=t; }
+  /* Local text always wins until the server has confirmed it. The poll below never overwrites
+     unsaved edits, and a failed save says so and retries instead of failing silently. */
   function saveNotes(){
-    if(!MY_NAME) return;
-    hwPost("/api/notes",{content:$("notes").value.slice(0,20000), updatedBy:MY_NAME}).catch(function(){});
+    if(!MY_NAME||!notesDirty||notesSaving) return;
+    var snap=$("notes").value.slice(0,20000);
+    notesSaving=true; notesStatus("saving…");
+    hwPost("/api/notes",{content:snap, updatedBy:MY_NAME}).then(function(){
+      if($("notes").value.slice(0,20000)===snap){ notesDirty=false; notesStatus("saved"); }
+    }).catch(function(e){
+      notesStatus("not saved — "+hwErrText(e)+" · retrying");
+      clearTimeout(notesRetry); notesRetry=setTimeout(saveNotes,4000);
+    }).then(function(){
+      notesSaving=false;
+      if(notesDirty){ clearTimeout(notesTimer); notesTimer=setTimeout(saveNotes,400); }
+    });
   }
 
   /* ================= ACTIVITY FEED ================= */
@@ -816,6 +855,9 @@ function updateAmbientStatus(snap){
   /* ================= GO LIVE ================= */
   function goLive(){
     dot.classList.remove("off"); sub.textContent="live";
+    // Signing back in after an expired session must NOT start a second set of pollers/streams.
+    if(_liveStarted){ if(window.hwPullMessages) window.hwPullMessages(); return; }
+    _liveStarted=true;
     sysLine("Connected — chat, presence, tasks, notes & activity all sync live.");
 
     var _msgWatermark=0, _presReady=false, _presItems=[], _typeItems=[], _actItems=[];
@@ -898,13 +940,15 @@ function updateAmbientStatus(snap){
     function pullNotes(){
       hwGet("/api/notes").then(function(body){
         var d=body.notes; if(!d) return;
-        var ts=Number(d.ts)||0;
-        if(!notesFocused && ts && (!lastNotesTs || ts>lastNotesTs)){
+        var ts=Number(d.ts)||0, ta=$("notes");
+        var remote=(typeof d.content==="string")?d.content:null;   // a missing field is not "empty"
+        var blanking=remote!==null && !remote.trim() && ta.value.trim() && d.updatedBy===MY_NAME;
+        if(!notesFocused && !notesDirty && !notesSaving && remote!==null && !blanking && ts && (!lastNotesTs || ts>lastNotesTs)){
           lastNotesTs=ts;
-          $("notes").value=d.content||"";
+          if(ta.value!==remote){ var top=ta.scrollTop; ta.value=remote; ta.scrollTop=top; }
         }
-        $("notes-meta").textContent=d.updatedBy?("last edited by "+d.updatedBy):"";
-      }).catch(function(){});
+        if(!notesDirty && !notesSaving) notesStatus(d.updatedBy?("last edited by "+d.updatedBy):"");
+      }).catch(function(e){ if(!notesDirty && !notesSaving) notesStatus("offline — "+hwErrText(e)); });
     }
     function paintActivity(items){
       _actItems=items||[];
@@ -1006,6 +1050,19 @@ function updateAmbientStatus(snap){
   var _PW="TheEnd";
   var authShown=false;
   var joining=false;
+  var _liveStarted=false;
+  /* Busy state: instant (same frame as the tap), spinner + label, disabled so a double-tap can't double-submit. */
+  function setBusy(btn,on,label){
+    if(!btn) return;
+    if(on){
+      if(btn._lbl==null) btn._lbl=btn.innerHTML;
+      btn.classList.add("is-busy"); btn.setAttribute("aria-busy","true");
+      btn.innerHTML='<i class="btn-spin" aria-hidden="true"></i><span>'+esc(label||"Working…")+'</span>';
+    } else {
+      btn.classList.remove("is-busy"); btn.removeAttribute("aria-busy");
+      if(btn._lbl!=null){ btn.innerHTML=btn._lbl; btn._lbl=null; }
+    }
+  }
   function setAuthStage(stage){
     var pwEl=$("pwgate"), gEl=$("gate");
     var body=document.body;
@@ -1070,22 +1127,44 @@ function updateAmbientStatus(snap){
     if(!email||!pw){ err.textContent="Enter your email and password."; return; }
     joining=true;
     joinBtn.disabled=true;
-    err.textContent="Verifying...";
+    setBusy(joinBtn,true,"Verifying…");     // visible in the same frame as the tap
+    err.className=""; err.textContent="";
     hwLogin(email,pw,n).then(function(){
       completeJoin(n,true);
     }).catch(function(e){
-      var msg="Sign-in failed.";
+      var msg="Sign-in failed — "+hwErrText(e)+".";
       if(e&&e.code==="timeout") msg="Login timed out — the link may be strained. Try again.";
       else if(e&&e.status===401) msg="Wrong password, or no account for that email.";
       else if(e&&e.status===429) msg="Too many attempts — wait a minute.";
       else if(e&&e.status===503) msg="Login is unavailable right now.";
-      else if(e&&e.message&&/Failed to fetch|NetworkError|network/i.test(e.message)) msg="Could not reach the heart — check Tailscale/door and try again.";
-      err.textContent=msg;
+      else if(e&&e.status===404) msg="The login route wasn't found (404) — the door may be running an old build.";
+      else if(e&&e.message&&/Failed to fetch|NetworkError|network|Load failed/i.test(e.message)) msg="Could not reach the heart — check Tailscale/door and try again.";
+      err.className="bad"; err.textContent=msg;
+      var pwEl=$("password"); if(pwEl&&e&&e.status===401){ pwEl.value=""; pwEl.focus(); }
     }).finally(function(){
       joining=false;
       joinBtn.disabled=false;
+      setBusy(joinBtn,false);
     });
   }
+  /* Enter submits from every field; an old error clears the moment you start fixing it. */
+  ["email","password"].forEach(function(id){
+    var el=$(id); if(el) el.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); join(); } });
+  });
+  [nameIn,$("email"),$("password")].forEach(function(el){
+    if(el) el.addEventListener("input", function(){ if(!joining){ err.textContent=""; err.className=""; } });
+  });
+  /* Session ran out while the app was open (15-min token, no stored password by design):
+     say so, put the sign-in back with the name filled, and keep any unsaved work in place. */
+  window.addEventListener("hw:session-expired", function(){
+    var saved=""; try{ saved=(sessionStorage.getItem("hw_name")||localStorage.getItem("hw_name")||"").trim().slice(0,24); }catch(e){}
+    if(saved&&nameIn) nameIn.value=saved;
+    authShown=true; var af=$("authfields"); if(af) af.style.display="block";
+    var em=$("email"); if(em&&!em.value){ var he=HW_LOGIN_EMAIL||hwJwtEmail(); if(he) em.value=he; }
+    setAuthStage("account");
+    err.className="bad"; err.textContent="Session expired — sign in again to keep going. Nothing you typed is lost.";
+    var pwEl=$("password"); if(pwEl){ pwEl.value=""; setTimeout(function(){ try{ pwEl.focus(); }catch(e){} },60); }
+  });
   function completeJoin(n,verified){
     if(window.HW_setWidgetJwt) window.HW_setWidgetJwt(HW_JWT);
     MY_NAME=n;
@@ -1127,6 +1206,7 @@ function updateAmbientStatus(snap){
       document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active");});
       document.querySelectorAll(".view").forEach(function(x){x.classList.remove("active");});
       t.classList.add("active"); $(t.getAttribute("data-v")).classList.add("active");
+      document.body.setAttribute("data-view", t.getAttribute("data-v")); // CSS dims overlay noise on text-heavy tabs
       moveGlider();
       if(window.HighwayAmbient)HighwayAmbient.shimmer();
       if(t.getAttribute("data-v")==="view-news" && Date.now()-newsLoadedAt>10*60*1000) loadNews();
@@ -1141,14 +1221,43 @@ function updateAmbientStatus(snap){
   /* ============ NEWS FEED (money moves: crypto + stocks + macro) ============ */
   var NEWS_URL="https://phantomway-door.tail0a8095.ts.net/news";
   var newsLoadedAt=0;
+  var NEWS_CACHE="hw_news_v1";
+  function newsSkeleton(){
+    var one='<div class="ncard skel" aria-hidden="true"><span class="nthumbwrap"><span class="nthumb nph skel-box"></span></span><span class="nbody"><span class="skel-line" style="width:34%"></span><span class="skel-line" style="width:92%"></span><span class="skel-line" style="width:68%"></span></span></div>';
+    return '<div aria-busy="true" aria-label="Loading headlines" style="display:flex;flex-direction:column;gap:8px;">'+one+one+one+one+'</div>';
+  }
+  function newsNote(text,retry){
+    return '<div class="ph-note'+(retry?' err':'')+'">'+esc(text)+(retry?' <button type="button" class="ph-retry" data-retry="news">Retry</button>':'')+'</div>';
+  }
   function loadNews(){
     var list=$("newslist"); if(!list) return;
-    list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Pulling the money moves…</div>';
-    fetch(NEWS_URL).then(function(r){ return r.json(); }).then(function(d){
+    // Stale-while-revalidate: last good headlines show instantly while the fetch runs.
+    var cached=null; try{ cached=JSON.parse(localStorage.getItem(NEWS_CACHE)||"null"); }catch(e){}
+    var haveCache=!!(cached&&cached.items&&cached.items.length);
+    if(haveCache) paintNews(list,cached,"Showing saved headlines · refreshing…"); else list.innerHTML=newsSkeleton();
+    var ctrl=typeof AbortController!=="undefined"?new AbortController():null;
+    var timer=ctrl?setTimeout(function(){ try{ctrl.abort();}catch(e){} },8000):null;
+    fetch(NEWS_URL,ctrl?{signal:ctrl.signal}:undefined).then(function(r){
+      if(!r.ok){ var er=new Error("api "+r.status); er.status=r.status; throw er; }
+      return r.json();
+    }).then(function(d){
       newsLoadedAt=Date.now();
+      try{ localStorage.setItem(NEWS_CACHE,JSON.stringify(d)); }catch(e){}
+      paintNews(list,d,"");
+    }).catch(function(e){
+      var why=hwErrText(e);
+      if(haveCache) paintNews(list,cached,"Couldn't refresh ("+why+") — showing saved headlines.",true);
+      else list.innerHTML=newsNote("Couldn't load headlines — "+why+".",true);
+    }).then(function(){ if(timer) clearTimeout(timer); });
+  }
+  if($("newslist")) $("newslist").addEventListener("click",function(ev){
+    var b=ev.target.closest&&ev.target.closest("[data-retry=news]"); if(b){ loadNews(); }
+  });
+  function paintNews(list,d,note,isErr){
+    {
       var items=(d&&d.items)||[];
       if(!items.length){ list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Markets are quiet right now.</div>'; return; }
-      var html='<div style="color:var(--muted);font-size:11px;text-align:center;letter-spacing:.4px;">MONEY MOVES · RANKED BY WALLET IMPACT · UPDATED '+esc(new Date(d.updated||Date.now()).toLocaleTimeString())+'</div>';
+      var html=(note?newsNote(note,!!isErr):'')+'<div style="color:var(--muted);font-size:11px;text-align:center;letter-spacing:.4px;">MONEY MOVES · RANKED BY WALLET IMPACT · UPDATED '+esc(new Date(d.updated||Date.now()).toLocaleTimeString())+'</div>';
       var lastSec="";
       items.forEach(function(n){
         var src=(n.source||"?").trim();
@@ -1163,9 +1272,7 @@ function updateAmbientStatus(snap){
           +'<span class="ntitle">'+esc(n.title||"")+'</span>'+desc+'</span></a>';
       });
       list.innerHTML=html;
-    }).catch(function(){
-      list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px;">Feed is warming up — open the tab again in a minute.</div>';
-    });
+    }
   }
 
   sendBtn.addEventListener("click", sendMsg);
@@ -1211,8 +1318,12 @@ function updateAmbientStatus(snap){
   $("notes").addEventListener("focus", function(){ notesFocused=true; });
   $("notes").addEventListener("blur", function(){ notesFocused=false; saveNotes(); });
   $("notes").addEventListener("input", function(){
+    notesDirty=true; notesStatus("unsaved…");
     clearTimeout(notesTimer); notesTimer=setTimeout(saveNotes, 1000);
   });
+  // Backgrounding the app (or locking the phone) mid-edit must not lose text.
+  document.addEventListener("visibilitychange", function(){ if(document.hidden) saveNotes(); });
+  window.addEventListener("pagehide", saveNotes);
 
   $("actadd").addEventListener("click", logActivity);
   $("actin").addEventListener("keydown", function(e){ if(e.key==="Enter") logActivity(); });
@@ -1615,6 +1726,18 @@ setInterval(applyMood, 600000);
   }
 })();
 
+// ============ NATIVE SHELL (Capacitor) hooks — no-ops in a browser/PWA ============
+(function(){
+  try {
+    var C = window.Capacitor, P = C && C.Plugins;
+    if (!(C && C.isNativePlatform && C.isNativePlatform())) return;
+    document.documentElement.classList.add('native');
+    // Hide the iOS prev/next/done accessory bar: the keyboard should feel like part of the app.
+    if (P && P.Keyboard && P.Keyboard.setAccessoryBarVisible) P.Keyboard.setAccessoryBarVisible({ isVisible: false });
+    if (P && P.SplashScreen && P.SplashScreen.hide) P.SplashScreen.hide();
+  } catch (e) {}
+})();
+
 // ============ iOS PREMIUM: Visual Viewport + Haptics ============
 (function(){
   // Keyboard-aware viewport
@@ -1627,6 +1750,11 @@ setInterval(applyMood, 600000);
   }
   // Haptic feedback
   window.hapticClick = function(){
+    // Native shell (Capacitor): real Taptic Engine. Browser/PWA: vibrate where it exists (iOS Safari has none).
+    try {
+      var H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+      if (H && H.impact) { H.impact({ style: 'LIGHT' }); return; }
+    } catch(e){}
     try { if ('vibrate' in navigator) navigator.vibrate(15); } catch(e){}
   };
   // Attach to send button and tabs
