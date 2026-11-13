@@ -1,0 +1,84 @@
+# Builds an UNSIGNED iOS IPA of PhantomWay for SideStore / iloader (they sign it with your free Apple ID).
+# Public repo => macOS runners are free. Run it from Actions -> "iOS IPA (SideStore)" -> Run workflow,
+# or push a tag like app-v1. The web app is bundled into the IPA, so a rebuild is only needed when the
+# native shell changes or you want the newest UI bundled; the backend is still the Tailscale door.
+name: iOS IPA (SideStore)
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["app-v*"]
+
+concurrency:
+  group: ios-ipa
+  cancel-in-progress: true
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bundle the web app
+        run: npm run build:www
+
+      - name: Generate the iOS project
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      - name: App icon (best effort — falls back to the default icon)
+        run: |
+          mkdir -p assets
+          sips -z 1024 1024 icons/icon-512.png --out assets/icon-only.png
+          npx capacitor-assets generate --ios --iconBackgroundColor '#0a0a0a' --splashBackgroundColor '#0a0a0a' || echo "icon generation skipped"
+
+      - name: Info.plist (sensor permissions, portrait only)
+        run: |
+          P=ios/App/App/Info.plist
+          B=/usr/libexec/PlistBuddy
+          $B -c "Add :NSMicrophoneUsageDescription string 'PhantomWay listens only while you have Listen turned on.'" "$P"
+          $B -c "Add :NSCameraUsageDescription string 'PhantomWay looks only when you tap Look.'" "$P"
+          $B -c "Add :NSLocationWhenInUseUsageDescription string 'PhantomWay reads your place only when you tap Place.'" "$P"
+          $B -c "Add :NSMotionUsageDescription string 'PhantomWay reads tilt and motion for the Tilt sense.'" "$P"
+          $B -c "Add :NSPhotoLibraryUsageDescription string 'Attach photos and files to the room.'" "$P"
+          $B -c "Delete :UISupportedInterfaceOrientations" "$P"
+          $B -c "Add :UISupportedInterfaceOrientations array" "$P"
+          $B -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" "$P"
+
+      - name: Archive (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/PhantomWay.xcarchive" \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            | tail -60
+
+      - name: Package IPA
+        run: |
+          APP=$(find "$RUNNER_TEMP/PhantomWay.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' | head -1)
+          test -d "$APP"
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qry PhantomWay.ipa Payload
+          ls -lh PhantomWay.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PhantomWay-ipa
+          path: PhantomWay.ipa
+          retention-days: 14
