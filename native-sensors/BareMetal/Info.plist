@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleName</key><string>BareMetal</string>
+	<key>CFBundleDisplayName</key><string>PhantomWay</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>100.77.206.103</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key><true/>
+				<key>NSIncludesSubdomains</key><true/>
+			</dict>
+		</dict>
+	</dict>
+	<key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>LSRequiresIPhoneOS</key><true/>
+	<key>UILaunchStoryboardName</key><string></string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key><false/>
+	</dict>
+	<key>NSMotionUsageDescription</key><string>BareMetal reads raw motion sensors (accelerometer, gyroscope, magnetometer, barometer) directly.</string>
+	<key>NSLocationWhenInUseUsageDescription</key><string>BareMetal reads GPS position and compass heading directly from the hardware.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key><string>BareMetal can keep reading position in the background when you ask it to.</string>
+	<key>NSCameraUsageDescription</key><string>BareMetal uses the cameras and LiDAR for raw frames, depth and light readings.</string>
+	<key>NSMicrophoneUsageDescription</key><string>BareMetal taps the microphone for raw audio levels.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key><string>BareMetal scans nearby Bluetooth devices directly.</string>
+	<key>NSLocalNetworkUsageDescription</key><string>BareMetal can see devices on your local network.</string>
+	<key>NSFaceIDUsageDescription</key><string>BareMetal can verify you with Face ID.</string>
+</dict>
+</plist>
