@@ -40,6 +40,8 @@ jobs:
         run: |
           mkdir -p assets
           sips -z 1024 1024 icons/icon-512.png --out assets/icon-only.png
+          cp icons/splash-2732.png assets/splash.png
+          cp icons/splash-2732.png assets/splash-dark.png
           npx capacitor-assets generate --ios --iconBackgroundColor '#0a0a0a' --splashBackgroundColor '#0a0a0a' || echo "icon generation skipped"
 
       - name: Info.plist (sensor permissions, portrait only)

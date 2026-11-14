@@ -1,0 +1,22 @@
+{
+  "name": "phantomway-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PhantomWay native iOS shell (Capacitor). The web app in this repo is the product; this wraps it.",
+  "scripts": {
+    "build:www": "node scripts/build-www.mjs",
+    "ios:sync": "npm run build:www && cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.6.2",
+    "@capacitor/keyboard": "^8.0.6",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^8.6.2"
+  }
+}
