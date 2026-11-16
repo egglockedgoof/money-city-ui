@@ -23,7 +23,7 @@
   'use strict';
 
   // The app is served from GitHub Pages, so a relative '/api/...' would hit Pages, not the bridge.
-  var BRIDGE = 'https://phantomway-door.tail0a8095.ts.net';
+  var BRIDGE = 'https://cia.tail0a8095.ts.net';
   var API = BRIDGE + '/api/sense/';
   var ENDPOINT = {
     audio: 'audio-features',

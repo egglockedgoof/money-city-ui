@@ -74,7 +74,7 @@ function flushReads(){
     var counts=_reads, any=false; for(var k in counts){ if(counts[k]){ any=true; break; } } if(!any) return;
     _reads={};
     hwToken().then(function(t){
-      return fetch("https://phantomway-door.tail0a8095.ts.net/metrics/reads",{method:"POST",keepalive:true,
+      return fetch("https://cia.tail0a8095.ts.net/metrics/reads",{method:"POST",keepalive:true,
         headers:{"Content-Type":"application/json","Authorization":"Bearer "+t},
         body:JSON.stringify({tab:_readsTab,counts:counts})});
     }).catch(function(){});
@@ -97,11 +97,11 @@ var HW_BRIDGE=(function(){
     var o=location.origin||"";
     // Native shell (Capacitor): the app is served from capacitor://localhost,
     // which is the bundle, not the bridge — API calls must go to the door.
-    if(/^(capacitor|ionic):$/.test(location.protocol||"")||window.Capacitor) return "https://phantomway-door.tail0a8095.ts.net";
-    if(/phantomway-door\.tail0a8095\.ts\.net$/.test(location.host||"")) return o;
-    if(/^(100\.77\.206\.103|127\.0\.0\.1|localhost)(:\d+)?$/.test(location.host||"")) return o;
+    if(/^(capacitor|ionic):$/.test(location.protocol||"")||window.Capacitor) return "https://cia.tail0a8095.ts.net";
+    if(/(phantomway-door|cia)\.tail0a8095\.ts\.net$/.test(location.host||"")) return o;
+    if(/^(100\.77\.206\.103|100\.71\.81\.102|127\.0\.0\.1|localhost)(:\d+)?$/.test(location.host||"")) return o;
   }catch(e){}
-  return "https://phantomway-door.tail0a8095.ts.net";
+  return "https://cia.tail0a8095.ts.net";
 })();
 window.PHANTOM_BRIDGE=HW_BRIDGE; // single source of truth for the link-telemetry ping (phantom-physics.js)
 var HW_JWT=null, HW_LOGIN_EMAIL=null, HW_LOGIN_PW=null;
@@ -619,7 +619,7 @@ function updateAmbientStatus(snap){
      the browser. No dashboard upload preset needed. */
   window.HW_uploading=false;
   (function(){
-    var BRIDGE_URL="https://phantomway-door.tail0a8095.ts.net";
+    var BRIDGE_URL="https://cia.tail0a8095.ts.net";
     var MAX_BYTES=10*1024*1024; // 10 MB cap — bridge enforces per-type limits
     var pendingFile=null, objectUrl=null;
 
@@ -1222,7 +1222,7 @@ function updateAmbientStatus(snap){
   setTimeout(moveGlider, 300);
 
   /* ============ NEWS FEED (money moves: crypto + stocks + macro) ============ */
-  var NEWS_URL="https://phantomway-door.tail0a8095.ts.net/news";
+  var NEWS_URL="https://cia.tail0a8095.ts.net/news";
   var newsLoadedAt=0;
   var NEWS_CACHE="hw_news_v1";
   function newsSkeleton(){
@@ -1442,7 +1442,7 @@ function updateAmbientStatus(snap){
       (function(){
         var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
         if(!t) return;
-        fetch("https://phantomway-door.tail0a8095.ts.net/api/push/subscribe",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({subscription:{endpoint:sub.endpoint, keys:subJson.keys}, name:myName})}).catch(function(e){ console.warn('push save failed', e); });
+        fetch("https://cia.tail0a8095.ts.net/api/push/subscribe",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({subscription:{endpoint:sub.endpoint, keys:subJson.keys}, name:myName})}).catch(function(e){ console.warn('push save failed', e); });
       })();
     }).catch(function(err){ console.warn('push subscribe failed', err); });
   }
@@ -1663,7 +1663,7 @@ setInterval(applyMood, 600000);
     function pullNexus(){
       var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
       if(!t) return;
-      fetch("https://phantomway-door.tail0a8095.ts.net/api/messages?channel=dm&limit=50",{headers:{Authorization:"Bearer "+t}}).then(function(r){ return r.json(); }).then(function(body){
+      fetch("https://cia.tail0a8095.ts.net/api/messages?channel=dm&limit=50",{headers:{Authorization:"Bearer "+t}}).then(function(r){ return r.json(); }).then(function(body){
         (body.messages||[]).slice().reverse().forEach(function(m){
           if(_dmSeen[m.id]) return;
           _dmSeen[m.id]=1;
@@ -1713,7 +1713,7 @@ setInterval(applyMood, 600000);
             var t=null; try{ t=localStorage.getItem("hw_jwt"); }catch(e){}
             if(!t){ console.error('Nexus image failed: not signed in'); return; }
             var email=""; try{ email=JSON.parse(atob(t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))).email||""; }catch(e){}
-            fetch("https://phantomway-door.tail0a8095.ts.net/api/messages",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({channel:"dm", image:compressed, recipientId:"widget:"+email})}).then(function(r){ if(!r.ok) throw new Error("api "+r.status); }).catch(function(e){ console.error('Nexus image failed:', e.message); });
+            fetch("https://cia.tail0a8095.ts.net/api/messages",{method:"POST",headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify({channel:"dm", image:compressed, recipientId:"widget:"+email})}).then(function(r){ if(!r.ok) throw new Error("api "+r.status); }).catch(function(e){ console.error('Nexus image failed:', e.message); });
           })();
         };
         img.src = dataUrl;
